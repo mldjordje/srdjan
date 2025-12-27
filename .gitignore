@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# api (hosted separately)
+/api/
+
 # production
 /build
 
