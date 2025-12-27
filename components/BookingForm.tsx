@@ -491,12 +491,13 @@ export default function BookingForm() {
                   className={`calendar-day ${isActive ? "is-active" : ""}`}
                   isDisabled={isDisabled}
                   onPress={() => {
-                    if (!day.value) {
+                    const value = day.value;
+                    if (!value) {
                       return;
                     }
                     setFormData((prev) => ({
                       ...prev,
-                      date: day.value,
+                      date: value,
                     }));
                   }}
                 >
