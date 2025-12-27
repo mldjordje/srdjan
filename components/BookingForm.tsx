@@ -490,13 +490,15 @@ export default function BookingForm() {
                   radius="sm"
                   className={`calendar-day ${isActive ? "is-active" : ""}`}
                   isDisabled={isDisabled}
-                  onPress={() =>
-                    day.value &&
+                  onPress={() => {
+                    if (!day.value) {
+                      return;
+                    }
                     setFormData((prev) => ({
                       ...prev,
                       date: day.value,
-                    }))
-                  }
+                    }));
+                  }}
                 >
                   {day.label}
                 </Button>

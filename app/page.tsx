@@ -196,6 +196,24 @@ export default function Home() {
                 </p>
               </div>
             </div>
+            <div className="map-card reveal-on-scroll" data-reveal>
+              <iframe
+                title="Doctor Barber lokacija"
+                src="https://www.google.com/maps?q=Doctor%20Barber%20Belgrade&output=embed"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+              <div className="map-actions">
+                <a
+                  className="button outline"
+                  href="https://maps.app.goo.gl/V9ZjSA8dCXB2cwbn7"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Otvori u Google Maps
+                </a>
+              </div>
+            </div>
           </div>
         </section>
       </main>

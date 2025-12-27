@@ -702,6 +702,29 @@ h4 {
   margin-bottom: 10px;
 }
 
+.map-card {
+  margin-top: 28px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 13, 12, 0.7);
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 0;
+}
+
+.map-card iframe {
+  width: 100%;
+  height: 320px;
+  border: 0;
+}
+
+.map-actions {
+  padding: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .login-layout {
   padding: 100px 0;
 }
