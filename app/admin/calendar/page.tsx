@@ -241,60 +241,28 @@ export default function AdminCalendarPage() {
   return (
     <AdminShell title="Kalendar" subtitle="Upravljanje dostupnoscu termina">
       <div className="admin-grid">
-        <div className="admin-toolbar">
-          <div className="date-grid">
-            {dateOptions.map((date) => (
-              <button
-                key={date.value}
-                type="button"
-                className={`date-card ${date.value === selectedDate ? "is-active" : ""}`}
-                onClick={() => setSelectedDate(date.value)}
-              >
-                <span>{date.label}</span>
-                <strong>{date.value}</strong>
-              </button>
-            ))}
-          </div>
-          {status.type !== "idle" && status.message && (
-            <div className={`form-status ${status.type}`}>{status.message}</div>
-          )}
-        </div>
+        {status.type !== "idle" && status.message && (
+          <div className={`form-status ${status.type}`}>{status.message}</div>
+        )}
 
         <div className="calendar-layout">
-          <div className="calendar-list">
-            <h3>Termini</h3>
-            {appointments.length === 0 && <div className="admin-card">Nema termina.</div>}
-            {appointments.map((appointment) => (
-              <div key={appointment.id} className="admin-card">
-                <div className={`status-pill ${appointment.status || "pending"}`}>
-                  {statusLabels[appointment.status || "pending"] || appointment.status}
-                </div>
-                <strong>{appointment.serviceName}</strong>
-                <span>
-                  {appointment.time} | {appointment.clientName}
-                </span>
+          <aside className="calendar-sidebar">
+            <div>
+              <h3>Izaberi datum</h3>
+              <div className="date-grid">
+                {dateOptions.map((date) => (
+                  <button
+                    key={date.value}
+                    type="button"
+                    className={`date-card ${date.value === selectedDate ? "is-active" : ""}`}
+                    onClick={() => setSelectedDate(date.value)}
+                  >
+                    <span>{date.label}</span>
+                    <strong>{date.value}</strong>
+                  </button>
+                ))}
               </div>
-            ))}
-          </div>
-
-          <div className="calendar-list">
-            <h3>Blokade</h3>
-            {blocks.length === 0 && <div className="admin-card">Nema blokada.</div>}
-            {blocks.map((block) => (
-              <div key={block.id} className="admin-card">
-                <strong>
-                  {block.time} ({block.duration} min)
-                </strong>
-                {block.note && <span>{block.note}</span>}
-                <button
-                  className="button outline"
-                  type="button"
-                  onClick={() => handleDeleteBlock(block.id)}
-                >
-                  Obrisi
-                </button>
-              </div>
-            ))}
+            </div>
 
             <form className="calendar-form" onSubmit={handleCreateBlock}>
               <h4>Dodaj blokadu</h4>
@@ -350,6 +318,44 @@ export default function AdminCalendarPage() {
                 Sacuvaj blokadu
               </button>
             </form>
+          </aside>
+
+          <div className="calendar-main">
+            <div className="calendar-list">
+              <h3>Termini</h3>
+              {appointments.length === 0 && <div className="admin-card">Nema termina.</div>}
+              {appointments.map((appointment) => (
+                <div key={appointment.id} className="admin-card">
+                  <div className={`status-pill ${appointment.status || "pending"}`}>
+                    {statusLabels[appointment.status || "pending"] || appointment.status}
+                  </div>
+                  <strong>{appointment.serviceName}</strong>
+                  <span>
+                    {appointment.time} | {appointment.clientName}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="calendar-list">
+              <h3>Blokade</h3>
+              {blocks.length === 0 && <div className="admin-card">Nema blokada.</div>}
+              {blocks.map((block) => (
+                <div key={block.id} className="admin-card">
+                  <strong>
+                    {block.time} ({block.duration} min)
+                  </strong>
+                  {block.note && <span>{block.note}</span>}
+                  <button
+                    className="button outline"
+                    type="button"
+                    onClick={() => handleDeleteBlock(block.id)}
+                  >
+                    Obrisi
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

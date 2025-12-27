@@ -43,7 +43,7 @@ export default function Home() {
       </header>
 
       <main>
-        <section className="hero">
+        <section className="hero reveal-on-scroll" data-reveal>
           <div className="orb one" aria-hidden="true" />
           <div className="orb two" aria-hidden="true" />
           <div className="container hero-grid">
@@ -101,14 +101,14 @@ export default function Home() {
 
         <section id="services" className="section">
           <div className="container">
-            <div className="section-header">
+            <div className="section-header reveal-on-scroll" data-reveal>
               <h2>Usluge</h2>
               <p>
                 Jasne cene, precizno trajanje i potpuna kontrola rezultata.
                 Izaberi tretman koji ti najvise odgovara.
               </p>
             </div>
-            <div className="services-grid">
+            <div className="services-grid reveal-on-scroll" data-reveal>
               {services.map((service) => (
                 <div key={service.id} className="service-card">
                   <h3>{service.name}</h3>
@@ -126,14 +126,14 @@ export default function Home() {
 
         <section id="booking" className="section">
           <div className="container">
-            <div className="section-header">
+            <div className="section-header reveal-on-scroll" data-reveal>
               <h2>Zakazivanje</h2>
               <p>
                 Prijavi se, izaberi termin i posalji zahtev. Termin
                 potvrdjujemo cim proverimo raspored.
               </p>
             </div>
-            <div className="booking-grid">
+            <div className="booking-grid reveal-on-scroll" data-reveal>
               <BookingForm />
               <div className="info-grid">
                 <div className="info-card">
@@ -164,14 +164,14 @@ export default function Home() {
 
         <section id="studio" className="section">
           <div className="container">
-            <div className="section-header">
+            <div className="section-header reveal-on-scroll" data-reveal>
               <h2>Studio</h2>
               <p>
                 Mirna atmosfera, ogranicen broj termina dnevno i potpuna paznja
                 na detalj.
               </p>
             </div>
-            <div className="info-grid">
+            <div className="info-grid reveal-on-scroll" data-reveal>
               <div className="info-card">
                 <h4>Radno vreme</h4>
                 <p>{siteConfig.hours}</p>

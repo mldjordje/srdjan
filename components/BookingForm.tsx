@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { Button } from "@heroui/react";
 
 import { services } from "@/lib/services";
 import { siteConfig } from "@/lib/site";
@@ -31,6 +32,13 @@ type AvailabilityItem = {
   duration?: string | number;
 };
 
+type CalendarDay = {
+  value: string | null;
+  label: string;
+  inMonth: boolean;
+  isAvailable: boolean;
+};
+
 const formatDate = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -38,11 +46,23 @@ const formatDate = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const formatDateLabel = (date: Date) =>
+const formatDisplayDate = (value: string) => {
+  const [year, month, day] = value.split("-");
+  if (!year || !month || !day) {
+    return value;
+  }
+  return `${day}/${month}/${year}`;
+};
+
+const formatMonthLabel = (date: Date) =>
+  new Intl.DateTimeFormat("sr-RS", {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+
+const formatWeekday = (date: Date) =>
   new Intl.DateTimeFormat("sr-RS", {
     weekday: "short",
-    day: "2-digit",
-    month: "short",
   }).format(date);
 
 const timeToMinutes = (time: string) => {
@@ -75,17 +95,51 @@ const parseDurationMinutes = (duration?: string | number) => {
   return Number.isFinite(number) ? number : 0;
 };
 
-const buildDateOptions = () => {
-  const today = new Date();
-  const list = [] as { value: string; label: string }[];
+const addDays = (date: Date, days: number) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+};
 
-  for (let i = 0; i < DAYS_AHEAD; i += 1) {
-    const next = new Date(today);
-    next.setDate(today.getDate() + i);
-    list.push({ value: formatDate(next), label: formatDateLabel(next) });
+const addMonths = (date: Date, months: number) =>
+  new Date(date.getFullYear(), date.getMonth() + months, 1);
+
+const getMondayIndex = (day: number) => (day + 6) % 7;
+
+const buildCalendarDays = (
+  monthDate: Date,
+  minDate: Date,
+  maxDate: Date
+): CalendarDay[] => {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const firstOfMonth = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const startOffset = getMondayIndex(firstOfMonth.getDay());
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+  const days: CalendarDay[] = [];
+
+  for (let i = 0; i < totalCells; i += 1) {
+    const dayNumber = i - startOffset + 1;
+    const inMonth = dayNumber >= 1 && dayNumber <= daysInMonth;
+    if (!inMonth) {
+      days.push({ value: null, label: "", inMonth: false, isAvailable: false });
+      continue;
+    }
+
+    const date = new Date(year, month, dayNumber);
+    const value = formatDate(date);
+    const isAvailable = date >= minDate && date <= maxDate;
+
+    days.push({
+      value,
+      label: String(dayNumber),
+      inMonth: true,
+      isAvailable,
+    });
   }
 
-  return list;
+  return days;
 };
 
 const buildSlots = (
@@ -126,12 +180,17 @@ const buildSlots = (
 };
 
 export default function BookingForm() {
-  const dateOptions = useMemo(() => buildDateOptions(), []);
+  const today = useMemo(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }, []);
+  const lastDay = useMemo(() => addDays(today, DAYS_AHEAD - 1), [today]);
+
   const initialServiceId = services[0]?.id ?? "";
   const [client, setClient] = useState<ClientProfile | null>(null);
   const [formData, setFormData] = useState({
     serviceId: initialServiceId,
-    date: dateOptions[0]?.value ?? "",
+    date: formatDate(today),
     time: "",
     note: "",
   });
@@ -140,6 +199,9 @@ export default function BookingForm() {
     type: "idle",
   });
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [calendarMonth, setCalendarMonth] = useState(
+    new Date(today.getFullYear(), today.getMonth(), 1)
+  );
 
   useEffect(() => {
     const token = localStorage.getItem("db_client_token");
@@ -157,6 +219,11 @@ export default function BookingForm() {
   const selectedService = useMemo(
     () => services.find((service) => service.id === formData.serviceId),
     [formData.serviceId]
+  );
+
+  const calendarDays = useMemo(
+    () => buildCalendarDays(calendarMonth, today, lastDay),
+    [calendarMonth, today, lastDay]
   );
 
   useEffect(() => {
@@ -202,6 +269,15 @@ export default function BookingForm() {
 
     fetchAvailability();
   }, [apiBaseUrl, formData.date, selectedService?.duration]);
+
+  useEffect(() => {
+    const [year, month] = formData.date.split("-").map((part) => Number(part));
+    if (!year || !month) {
+      return;
+    }
+
+    setCalendarMonth(new Date(year, month - 1, 1));
+  }, [formData.date]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -283,9 +359,18 @@ export default function BookingForm() {
     ? `RSD ${selectedService.price.toLocaleString("sr-RS")}`
     : "-";
 
+  const canGoPrev = calendarMonth > new Date(today.getFullYear(), today.getMonth(), 1);
+  const canGoNext =
+    calendarMonth < new Date(lastDay.getFullYear(), lastDay.getMonth(), 1);
+
+  const weekdayLabels = useMemo(() => {
+    const base = new Date(2024, 0, 1);
+    return Array.from({ length: 7 }).map((_, index) => formatWeekday(addDays(base, index)));
+  }, []);
+
   if (!client) {
     return (
-      <div className="booking-locked">
+      <div className="booking-locked reveal-on-scroll" data-reveal>
         <div>
           <h3>Prijava je obavezna</h3>
           <p>
@@ -306,7 +391,7 @@ export default function BookingForm() {
   }
 
   return (
-    <form className="booking-form" onSubmit={handleSubmit}>
+    <form className="booking-form reveal-on-scroll" onSubmit={handleSubmit} data-reveal>
       <div className="booking-summary">
         <div>
           <span>Izabrana usluga</span>
@@ -350,34 +435,76 @@ export default function BookingForm() {
       <div className="availability-panel">
         <div className="availability-header">
           <div>
-            <span>Datum</span>
-            <strong>{formData.date}</strong>
+            <span>Izabrani datum</span>
+            <strong>{formatDisplayDate(formData.date)}</strong>
           </div>
           {availabilityStatus.type === "loading" && <span>Provera...</span>}
           {availabilityStatus.type === "error" && (
             <span>{availabilityStatus.message}</span>
           )}
         </div>
-        <div className="date-grid">
-          {dateOptions.map((date) => (
-            <button
-              key={date.value}
-              type="button"
-              className={`date-card ${
-                date.value === formData.date ? "is-active" : ""
-              }`}
-              onClick={() =>
-                setFormData((prev) => ({
-                  ...prev,
-                  date: date.value,
-                }))
-              }
+
+        <div className="calendar">
+          <div className="calendar-header">
+            <Button
+              size="sm"
+              variant="bordered"
+              className="calendar-nav"
+              isDisabled={!canGoPrev}
+              onPress={() => setCalendarMonth(addMonths(calendarMonth, -1))}
             >
-              <span>{date.label}</span>
-              <strong>{date.value}</strong>
-            </button>
-          ))}
+              Prethodni
+            </Button>
+            <div className="calendar-title">{formatMonthLabel(calendarMonth)}</div>
+            <Button
+              size="sm"
+              variant="bordered"
+              className="calendar-nav"
+              isDisabled={!canGoNext}
+              onPress={() => setCalendarMonth(addMonths(calendarMonth, 1))}
+            >
+              Sledeci
+            </Button>
+          </div>
+
+          <div className="calendar-weekdays">
+            {weekdayLabels.map((day) => (
+              <span key={day}>{day}</span>
+            ))}
+          </div>
+
+          <div className="calendar-grid">
+            {calendarDays.map((day, index) => {
+              if (!day.inMonth) {
+                return <div key={`empty-${index}`} className="calendar-cell" />;
+              }
+
+              const isActive = day.value === formData.date;
+              const isDisabled = !day.isAvailable;
+
+              return (
+                <Button
+                  key={day.value}
+                  size="sm"
+                  variant="flat"
+                  radius="sm"
+                  className={`calendar-day ${isActive ? "is-active" : ""}`}
+                  isDisabled={isDisabled}
+                  onPress={() =>
+                    day.value &&
+                    setFormData((prev) => ({
+                      ...prev,
+                      date: day.value,
+                    }))
+                  }
+                >
+                  {day.label}
+                </Button>
+              );
+            })}
+          </div>
         </div>
+
         <div className="slot-grid">
           {availableSlots.length === 0 && availabilityStatus.type !== "loading" && (
             <div className="slot-empty">
@@ -385,14 +512,16 @@ export default function BookingForm() {
             </div>
           )}
           {availableSlots.map((slot) => (
-            <button
+            <Button
               key={slot}
-              type="button"
+              size="sm"
+              variant="bordered"
+              radius="sm"
               className={`slot-button ${slot === formData.time ? "is-active" : ""}`}
-              onClick={() => setFormData((prev) => ({ ...prev, time: slot }))}
+              onPress={() => setFormData((prev) => ({ ...prev, time: slot }))}
             >
               {slot}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

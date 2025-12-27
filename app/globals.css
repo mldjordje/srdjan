@@ -426,6 +426,17 @@ h4 {
   font-size: 1.4rem;
 }
 
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.reveal-on-scroll.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .availability-panel {
   padding: 18px;
   border-radius: var(--radius-md);
@@ -446,6 +457,67 @@ h4 {
 
 .availability-header strong {
   color: var(--text);
+}
+
+.calendar {
+  display: grid;
+  gap: 14px;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.calendar-title {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.calendar-nav {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.calendar-cell {
+  min-height: 36px;
+}
+
+.calendar-day {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(18, 15, 13, 0.85);
+  color: var(--text);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.calendar-day:hover {
+  transform: translateY(-2px);
+  border-color: rgba(217, 164, 65, 0.5);
+}
+
+.calendar-day.is-active {
+  background: rgba(217, 164, 65, 0.2);
+  border-color: rgba(217, 164, 65, 0.8);
 }
 
 .date-grid {
@@ -765,8 +837,19 @@ h4 {
 
 .calendar-layout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 20px;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.calendar-sidebar {
+  display: grid;
+  gap: 16px;
+}
+
+.calendar-main {
+  display: grid;
+  gap: 16px;
 }
 
 .calendar-list {
@@ -899,6 +982,14 @@ h4 {
   .form-grid {
     grid-template-columns: 1fr;
   }
+
+  .admin-shell__nav {
+    width: 100%;
+  }
+
+  .calendar-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 600px) {
@@ -913,6 +1004,11 @@ h4 {
   }
 
   .availability-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .calendar-header {
     flex-direction: column;
     align-items: flex-start;
   }
