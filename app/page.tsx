@@ -133,7 +133,7 @@ export default function Home() {
                 potvrdjujemo cim proverimo raspored.
               </p>
             </div>
-            <div className="booking-grid reveal-on-scroll" data-reveal>
+            <div className="booking-grid">
               <BookingForm />
               <div className="info-grid">
                 <div className="info-card">

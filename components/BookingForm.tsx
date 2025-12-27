@@ -36,7 +36,7 @@ type CalendarDay = {
   value: string | null;
   label: string;
   inMonth: boolean;
-  isAvailable: boolean;
+  inRange: boolean;
 };
 
 const formatDate = (date: Date) => {
@@ -46,12 +46,14 @@ const formatDate = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const formatDisplayDate = (value: string) => {
-  const [year, month, day] = value.split("-");
-  if (!year || !month || !day) {
-    return value;
-  }
-  return `${day}/${month}/${year}`;
+const formatLongDate = (value: string) => {
+  const date = new Date(`${value}T00:00:00`);
+  return new Intl.DateTimeFormat("sr-RS", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(date);
 };
 
 const formatMonthLabel = (date: Date) =>
@@ -64,6 +66,15 @@ const formatWeekday = (date: Date) =>
   new Intl.DateTimeFormat("sr-RS", {
     weekday: "short",
   }).format(date);
+
+const formatSlotLabel = (time: string) => {
+  const [hours, minutes] = time.split(":").map((part) => Number(part));
+  const date = new Date(2024, 0, 1, hours, minutes);
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+};
 
 const timeToMinutes = (time: string) => {
   const [hours, minutes] = time.split(":").map((part) => Number(part));
@@ -123,19 +134,19 @@ const buildCalendarDays = (
     const dayNumber = i - startOffset + 1;
     const inMonth = dayNumber >= 1 && dayNumber <= daysInMonth;
     if (!inMonth) {
-      days.push({ value: null, label: "", inMonth: false, isAvailable: false });
+      days.push({ value: null, label: "", inMonth: false, inRange: false });
       continue;
     }
 
     const date = new Date(year, month, dayNumber);
     const value = formatDate(date);
-    const isAvailable = date >= minDate && date <= maxDate;
+    const inRange = date >= minDate && date <= maxDate;
 
     days.push({
       value,
       label: String(dayNumber),
       inMonth: true,
-      isAvailable,
+      inRange,
     });
   }
 
@@ -185,11 +196,14 @@ export default function BookingForm() {
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }, []);
   const lastDay = useMemo(() => addDays(today, DAYS_AHEAD - 1), [today]);
+  const dateList = useMemo(
+    () => Array.from({ length: DAYS_AHEAD }, (_, index) => formatDate(addDays(today, index))),
+    [today]
+  );
 
-  const initialServiceId = services[0]?.id ?? "";
   const [client, setClient] = useState<ClientProfile | null>(null);
   const [formData, setFormData] = useState({
-    serviceId: initialServiceId,
+    serviceId: "",
     date: formatDate(today),
     time: "",
     note: "",
@@ -198,6 +212,9 @@ export default function BookingForm() {
   const [availabilityStatus, setAvailabilityStatus] = useState<AvailabilityState>({
     type: "idle",
   });
+  const [availabilityByDate, setAvailabilityByDate] = useState<
+    Record<string, string[]>
+  >({});
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [calendarMonth, setCalendarMonth] = useState(
     new Date(today.getFullYear(), today.getMonth(), 1)
@@ -227,48 +244,77 @@ export default function BookingForm() {
   );
 
   useEffect(() => {
-    if (!apiBaseUrl) {
+    if (!apiBaseUrl || !selectedService) {
+      setAvailabilityByDate({});
+      setAvailableSlots([]);
+      setAvailabilityStatus({ type: "idle" });
       return;
     }
 
-    if (!formData.date) {
-      return;
-    }
-
+    let active = true;
     setAvailabilityStatus({ type: "loading" });
 
-    const fetchAvailability = async () => {
-      try {
-        const response = await fetch(
-          `${apiBaseUrl}/availability.php?date=${encodeURIComponent(formData.date)}`
-        );
-        const data = await response.json();
+    const durationMinutes = parseDurationMinutes(selectedService.duration);
 
-        if (!response.ok) {
-          throw new Error(data?.message || "Ne mogu da proverim dostupnost.");
+    const fetchForDate = async (date: string) => {
+      const response = await fetch(
+        `${apiBaseUrl}/availability.php?date=${encodeURIComponent(date)}`
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Ne mogu da proverim dostupnost.");
+      }
+
+      const appointments = Array.isArray(data.appointments) ? data.appointments : [];
+      const blocks = Array.isArray(data.blocks) ? data.blocks : [];
+      const slots = buildSlots(date, durationMinutes, appointments, blocks);
+
+      return [date, slots] as const;
+    };
+
+    Promise.all(dateList.map((date) => fetchForDate(date)))
+      .then((entries) => {
+        if (!active) {
+          return;
         }
 
-        const appointments = Array.isArray(data.appointments) ? data.appointments : [];
-        const blocks = Array.isArray(data.blocks) ? data.blocks : [];
-        const durationMinutes = parseDurationMinutes(selectedService?.duration);
-        const slots = buildSlots(formData.date, durationMinutes, appointments, blocks);
-
-        setAvailableSlots(slots);
-        setFormData((prev) => ({
-          ...prev,
-          time: slots.includes(prev.time) ? prev.time : slots[0] ?? "",
-        }));
+        const map: Record<string, string[]> = {};
+        entries.forEach(([date, slots]) => {
+          map[date] = slots;
+        });
+        setAvailabilityByDate(map);
         setAvailabilityStatus({ type: "idle" });
-      } catch (error) {
+      })
+      .catch((error) => {
+        if (!active) {
+          return;
+        }
+
         const message =
           error instanceof Error ? error.message : "Doslo je do greske.";
         setAvailabilityStatus({ type: "error", message });
-        setAvailableSlots([]);
-      }
-    };
+        setAvailabilityByDate({});
+      });
 
-    fetchAvailability();
-  }, [apiBaseUrl, formData.date, selectedService?.duration]);
+    return () => {
+      active = false;
+    };
+  }, [apiBaseUrl, dateList, selectedService?.duration, selectedService?.id]);
+
+  useEffect(() => {
+    if (!selectedService) {
+      setAvailableSlots([]);
+      return;
+    }
+
+    const slots = availabilityByDate[formData.date] ?? [];
+    setAvailableSlots(slots);
+    setFormData((prev) => ({
+      ...prev,
+      time: slots.includes(prev.time) ? prev.time : slots[0] ?? "",
+    }));
+  }, [availabilityByDate, formData.date, selectedService?.id]);
 
   useEffect(() => {
     const [year, month] = formData.date.split("-").map((part) => Number(part));
@@ -286,6 +332,14 @@ export default function BookingForm() {
       setStatus({
         type: "error",
         message: "Morate biti ulogovani da biste zakazali termin.",
+      });
+      return;
+    }
+
+    if (!selectedService) {
+      setStatus({
+        type: "error",
+        message: "Izaberite uslugu pre zakazivanja.",
       });
       return;
     }
@@ -313,9 +367,9 @@ export default function BookingForm() {
       phone: client.phone,
       email: client.email,
       serviceId: formData.serviceId,
-      serviceName: selectedService?.name ?? "",
-      duration: selectedService?.duration ?? "",
-      price: selectedService?.price ?? 0,
+      serviceName: selectedService.name,
+      duration: selectedService.duration,
+      price: selectedService.price,
       date: formData.date,
       time: formData.time,
       notes: formData.note.trim(),
@@ -368,9 +422,13 @@ export default function BookingForm() {
     return Array.from({ length: 7 }).map((_, index) => formatWeekday(addDays(base, index)));
   }, []);
 
+  const selectedDateLabel = formData.date ? formatLongDate(formData.date) : "";
+  const morningSlots = availableSlots.filter((slot) => timeToMinutes(slot) < 12 * 60);
+  const afternoonSlots = availableSlots.filter((slot) => timeToMinutes(slot) >= 12 * 60);
+
   if (!client) {
     return (
-      <div className="booking-locked reveal-on-scroll" data-reveal>
+      <div className="booking-locked">
         <div>
           <h3>Prijava je obavezna</h3>
           <p>
@@ -391,168 +449,268 @@ export default function BookingForm() {
   }
 
   return (
-    <form className="booking-form reveal-on-scroll" onSubmit={handleSubmit} data-reveal>
-      <div className="booking-summary">
+    <form className="booking-form" onSubmit={handleSubmit}>
+      <div className="booking-header">
         <div>
-          <span>Izabrana usluga</span>
-          <strong>{selectedService?.name ?? "Izaberi uslugu"}</strong>
+          <h3>Zakazi termin</h3>
+          <p>Izaberi uslugu, datum i vreme koje ti odgovara.</p>
         </div>
-        <div className="booking-summary__meta">
-          <span>Trajanje: {selectedService?.duration ?? "-"}</span>
-          <span>Cena: {servicePrice}</span>
-        </div>
-        <p className="booking-summary__note">
-          Ulogovani ste kao {client.name}. Potvrdu termina saljemo u roku od 24h.
-        </p>
-      </div>
-
-      <div className="form-grid">
-        <div className="form-row form-row--full">
-          <label htmlFor="serviceId">Usluga</label>
-          <select
-            id="serviceId"
-            name="serviceId"
-            className="select"
-            value={formData.serviceId}
-            onChange={(event) =>
-              setFormData((prev) => ({
-                ...prev,
-                serviceId: event.target.value,
-              }))
-            }
-            required
-          >
-            {services.map((service) => (
-              <option key={service.id} value={service.id}>
-                {service.name} | {service.duration} | RSD{" "}
-                {service.price.toLocaleString("sr-RS")}
-              </option>
-            ))}
-          </select>
+        <div className="booking-user">
+          <span>Ulogovani ste</span>
+          <strong>{client.name}</strong>
         </div>
       </div>
 
-      <div className="availability-panel">
-        <div className="availability-header">
-          <div>
-            <span>Izabrani datum</span>
-            <strong>{formatDisplayDate(formData.date)}</strong>
+      <div className="booking-steps">
+        <section className="booking-panel">
+          <div className="booking-panel__header">
+            <span className="step-pill">01</span>
+            <div>
+              <h4>Izaberi uslugu</h4>
+              <p>Prikazujemo slobodne termine na osnovu trajanja usluge.</p>
+            </div>
           </div>
-          {availabilityStatus.type === "loading" && <span>Provera...</span>}
-          {availabilityStatus.type === "error" && (
-            <span>{availabilityStatus.message}</span>
-          )}
-        </div>
-
-        <div className="calendar">
-          <div className="calendar-header">
-            <Button
-              size="sm"
-              variant="bordered"
-              className="calendar-nav"
-              isDisabled={!canGoPrev}
-              onPress={() => setCalendarMonth(addMonths(calendarMonth, -1))}
-            >
-              Prethodni
-            </Button>
-            <div className="calendar-title">{formatMonthLabel(calendarMonth)}</div>
-            <Button
-              size="sm"
-              variant="bordered"
-              className="calendar-nav"
-              isDisabled={!canGoNext}
-              onPress={() => setCalendarMonth(addMonths(calendarMonth, 1))}
-            >
-              Sledeci
-            </Button>
-          </div>
-
-          <div className="calendar-weekdays">
-            {weekdayLabels.map((day) => (
-              <span key={day}>{day}</span>
-            ))}
-          </div>
-
-          <div className="calendar-grid">
-            {calendarDays.map((day, index) => {
-              if (!day.inMonth) {
-                return <div key={`empty-${index}`} className="calendar-cell" />;
-              }
-
-              const isActive = day.value === formData.date;
-              const isDisabled = !day.isAvailable;
-
+          <div className="service-list">
+            {services.map((service) => {
+              const isActive = service.id === formData.serviceId;
               return (
-                <Button
-                  key={day.value}
-                  size="sm"
-                  variant="flat"
-                  radius="sm"
-                  className={`calendar-day ${isActive ? "is-active" : ""}`}
-                  isDisabled={isDisabled}
-                  onPress={() => {
-                    const value = day.value;
-                    if (!value) {
-                      return;
-                    }
+                <button
+                  key={service.id}
+                  type="button"
+                  className={`service-option ${isActive ? "is-active" : ""}`}
+                  onClick={() =>
                     setFormData((prev) => ({
                       ...prev,
-                      date: value,
-                    }));
-                  }}
+                      serviceId: service.id,
+                      time: "",
+                    }))
+                  }
                 >
-                  {day.label}
-                </Button>
+                  <div className="service-info">
+                    <strong>{service.name}</strong>
+                    <span>
+                      {service.duration} | RSD {service.price.toLocaleString("sr-RS")}
+                    </span>
+                  </div>
+                  <span className="service-action">
+                    {isActive ? "Izabrano" : "Izaberi"}
+                  </span>
+                </button>
               );
             })}
           </div>
-        </div>
+        </section>
 
-        <div className="slot-grid">
-          {availableSlots.length === 0 && availabilityStatus.type !== "loading" && (
-            <div className="slot-empty">
-              Nema dostupnih termina za ovaj dan.
+        <section className="booking-panel">
+          <div className="booking-panel__header">
+            <span className="step-pill">02</span>
+            <div>
+              <h4>Izaberi datum i vreme</h4>
+              <p>Termini se automatski prilagodjavaju trajanju usluge.</p>
             </div>
+          </div>
+
+          {!selectedService && (
+            <div className="booking-empty">Prvo izaberi uslugu da bi video kalendar.</div>
           )}
-          {availableSlots.map((slot) => (
-            <Button
-              key={slot}
-              size="sm"
-              variant="bordered"
-              radius="sm"
-              className={`slot-button ${slot === formData.time ? "is-active" : ""}`}
-              onPress={() => setFormData((prev) => ({ ...prev, time: slot }))}
-            >
-              {slot}
-            </Button>
-          ))}
+
+          {selectedService && (
+            <>
+              <div className="booking-meta">
+                <div>
+                  <span>Izabrana usluga</span>
+                  <strong>{selectedService.name}</strong>
+                </div>
+                <div>
+                  <span>Trajanje</span>
+                  <strong>{selectedService.duration}</strong>
+                </div>
+                <div>
+                  <span>Cena</span>
+                  <strong>{servicePrice}</strong>
+                </div>
+              </div>
+
+              <div className="calendar">
+                <div className="calendar-header">
+                  <Button
+                    size="sm"
+                    variant="bordered"
+                    className="calendar-nav"
+                    isDisabled={!canGoPrev}
+                    onPress={() => setCalendarMonth(addMonths(calendarMonth, -1))}
+                  >
+                    Prethodni
+                  </Button>
+                  <div className="calendar-title">{formatMonthLabel(calendarMonth)}</div>
+                  <Button
+                    size="sm"
+                    variant="bordered"
+                    className="calendar-nav"
+                    isDisabled={!canGoNext}
+                    onPress={() => setCalendarMonth(addMonths(calendarMonth, 1))}
+                  >
+                    Sledeci
+                  </Button>
+                </div>
+
+                <div className="calendar-weekdays">
+                  {weekdayLabels.map((day) => (
+                    <span key={day}>{day}</span>
+                  ))}
+                </div>
+
+                <div className="calendar-grid">
+                  {calendarDays.map((day, index) => {
+                    if (!day.inMonth) {
+                      return <div key={`empty-${index}`} className="calendar-cell" />;
+                    }
+
+                    const isActive = day.value === formData.date;
+                    const slots = day.value ? availabilityByDate[day.value] : undefined;
+                    const hasSlots = slots ? slots.length > 0 : false;
+                    const isDisabled = !day.inRange || (slots !== undefined && slots.length === 0);
+
+                    return (
+                      <Button
+                        key={day.value}
+                        size="sm"
+                        variant="flat"
+                        radius="sm"
+                        className={`calendar-day ${isActive ? "is-active" : ""}`}
+                        isDisabled={isDisabled}
+                        onPress={() => {
+                          const value = day.value;
+                          if (!value) {
+                            return;
+                          }
+                          setFormData((prev) => ({
+                            ...prev,
+                            date: value,
+                          }));
+                        }}
+                      >
+                        <span>{day.label}</span>
+                        {day.inRange && (
+                          <span
+                            className={`calendar-indicator ${
+                              slots === undefined
+                                ? "is-loading"
+                                : hasSlots
+                                ? "is-available"
+                                : "is-full"
+                            }`}
+                          />
+                        )}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="slot-section">
+                <div className="slot-header">
+                  <h4>Dostupno {selectedDateLabel} (GMT+1)</h4>
+                  {availabilityStatus.type === "loading" && <span>Ucitavanje...</span>}
+                  {availabilityStatus.type === "error" && (
+                    <span>{availabilityStatus.message}</span>
+                  )}
+                </div>
+
+                {availableSlots.length === 0 && availabilityStatus.type !== "loading" && (
+                  <div className="slot-empty">Nema dostupnih termina za ovaj dan.</div>
+                )}
+
+                {availableSlots.length > 0 && (
+                  <div className="slot-groups">
+                    <div className="slot-group">
+                      <span>Jutro</span>
+                      <div className="slot-items">
+                        {morningSlots.length === 0 && (
+                          <div className="slot-empty">Nema jutarnjih termina.</div>
+                        )}
+                        {morningSlots.map((slot) => (
+                          <Button
+                            key={slot}
+                            size="sm"
+                            variant="bordered"
+                            radius="sm"
+                            className={`slot-button ${
+                              slot === formData.time ? "is-active" : ""
+                            }`}
+                            onPress={() =>
+                              setFormData((prev) => ({ ...prev, time: slot }))
+                            }
+                          >
+                            {formatSlotLabel(slot)}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="slot-group">
+                      <span>Popodne</span>
+                      <div className="slot-items">
+                        {afternoonSlots.length === 0 && (
+                          <div className="slot-empty">Nema popodnevnih termina.</div>
+                        )}
+                        {afternoonSlots.map((slot) => (
+                          <Button
+                            key={slot}
+                            size="sm"
+                            variant="bordered"
+                            radius="sm"
+                            className={`slot-button ${
+                              slot === formData.time ? "is-active" : ""
+                            }`}
+                            onPress={() =>
+                              setFormData((prev) => ({ ...prev, time: slot }))
+                            }
+                          >
+                            {formatSlotLabel(slot)}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </section>
+      </div>
+
+      <section className="booking-panel">
+        <div className="booking-panel__header">
+          <span className="step-pill">03</span>
+          <div>
+            <h4>Napomena</h4>
+            <p>Dodaj detalje koji nam pomazu oko pripreme.</p>
+          </div>
         </div>
-      </div>
-
-      <div className="form-row">
-        <label htmlFor="note">Napomena</label>
-        <textarea
-          id="note"
-          name="note"
-          className="textarea"
-          value={formData.note}
-          onChange={(event) =>
-            setFormData((prev) => ({ ...prev, note: event.target.value }))
-          }
-          placeholder="Specijalne zelje, stil, dodatne informacije."
-        />
-      </div>
-
-      {status.type !== "idle" && status.message && (
-        <div className={`form-status ${status.type}`}>{status.message}</div>
-      )}
-      <button
-        className="button"
-        type="submit"
-        disabled={status.type === "sending" || !formData.time}
-      >
-        {status.type === "sending" ? "Slanje..." : "Posalji zahtev"}
-      </button>
+        <div className="form-row">
+          <label htmlFor="note">Napomena</label>
+          <textarea
+            id="note"
+            name="note"
+            className="textarea"
+            value={formData.note}
+            onChange={(event) =>
+              setFormData((prev) => ({ ...prev, note: event.target.value }))
+            }
+            placeholder="Specijalne zelje, stil, dodatne informacije."
+          />
+        </div>
+        {status.type !== "idle" && status.message && (
+          <div className={`form-status ${status.type}`}>{status.message}</div>
+        )}
+        <button
+          className="button"
+          type="submit"
+          disabled={status.type === "sending" || !formData.time}
+        >
+          {status.type === "sending" ? "Slanje..." : "Potvrdi termin"}
+        </button>
+      </section>
     </form>
   );
 }
