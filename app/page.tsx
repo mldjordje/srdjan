@@ -129,8 +129,8 @@ export default function Home() {
             <div className="section-header">
               <h2>Zakazivanje</h2>
               <p>
-                Popuni formu i posalji zahtev. Termin potvrdjujemo cim proverimo
-                raspored.
+                Prijavi se, izaberi termin i posalji zahtev. Termin
+                potvrdjujemo cim proverimo raspored.
               </p>
             </div>
             <div className="booking-grid">

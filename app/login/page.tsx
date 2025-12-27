@@ -184,8 +184,8 @@ export default function ClientLoginPage() {
           <div>
             <h1>Prijava klijenata</h1>
             <p>
-              Unesi telefon i pristupi svojim terminima. Registracija je brza i
-              bez komplikacija.
+              Unesi telefon i pristupi svojim terminima. Zakazivanje je
+              dostupno samo ulogovanim klijentima.
             </p>
           </div>
 

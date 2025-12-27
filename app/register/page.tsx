@@ -143,7 +143,7 @@ export default function RegisterPage() {
             <h1>Registracija klijenata</h1>
             <p>
               Napravi nalog za brze rezervacije i pregled svih termina na jednom
-              mestu.
+              mestu. Bez naloga nije moguce zakazivanje.
             </p>
           </div>
 

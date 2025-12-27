@@ -4,4 +4,9 @@ export const siteConfig = {
   city: "Beograd",
   phone: "",
   email: "",
+  schedule: {
+    open: "09:00",
+    close: "20:00",
+    slotMinutes: 20,
+  },
 };
