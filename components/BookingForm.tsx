@@ -9,6 +9,7 @@ import { siteConfig } from "@/lib/site";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const MONTHS_AHEAD = 3;
+const WORKING_DAYS = siteConfig.schedule.workingDays ?? [1, 2, 3, 4, 5];
 
 type StatusState = {
   type: "idle" | "sending" | "success" | "error";
@@ -112,6 +113,16 @@ const addDays = (date: Date, days: number) => {
   return next;
 };
 
+const isWorkingDay = (date: Date) => WORKING_DAYS.includes(date.getDay());
+
+const getNextWorkingDay = (date: Date) => {
+  let cursor = new Date(date);
+  while (!isWorkingDay(cursor)) {
+    cursor = addDays(cursor, 1);
+  }
+  return cursor;
+};
+
 const addMonthsClamped = (date: Date, months: number) => {
   const year = date.getFullYear();
   const month = date.getMonth() + months;
@@ -148,7 +159,7 @@ const buildCalendarDays = (
 
     const date = new Date(year, month, dayNumber);
     const value = formatDate(date);
-    const inRange = date >= minDate && date <= maxDate;
+    const inRange = isWorkingDay(date) && date >= minDate && date <= maxDate;
 
     days.push({
       value,
@@ -179,6 +190,11 @@ const buildSlots = (
   appointments: AvailabilityItem[],
   blocks: AvailabilityItem[]
 ) => {
+  const dateObj = new Date(`${date}T00:00:00`);
+  if (!isWorkingDay(dateObj)) {
+    return [];
+  }
+
   const { open, close, slotMinutes } = siteConfig.schedule;
   const openMinutes = timeToMinutes(open);
   const closeMinutes = timeToMinutes(close);
@@ -217,13 +233,20 @@ export default function BookingForm() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }, []);
+  const firstWorkingDay = useMemo(() => getNextWorkingDay(today), [today]);
   const lastDay = useMemo(() => addMonthsClamped(today, MONTHS_AHEAD), [today]);
-  const dateList = useMemo(() => buildDateRange(today, lastDay), [today, lastDay]);
+  const dateList = useMemo(
+    () =>
+      buildDateRange(firstWorkingDay, lastDay).filter((value) =>
+        isWorkingDay(new Date(`${value}T00:00:00`))
+      ),
+    [firstWorkingDay, lastDay]
+  );
 
   const [client, setClient] = useState<ClientProfile | null>(null);
   const [formData, setFormData] = useState({
     serviceId: "",
-    date: formatDate(today),
+    date: formatDate(firstWorkingDay),
     time: "",
     note: "",
   });
@@ -236,7 +259,7 @@ export default function BookingForm() {
   >({});
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [calendarMonth, setCalendarMonth] = useState(
-    new Date(today.getFullYear(), today.getMonth(), 1)
+    new Date(firstWorkingDay.getFullYear(), firstWorkingDay.getMonth(), 1)
   );
 
   useEffect(() => {
@@ -258,8 +281,8 @@ export default function BookingForm() {
   );
 
   const calendarDays = useMemo(
-    () => buildCalendarDays(calendarMonth, today, lastDay),
-    [calendarMonth, today, lastDay]
+    () => buildCalendarDays(calendarMonth, firstWorkingDay, lastDay),
+    [calendarMonth, firstWorkingDay, lastDay]
   );
 
   useEffect(() => {
@@ -379,6 +402,15 @@ export default function BookingForm() {
       return;
     }
 
+    const bookingDate = new Date(`${formData.date}T00:00:00`);
+    if (!isWorkingDay(bookingDate)) {
+      setStatus({
+        type: "error",
+        message: "Vikendom ne radimo. Izaberi radni dan.",
+      });
+      return;
+    }
+
     setStatus({ type: "sending" });
 
     const payload = {
@@ -432,7 +464,8 @@ export default function BookingForm() {
     ? `RSD ${selectedService.price.toLocaleString("sr-RS")}`
     : "-";
 
-  const canGoPrev = calendarMonth > new Date(today.getFullYear(), today.getMonth(), 1);
+  const canGoPrev =
+    calendarMonth > new Date(firstWorkingDay.getFullYear(), firstWorkingDay.getMonth(), 1);
   const canGoNext =
     calendarMonth < new Date(lastDay.getFullYear(), lastDay.getMonth(), 1);
 

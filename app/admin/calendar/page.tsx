@@ -8,6 +8,7 @@ import { siteConfig } from "@/lib/site";
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || "";
 const MONTHS_AHEAD = 3;
+const WORKING_DAYS = siteConfig.schedule.workingDays ?? [1, 2, 3, 4, 5];
 
 type Appointment = {
   id: string;
@@ -125,6 +126,16 @@ const addDays = (date: Date, days: number) => {
   return next;
 };
 
+const isWorkingDay = (date: Date) => WORKING_DAYS.includes(date.getDay());
+
+const getNextWorkingDay = (date: Date) => {
+  let cursor = new Date(date);
+  while (!isWorkingDay(cursor)) {
+    cursor = addDays(cursor, 1);
+  }
+  return cursor;
+};
+
 const addMonthsClamped = (date: Date, months: number) => {
   const year = date.getFullYear();
   const month = date.getMonth() + months;
@@ -156,17 +167,18 @@ export default function AdminCalendarPage() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }, []);
+  const firstWorkingDay = useMemo(() => getNextWorkingDay(today), [today]);
   const lastDay = useMemo(() => addMonthsClamped(today, MONTHS_AHEAD), [today]);
   const { open, close, slotMinutes } = siteConfig.schedule;
 
-  const [selectedDate, setSelectedDate] = useState(formatDate(today));
+  const [selectedDate, setSelectedDate] = useState(formatDate(firstWorkingDay));
   const [appointmentsByDate, setAppointmentsByDate] = useState<
     Record<string, Appointment[]>
   >({});
   const [blocksByDate, setBlocksByDate] = useState<Record<string, Block[]>>({});
   const [status, setStatus] = useState<StatusState>({ type: "idle" });
   const [blockForm, setBlockForm] = useState({
-    date: formatDate(today),
+    date: formatDate(firstWorkingDay),
     time: "",
     duration: "20",
     note: "",
@@ -195,9 +207,9 @@ export default function AdminCalendarPage() {
 
   const gridStyles = useMemo(
     () => ({
-      gridTemplateColumns: `repeat(${weekDays.length}, minmax(160px, 1fr))`,
+      gridTemplateColumns: `repeat(${weekDays.length}, minmax(130px, 1fr))`,
       gridTemplateRows: `var(--calendar-header-height) repeat(${slotCount}, var(--calendar-slot-height))`,
-      minWidth: `${weekDays.length * 160}px`,
+      minWidth: "100%",
     }),
     [weekDays.length, slotCount]
   );
@@ -232,7 +244,7 @@ export default function AdminCalendarPage() {
     [blocksByDate]
   );
 
-  const canGoPrev = weekStart > today;
+  const canGoPrev = weekStart > firstWorkingDay;
   const canGoNext = addDays(weekStart, 7) <= lastDay;
 
   const scheduleItems = useMemo(() => {
@@ -403,22 +415,52 @@ export default function AdminCalendarPage() {
     refreshData(weekDateStrings);
   }, [weekDateStrings]);
 
+  const normalizeToWorkingDay = (value: string) => {
+    const date = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return isWorkingDay(date) ? value : formatDate(getNextWorkingDay(date));
+  };
+
   const handleBlockChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
+
+    if (name === "date") {
+      const normalized = normalizeToWorkingDay(value);
+      if (normalized !== value) {
+        setStatus({
+          type: "error",
+          message: "Vikendom ne radimo. Izabran je prvi radni dan.",
+        });
+      }
+      setBlockForm((prev) => ({
+        ...prev,
+        date: normalized,
+      }));
+      setSelectedDate(normalized);
+      return;
+    }
+
     setBlockForm((prev) => ({
       ...prev,
       [name]: value,
     }));
-
-    if (name === "date") {
-      setSelectedDate(value);
-    }
   };
 
   const handleCreateBlock = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!apiBaseUrl || !adminKey) {
+      return;
+    }
+
+    const blockDate = new Date(`${blockForm.date}T00:00:00`);
+    if (!isWorkingDay(blockDate)) {
+      setStatus({
+        type: "error",
+        message: "Vikendom ne radimo. Izaberi radni dan.",
+      });
       return;
     }
 
@@ -588,7 +630,7 @@ export default function AdminCalendarPage() {
                 <button
                   className="button small ghost"
                   type="button"
-                  onClick={() => setSelectedDate(formatDate(today))}
+                  onClick={() => setSelectedDate(formatDate(getNextWorkingDay(today)))}
                 >
                   Danas
                 </button>
@@ -623,14 +665,15 @@ export default function AdminCalendarPage() {
                     const dateKey = formatDate(day);
                     const isActive = dateKey === selectedDate;
                     const isToday = dateKey === formatDate(today);
-                    const inRange = day >= today && day <= lastDay;
+                    const isWorkday = isWorkingDay(day);
+                    const inRange = day >= today && day <= lastDay && isWorkday;
                     return (
                       <button
                         key={dateKey}
                         type="button"
                         className={`calendar-day-header ${isActive ? "is-active" : ""} ${
                           isToday ? "is-today" : ""
-                        }`}
+                        } ${isWorkday ? "" : "is-closed"}`}
                         style={{ gridColumn: index + 1, gridRow: 1 }}
                         disabled={!inRange}
                         onClick={() => setSelectedDate(dateKey)}
@@ -644,10 +687,10 @@ export default function AdminCalendarPage() {
                   })}
 
                   {timeSlots.map((slot, rowIndex) =>
-                    weekDays.map((_, colIndex) => (
+                    weekDays.map((day, colIndex) => (
                       <div
                         key={`${slot}-${colIndex}`}
-                        className="calendar-slot"
+                        className={`calendar-slot ${isWorkingDay(day) ? "" : "is-closed"}`}
                         style={{ gridColumn: colIndex + 1, gridRow: rowIndex + 2 }}
                       />
                     ))

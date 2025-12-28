@@ -1,12 +1,13 @@
 export const siteConfig = {
-  hours: "Pon - Sub: 09:00 - 20:00",
+  hours: "Pon - Pet: 11:00 - 19:00",
   locationNote: "Beograd - Lokacija se salje uz potvrdu termina.",
   city: "Beograd",
   phone: "",
   email: "",
   schedule: {
-    open: "09:00",
-    close: "20:00",
+    open: "11:00",
+    close: "19:00",
     slotMinutes: 20,
+    workingDays: [1, 2, 3, 4, 5],
   },
 };
