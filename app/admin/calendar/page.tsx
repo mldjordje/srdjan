@@ -9,6 +9,8 @@ const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || "";
 const MONTHS_AHEAD = 12;
 const WORKING_DAYS = siteConfig.schedule.workingDays ?? [1, 2, 3, 4, 5];
+const WORKING_DAY_ORDER = [...WORKING_DAYS].sort((a, b) => a - b);
+const getWorkdayColumn = (day: number) => WORKING_DAY_ORDER.indexOf(day);
 
 type Appointment = {
   id: string;
@@ -159,8 +161,6 @@ const addMonthsClamped = (date: Date, months: number) => {
 const addMonths = (date: Date, months: number) =>
   new Date(date.getFullYear(), date.getMonth() + months, 1);
 
-const getMondayIndex = (day: number) => (day + 6) % 7;
-
 const buildCalendarDays = (
   monthDate: Date,
   minDate: Date,
@@ -168,21 +168,30 @@ const buildCalendarDays = (
 ): CalendarDay[] => {
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
-  const firstOfMonth = new Date(year, month, 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const startOffset = getMondayIndex(firstOfMonth.getDay());
-  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
   const days: CalendarDay[] = [];
 
-  for (let i = 0; i < totalCells; i += 1) {
-    const dayNumber = i - startOffset + 1;
-    const inMonth = dayNumber >= 1 && dayNumber <= daysInMonth;
-    if (!inMonth) {
-      days.push({ value: null, label: "", inMonth: false, inRange: false });
+  let firstWorking = new Date(year, month, 1);
+  while (
+    firstWorking.getMonth() === month &&
+    getWorkdayColumn(firstWorking.getDay()) === -1
+  ) {
+    firstWorking = addDays(firstWorking, 1);
+  }
+
+  const startOffset =
+    firstWorking.getMonth() === month ? Math.max(0, getWorkdayColumn(firstWorking.getDay())) : 0;
+
+  for (let i = 0; i < startOffset; i += 1) {
+    days.push({ value: null, label: "", inMonth: false, inRange: false });
+  }
+
+  for (let dayNumber = 1; dayNumber <= daysInMonth; dayNumber += 1) {
+    const date = new Date(year, month, dayNumber);
+    if (getWorkdayColumn(date.getDay()) === -1) {
       continue;
     }
 
-    const date = new Date(year, month, dayNumber);
     const value = formatDate(date);
     const inRange = isWorkingDay(date) && date >= minDate && date <= maxDate;
 
@@ -192,6 +201,12 @@ const buildCalendarDays = (
       inMonth: true,
       inRange,
     });
+  }
+
+  const totalCells =
+    Math.ceil(days.length / WORKING_DAY_ORDER.length) * WORKING_DAY_ORDER.length;
+  while (days.length < totalCells) {
+    days.push({ value: null, label: "", inMonth: false, inRange: false });
   }
 
   return days;
@@ -250,9 +265,12 @@ export default function AdminCalendarPage() {
     [selectedDate]
   );
   const weekStart = useMemo(() => getWeekStart(selectedDateObj), [selectedDateObj]);
-  const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart]);
+  const weekEnd = useMemo(
+    () => addDays(weekStart, WORKING_DAY_ORDER.length - 1),
+    [weekStart]
+  );
   const weekDays = useMemo(
-    () => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)),
+    () => WORKING_DAY_ORDER.map((dayIndex) => addDays(weekStart, dayIndex - 1)),
     [weekStart]
   );
   const weekDateStrings = useMemo(
@@ -268,7 +286,10 @@ export default function AdminCalendarPage() {
 
   const weekdayLabels = useMemo(() => {
     const base = new Date(2024, 0, 1);
-    return Array.from({ length: 7 }).map((_, index) => formatWeekday(addDays(base, index)));
+    return WORKING_DAY_ORDER.map((dayIndex) => {
+      const offset = dayIndex === 0 ? -1 : dayIndex - 1;
+      return formatWeekday(addDays(base, offset));
+    });
   }, []);
 
   const gridStyles = useMemo(

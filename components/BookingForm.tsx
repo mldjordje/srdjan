@@ -10,6 +10,8 @@ import { siteConfig } from "@/lib/site";
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const MONTHS_AHEAD = 3;
 const WORKING_DAYS = siteConfig.schedule.workingDays ?? [1, 2, 3, 4, 5];
+const WORKING_DAY_ORDER = [...WORKING_DAYS].sort((a, b) => a - b);
+const getWorkdayColumn = (day: number) => WORKING_DAY_ORDER.indexOf(day);
 
 type StatusState = {
   type: "idle" | "sending" | "success" | "error";
@@ -142,8 +144,6 @@ const addMonthsClamped = (date: Date, months: number) => {
 const addMonths = (date: Date, months: number) =>
   new Date(date.getFullYear(), date.getMonth() + months, 1);
 
-const getMondayIndex = (day: number) => (day + 6) % 7;
-
 const buildCalendarDays = (
   monthDate: Date,
   minDate: Date,
@@ -151,21 +151,30 @@ const buildCalendarDays = (
 ): CalendarDay[] => {
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
-  const firstOfMonth = new Date(year, month, 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const startOffset = getMondayIndex(firstOfMonth.getDay());
-  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
   const days: CalendarDay[] = [];
 
-  for (let i = 0; i < totalCells; i += 1) {
-    const dayNumber = i - startOffset + 1;
-    const inMonth = dayNumber >= 1 && dayNumber <= daysInMonth;
-    if (!inMonth) {
-      days.push({ value: null, label: "", inMonth: false, inRange: false });
+  let firstWorking = new Date(year, month, 1);
+  while (
+    firstWorking.getMonth() === month &&
+    getWorkdayColumn(firstWorking.getDay()) === -1
+  ) {
+    firstWorking = addDays(firstWorking, 1);
+  }
+
+  const startOffset =
+    firstWorking.getMonth() === month ? Math.max(0, getWorkdayColumn(firstWorking.getDay())) : 0;
+
+  for (let i = 0; i < startOffset; i += 1) {
+    days.push({ value: null, label: "", inMonth: false, inRange: false });
+  }
+
+  for (let dayNumber = 1; dayNumber <= daysInMonth; dayNumber += 1) {
+    const date = new Date(year, month, dayNumber);
+    if (getWorkdayColumn(date.getDay()) === -1) {
       continue;
     }
 
-    const date = new Date(year, month, dayNumber);
     const value = formatDate(date);
     const inRange = isWorkingDay(date) && date >= minDate && date <= maxDate;
 
@@ -175,6 +184,12 @@ const buildCalendarDays = (
       inMonth: true,
       inRange,
     });
+  }
+
+  const totalCells =
+    Math.ceil(days.length / WORKING_DAY_ORDER.length) * WORKING_DAY_ORDER.length;
+  while (days.length < totalCells) {
+    days.push({ value: null, label: "", inMonth: false, inRange: false });
   }
 
   return days;
@@ -523,7 +538,10 @@ export default function BookingForm() {
 
   const weekdayLabels = useMemo(() => {
     const base = new Date(2024, 0, 1);
-    return Array.from({ length: 7 }).map((_, index) => formatWeekday(addDays(base, index)));
+    return WORKING_DAY_ORDER.map((dayIndex) => {
+      const offset = dayIndex === 0 ? -1 : dayIndex - 1;
+      return formatWeekday(addDays(base, offset));
+    });
   }, []);
 
   const selectedDateLabel = formData.date ? formatLongDate(formData.date) : "";
@@ -586,6 +604,7 @@ export default function BookingForm() {
         <button
           className={`booking-step ${activeStep === 2 ? "is-active" : ""}`}
           type="button"
+          disabled={!selectedService}
           onClick={() => setActiveStep(2)}
         >
           2. Termin
@@ -844,53 +863,44 @@ export default function BookingForm() {
                   </div>
                 )}
               </div>
+              <div className="booking-note">
+                <label htmlFor="note">Napomena</label>
+                <textarea
+                  id="note"
+                  name="note"
+                  className="textarea"
+                  value={formData.note}
+                  onChange={(event) =>
+                    setFormData((prev) => ({ ...prev, note: event.target.value }))
+                  }
+                  placeholder="Specijalne zelje, stil, dodatne informacije."
+                />
+              </div>
             </>
           )}
-          <div className="booking-step-actions">
+
+          {status.type !== "idle" && status.message && (
+            <div className={`form-status ${status.type}`}>{status.message}</div>
+          )}
+
+          <div className="booking-submit">
             <button
-              className="button outline"
+              className="button outline booking-back"
               type="button"
               onClick={() => setActiveStep(1)}
             >
               Nazad
             </button>
-            <span />
+            <button
+              className="button"
+              type="submit"
+              disabled={status.type === "sending" || !formData.time || !selectedService}
+            >
+              {status.type === "sending" ? "Slanje..." : "Potvrdi termin"}
+            </button>
           </div>
         </section>
       </div>
-
-      <section className="booking-panel" data-step="3">
-        <div className="booking-panel__header">
-          <span className="step-pill">03</span>
-          <div>
-            <h4>Napomena</h4>
-            <p>Dodaj detalje koji nam pomazu oko pripreme.</p>
-          </div>
-        </div>
-        <div className="form-row">
-          <label htmlFor="note">Napomena</label>
-          <textarea
-            id="note"
-            name="note"
-            className="textarea"
-            value={formData.note}
-            onChange={(event) =>
-              setFormData((prev) => ({ ...prev, note: event.target.value }))
-            }
-            placeholder="Specijalne zelje, stil, dodatne informacije."
-          />
-        </div>
-        {status.type !== "idle" && status.message && (
-          <div className={`form-status ${status.type}`}>{status.message}</div>
-        )}
-        <button
-          className="button"
-          type="submit"
-          disabled={status.type === "sending" || !formData.time}
-        >
-          {status.type === "sending" ? "Slanje..." : "Potvrdi termin"}
-        </button>
-      </section>
     </form>
   );
 }
