@@ -1426,6 +1426,7 @@ h4 {
   max-height: min(70vh, 760px);
   overscroll-behavior: contain;
   touch-action: pan-y;
+  align-items: stretch;
 }
 
 .calendar-schedule__times {
@@ -1460,6 +1461,8 @@ h4 {
   display: grid;
   position: relative;
   min-width: 0;
+  flex: 1 1 auto;
+  width: 100%;
 }
 
 .calendar-day-header {
