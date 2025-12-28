@@ -199,7 +199,8 @@ export default function Home() {
             <div className="map-card reveal-on-scroll" data-reveal>
               <iframe
                 title="Doctor Barber lokacija"
-                src="https://www.google.com/maps?q=Doctor%20Barber%20Belgrade&output=embed"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2903.2545068929708!2d21.8622563!3d43.3089314!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x4755b0b14f921bab%3A0xa0b0730c4935e4ae!2sDoctor%20Barber!5e0!3m2!1sen!2srs!4v1766882078982!5m2!1sen!2srs"
+                allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
               />
