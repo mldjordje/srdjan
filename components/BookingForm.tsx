@@ -166,6 +166,7 @@ const buildSlots = (
   const isToday = date === formatDate(now);
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const required = durationMinutes || slotMinutes;
+  const stepMinutes = durationMinutes || slotMinutes;
 
   const reserved = [...appointments, ...blocks].map((item) => {
     const start = timeToMinutes(item.time);
@@ -175,7 +176,7 @@ const buildSlots = (
 
   const slots: string[] = [];
 
-  for (let start = openMinutes; start + required <= closeMinutes; start += slotMinutes) {
+  for (let start = openMinutes; start + required <= closeMinutes; start += stepMinutes) {
     if (isToday && start < nowMinutes) {
       continue;
     }
