@@ -28,6 +28,14 @@ type ClientProfile = {
   token: string;
 };
 
+type Appointment = {
+  id: string;
+  serviceName: string;
+  date: string;
+  time: string;
+  status?: string;
+};
+
 type AvailabilityItem = {
   time: string;
   duration?: string | number;
@@ -229,6 +237,7 @@ const buildSlots = (
 };
 
 export default function BookingForm() {
+  const [activeStep, setActiveStep] = useState<1 | 2>(1);
   const today = useMemo(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -244,6 +253,8 @@ export default function BookingForm() {
   );
 
   const [client, setClient] = useState<ClientProfile | null>(null);
+  const [clientAppointments, setClientAppointments] = useState<Appointment[]>([]);
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [formData, setFormData] = useState({
     serviceId: "",
     date: formatDate(firstWorkingDay),
@@ -274,6 +285,44 @@ export default function BookingForm() {
 
     setClient({ name, phone, email, token });
   }, []);
+
+  const fetchClientAppointments = async (token: string) => {
+    if (!apiBaseUrl) {
+      return;
+    }
+
+    setLoadingAppointments(true);
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/appointments.php?clientToken=${encodeURIComponent(token)}`
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Ne mogu da preuzmem termine.");
+      }
+
+      const items = Array.isArray(data.appointments) ? data.appointments : [];
+      items.sort((a: Appointment, b: Appointment) =>
+        `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)
+      );
+      setClientAppointments(items);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Doslo je do greske.";
+      setStatus({ type: "error", message });
+    } finally {
+      setLoadingAppointments(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!client?.token) {
+      return;
+    }
+
+    fetchClientAppointments(client.token);
+  }, [client?.token]);
 
   const selectedService = useMemo(
     () => services.find((service) => service.id === formData.serviceId),
@@ -447,6 +496,9 @@ export default function BookingForm() {
         type: "success",
         message: "Termin je poslat! Javljamo potvrdu uskoro.",
       });
+      if (client?.token) {
+        fetchClientAppointments(client.token);
+      }
 
       setFormData((prev) => ({
         ...prev,
@@ -478,6 +530,19 @@ export default function BookingForm() {
   const morningSlots = availableSlots.filter((slot) => timeToMinutes(slot) < 12 * 60);
   const afternoonSlots = availableSlots.filter((slot) => timeToMinutes(slot) >= 12 * 60);
 
+  const upcomingAppointments = useMemo(() => {
+    const now = new Date();
+    return clientAppointments
+      .filter((appointment) => appointment.status !== "cancelled")
+      .map((appointment) => ({
+        ...appointment,
+        dateTime: new Date(`${appointment.date}T${appointment.time}:00`),
+      }))
+      .filter((appointment) => appointment.dateTime >= now)
+      .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime())
+      .slice(0, 2);
+  }, [clientAppointments]);
+
   if (!client) {
     return (
       <div className="booking-locked">
@@ -498,7 +563,7 @@ export default function BookingForm() {
   }
 
   return (
-    <form className="booking-form" onSubmit={handleSubmit}>
+    <form className="booking-form" data-step={activeStep} onSubmit={handleSubmit}>
       <div className="booking-header">
         <div>
           <h3>Zakazi termin</h3>
@@ -510,8 +575,53 @@ export default function BookingForm() {
         </div>
       </div>
 
+      <div className="booking-stepper">
+        <button
+          className={`booking-step ${activeStep === 1 ? "is-active" : ""}`}
+          type="button"
+          onClick={() => setActiveStep(1)}
+        >
+          1. Usluga
+        </button>
+        <button
+          className={`booking-step ${activeStep === 2 ? "is-active" : ""}`}
+          type="button"
+          onClick={() => setActiveStep(2)}
+        >
+          2. Termin
+        </button>
+      </div>
+
+      {client && (
+        <div className="booking-upcoming">
+          <div className="booking-upcoming__header">
+            <span>Vas sledeci termin</span>
+            <button
+              className="button small ghost"
+              type="button"
+              disabled={loadingAppointments}
+              onClick={() => fetchClientAppointments(client.token)}
+            >
+              {loadingAppointments ? "Ucitavanje..." : "Osvezi"}
+            </button>
+          </div>
+          {upcomingAppointments.length === 0 && !loadingAppointments && (
+            <div className="booking-upcoming__empty">Nema zakazanih termina.</div>
+          )}
+          {upcomingAppointments.map((appointment) => (
+            <div key={appointment.id} className="booking-upcoming__item">
+              <strong>{appointment.serviceName}</strong>
+              <span>
+                {formatLongDate(appointment.date)} | {appointment.time}
+              </span>
+              {appointment.status && <em>{appointment.status}</em>}
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="booking-steps">
-        <section className="booking-panel">
+        <section className="booking-panel" data-step="1">
           <div className="booking-panel__header">
             <span className="step-pill">01</span>
             <div>
@@ -548,9 +658,20 @@ export default function BookingForm() {
               );
             })}
           </div>
+          <div className="booking-step-actions">
+            <span />
+            <button
+              className="button"
+              type="button"
+              disabled={!selectedService}
+              onClick={() => setActiveStep(2)}
+            >
+              Nastavi
+            </button>
+          </div>
         </section>
 
-        <section className="booking-panel">
+        <section className="booking-panel" data-step="2">
           <div className="booking-panel__header">
             <span className="step-pill">02</span>
             <div>
@@ -725,10 +846,20 @@ export default function BookingForm() {
               </div>
             </>
           )}
+          <div className="booking-step-actions">
+            <button
+              className="button outline"
+              type="button"
+              onClick={() => setActiveStep(1)}
+            >
+              Nazad
+            </button>
+            <span />
+          </div>
         </section>
       </div>
 
-      <section className="booking-panel">
+      <section className="booking-panel" data-step="3">
         <div className="booking-panel__header">
           <span className="step-pill">03</span>
           <div>
