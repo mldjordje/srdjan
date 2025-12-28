@@ -14,6 +14,7 @@ type Appointment = {
   serviceName: string;
   date: string;
   time: string;
+  duration?: string;
   status?: string;
 };
 
@@ -28,6 +29,15 @@ type Block = {
 type StatusState = {
   type: "idle" | "loading" | "success" | "error";
   message?: string;
+};
+
+type TimelineItem = {
+  id: string;
+  time: string;
+  title: string;
+  meta?: string;
+  type: "appointment" | "block";
+  status?: string;
 };
 
 const statusLabels: Record<string, string> = {
@@ -50,6 +60,15 @@ const formatDateLabel = (date: Date) =>
     day: "2-digit",
     month: "short",
   }).format(date);
+
+const formatLongDate = (value: string) => {
+  const date = new Date(`${value}T00:00:00`);
+  return new Intl.DateTimeFormat("sr-RS", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+  }).format(date);
+};
 
 const buildDateOptions = () => {
   const today = new Date();
@@ -76,6 +95,42 @@ export default function AdminCalendarPage() {
     duration: "20",
     note: "",
   });
+
+  const totalBlockedMinutes = useMemo(
+    () => blocks.reduce((sum, block) => sum + block.duration, 0),
+    [blocks]
+  );
+
+  const timelineItems = useMemo<TimelineItem[]>(() => {
+    const appointmentItems = appointments.map((appointment) => {
+      const metaParts = [appointment.clientName, appointment.duration].filter(Boolean);
+      return {
+        id: `appointment-${appointment.id}`,
+        time: appointment.time,
+        title: appointment.serviceName,
+        meta: metaParts.join(" | "),
+        type: "appointment" as const,
+        status: appointment.status || "pending",
+      };
+    });
+
+    const blockItems = blocks.map((block) => {
+      const metaParts = [`${block.duration} min`, block.note].filter(Boolean);
+      return {
+        id: `block-${block.id}`,
+        time: block.time,
+        title: "Blokada",
+        meta: metaParts.join(" | "),
+        type: "block" as const,
+      };
+    });
+
+    return [...appointmentItems, ...blockItems].sort((a, b) =>
+      a.time.localeCompare(b.time)
+    );
+  }, [appointments, blocks]);
+
+  const selectedDateLabel = selectedDate ? formatLongDate(selectedDate) : "";
 
   const fetchAppointments = async (date: string) => {
     if (!apiBaseUrl || !adminKey) {
@@ -321,6 +376,54 @@ export default function AdminCalendarPage() {
           </aside>
 
           <div className="calendar-main">
+            <div className="calendar-summary">
+              <div className="summary-card">
+                <span>Datum</span>
+                <strong>{selectedDateLabel || "Izaberi datum"}</strong>
+                <span className="summary-sub">{selectedDate}</span>
+              </div>
+              <div className="summary-card">
+                <span>Zakazano</span>
+                <strong>{appointments.length}</strong>
+                <span className="summary-sub">termina</span>
+              </div>
+              <div className="summary-card">
+                <span>Blokirano</span>
+                <strong>{blocks.length}</strong>
+                <span className="summary-sub">{totalBlockedMinutes} min</span>
+              </div>
+            </div>
+
+            <div className="calendar-timeline">
+              <div className="calendar-timeline__header">
+                <h3>Raspored dana</h3>
+                <span>{timelineItems.length} stavki</span>
+              </div>
+              {timelineItems.length === 0 && (
+                <div className="admin-card">Nema stavki za izabrani datum.</div>
+              )}
+              {timelineItems.length > 0 && (
+                <div className="timeline-list">
+                  {timelineItems.map((item) => (
+                    <div key={item.id} className={`timeline-item ${item.type}`}>
+                      <div className="timeline-time">{item.time}</div>
+                      <div className="timeline-body">
+                        <strong>{item.title}</strong>
+                        {item.meta && <span>{item.meta}</span>}
+                      </div>
+                      {item.type === "appointment" ? (
+                        <div className={`status-pill ${item.status || "pending"}`}>
+                          {statusLabels[item.status || "pending"] || item.status}
+                        </div>
+                      ) : (
+                        <div className="timeline-tag">Blokada</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="calendar-list">
               <h3>Termini</h3>
               {appointments.length === 0 && <div className="admin-card">Nema termina.</div>}

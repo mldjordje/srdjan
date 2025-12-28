@@ -43,17 +43,14 @@ export default function Home() {
       </header>
 
       <main>
-        <section className="hero reveal-on-scroll" data-reveal>
+        <section className="hero reveal-on-scroll" data-reveal="stagger">
           <div className="orb one" aria-hidden="true" />
           <div className="orb two" aria-hidden="true" />
           <div className="container hero-grid">
             <div className="hero-copy">
               <span className="hero-tag">Doctor Barber Studio</span>
               <h1>Precizan fade, cista linija, bez improvizacije.</h1>
-              <p>
-                Studio fokusiran na detalj, higijenu i miran tempo. Rezervisi
-                online, potvrdu saljemo brzo.
-              </p>
+              <p>Studio za precizan rad i miran tempo. Rezervisi online odmah.</p>
               <div className="hero-actions">
                 <a className="button" href="#booking">
                   Zakazi termin
@@ -63,15 +60,15 @@ export default function Home() {
                 </Link>
               </div>
               <div className="hero-highlights">
-                <div className="hero-highlight">
+                <div className="hero-highlight reveal-item" data-reveal-item>
                   <span>Radno vreme</span>
                   <strong>{siteConfig.hours}</strong>
                 </div>
-                <div className="hero-highlight">
+                <div className="hero-highlight reveal-item" data-reveal-item>
                   <span>Potvrda termina</span>
                   <strong>U roku od 24h</strong>
                 </div>
-                <div className="hero-highlight">
+                <div className="hero-highlight reveal-item" data-reveal-item>
                   <span>Lokacija</span>
                   <strong>{siteConfig.city}</strong>
                 </div>
@@ -87,12 +84,12 @@ export default function Home() {
                   sizes="(max-width: 900px) 100vw, 520px"
                 />
               </div>
-              <div className="hero-card">
+              <div className="hero-card reveal-item" data-reveal-item>
                 <strong>Sta dobijas</strong>
                 <ul>
                   <li>Precizan fade i ciste linije bez zurbe.</li>
-                  <li>Jasno vreme i cena pre nego sto pocnemo.</li>
-                  <li>Higijena, sterilni alati i uredna postavka.</li>
+                  <li>Jasno vreme i cena unapred.</li>
+                  <li>Higijena i uredna postavka.</li>
                 </ul>
               </div>
             </div>
@@ -103,14 +100,15 @@ export default function Home() {
           <div className="container">
             <div className="section-header reveal-on-scroll" data-reveal>
               <h2>Usluge</h2>
-              <p>
-                Jasne cene, precizno trajanje i potpuna kontrola rezultata.
-                Izaberi tretman koji ti najvise odgovara.
-              </p>
+              <p>Jasne cene i trajanje. Izaberi tretman koji ti odgovara.</p>
             </div>
-            <div className="services-grid reveal-on-scroll" data-reveal>
+            <div className="services-grid reveal-on-scroll" data-reveal="stagger">
               {services.map((service) => (
-                <div key={service.id} className="service-card">
+                <div
+                  key={service.id}
+                  className="service-card reveal-item"
+                  data-reveal-item
+                >
                   <h3>{service.name}</h3>
                   <div className="service-meta">
                     <span>{service.duration}</span>
@@ -128,34 +126,22 @@ export default function Home() {
           <div className="container">
             <div className="section-header reveal-on-scroll" data-reveal>
               <h2>Zakazivanje</h2>
-              <p>
-                Prijavi se, izaberi termin i posalji zahtev. Termin
-                potvrdjujemo cim proverimo raspored.
-              </p>
+              <p>Izaberi termin i posalji zahtev. Potvrdu saljemo brzo.</p>
             </div>
             <div className="booking-grid">
               <BookingForm />
-              <div className="info-grid">
-                <div className="info-card">
+              <div className="info-grid reveal-on-scroll" data-reveal="stagger">
+                <div className="info-card reveal-item" data-reveal-item>
                   <h4>Potvrda termina</h4>
-                  <p>
-                    Javljamo potvrdu SMS-om ili pozivom. Ako termin nije slobodan,
-                    predlazemo sledeci najblizi.
-                  </p>
+                  <p>Javljamo SMS-om ili pozivom. Ako nema termina, saljemo novi.</p>
                 </div>
-                <div className="info-card">
+                <div className="info-card reveal-item" data-reveal-item>
                   <h4>Priprema</h4>
-                  <p>
-                    Dodji 5 minuta ranije. Raspored je precizan, bez guzve i bez
-                    cekanja.
-                  </p>
+                  <p>Dodji 5 minuta ranije. Raspored je precizan.</p>
                 </div>
-                <div className="info-card">
+                <div className="info-card reveal-item" data-reveal-item>
                   <h4>Politika otkazivanja</h4>
-                  <p>
-                    Ako moras da otkazes, javi bar 6 sati ranije da oslobodimo
-                    termin.
-                  </p>
+                  <p>Otkazivanje bar 6 sati ranije.</p>
                 </div>
               </div>
             </div>
@@ -166,21 +152,18 @@ export default function Home() {
           <div className="container">
             <div className="section-header reveal-on-scroll" data-reveal>
               <h2>Studio</h2>
-              <p>
-                Mirna atmosfera, ogranicen broj termina dnevno i potpuna paznja
-                na detalj.
-              </p>
+              <p>Mirna atmosfera i ogranicen broj termina.</p>
             </div>
-            <div className="info-grid reveal-on-scroll" data-reveal>
-              <div className="info-card">
+            <div className="info-grid reveal-on-scroll" data-reveal="stagger">
+              <div className="info-card reveal-item" data-reveal-item>
                 <h4>Radno vreme</h4>
                 <p>{siteConfig.hours}</p>
               </div>
-              <div className="info-card">
+              <div className="info-card reveal-item" data-reveal-item>
                 <h4>Lokacija</h4>
-                <p>{siteConfig.locationNote}</p>
+                <p>Lokacija se salje uz potvrdu.</p>
               </div>
-              <div className="info-card">
+              <div className="info-card reveal-item" data-reveal-item>
                 <h4>Kontakt</h4>
                 <p>
                   {siteConfig.phone && <span>{siteConfig.phone}</span>}

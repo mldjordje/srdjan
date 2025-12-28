@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #0c1119;
-  --bg-elevated: #151c26;
-  --bg-soft: #1e2733;
-  --text: #f5f7fb;
-  --text-muted: #9aa6b2;
-  --accent: #22c7ff;
-  --accent-strong: #7be7ff;
-  --border: rgba(34, 199, 255, 0.25);
-  --shadow: 0 28px 60px rgba(5, 10, 20, 0.55);
+  --bg: #f6f5f2;
+  --bg-elevated: #ffffff;
+  --bg-soft: #f0efec;
+  --text: #111111;
+  --text-muted: #5f5f5f;
+  --accent: #111111;
+  --accent-strong: #000000;
+  --border: rgba(17, 17, 17, 0.12);
+  --shadow: 0 24px 50px rgba(15, 15, 15, 0.12);
   --radius-lg: 28px;
   --radius-md: 18px;
   --radius-sm: 12px;
@@ -33,9 +33,9 @@ body {
 
 body {
   color: var(--text);
-  background: radial-gradient(circle at 12% 8%, rgba(34, 199, 255, 0.2), transparent 45%),
-    radial-gradient(circle at 80% 15%, rgba(123, 231, 255, 0.12), transparent 40%),
-    linear-gradient(140deg, #0b1118 0%, #111a26 55%, #0c1119 100%);
+  background: radial-gradient(circle at 12% 8%, rgba(0, 0, 0, 0.05), transparent 45%),
+    radial-gradient(circle at 80% 15%, rgba(0, 0, 0, 0.04), transparent 40%),
+    linear-gradient(140deg, #f8f7f5 0%, #efeeeb 55%, #f6f5f2 100%);
   font-family: var(--font-body), sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -93,8 +93,8 @@ h4 {
   top: 0;
   z-index: 10;
   backdrop-filter: blur(16px);
-  background: rgba(12, 16, 23, 0.8);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(248, 247, 245, 0.9);
+  border-bottom: 1px solid rgba(17, 17, 17, 0.08);
 }
 
 .nav-inner {
@@ -115,16 +115,15 @@ h4 {
   width: 54px;
   height: 54px;
   border-radius: 16px;
-  background: radial-gradient(circle at 30% 30%, rgba(34, 199, 255, 0.45), rgba(12, 17, 25, 0.9));
-  border: 1px solid rgba(34, 199, 255, 0.35);
+  background: radial-gradient(circle at 30% 30%, rgba(0, 0, 0, 0.08), #f1f0ed);
+  border: 1px solid rgba(17, 17, 17, 0.12);
   display: grid;
   place-items: center;
   box-shadow: var(--shadow);
 }
 
 .brand-mark img {
-  mix-blend-mode: screen;
-  filter: grayscale(1) brightness(1.25) contrast(1.1);
+  filter: grayscale(1) contrast(1.1);
 }
 
 .brand-title {
@@ -170,12 +169,12 @@ h4 {
   gap: 8px;
   padding: 12px 22px;
   border-radius: 999px;
-  background: linear-gradient(120deg, var(--accent), #39e0ff);
-  color: #04131c;
+  background: var(--accent);
+  color: #ffffff;
   font-weight: 600;
   border: none;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 12px 25px rgba(34, 199, 255, 0.3);
+  box-shadow: 0 12px 25px rgba(17, 17, 17, 0.18);
 }
 
 .button:hover {
@@ -185,12 +184,12 @@ h4 {
 .button.outline {
   background: transparent;
   color: var(--text);
-  border: 1px solid rgba(34, 199, 255, 0.5);
+  border: 1px solid rgba(17, 17, 17, 0.35);
   box-shadow: none;
 }
 
 .button.ghost {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(17, 17, 17, 0.06);
   color: var(--text);
   box-shadow: none;
 }
@@ -212,8 +211,8 @@ h4 {
   content: "";
   position: absolute;
   inset: -20% 0;
-  background: radial-gradient(circle at 20% 20%, rgba(34, 199, 255, 0.18), transparent 55%),
-    radial-gradient(circle at 70% 30%, rgba(123, 231, 255, 0.12), transparent 60%);
+  background: radial-gradient(circle at 20% 20%, rgba(0, 0, 0, 0.06), transparent 55%),
+    radial-gradient(circle at 70% 30%, rgba(0, 0, 0, 0.04), transparent 60%);
   opacity: 0.7;
   animation: auroraShift 16s ease-in-out infinite;
   pointer-events: none;
@@ -243,7 +242,7 @@ h4 {
   width: fit-content;
   padding: 8px 16px;
   border-radius: 999px;
-  border: 1px solid rgba(34, 199, 255, 0.5);
+  border: 1px solid rgba(17, 17, 17, 0.25);
   color: var(--text);
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -279,8 +278,8 @@ h4 {
 .hero-highlight {
   padding: 14px 16px;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(17, 22, 30, 0.75);
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  background: var(--bg-elevated);
   display: grid;
   gap: 6px;
   font-size: 0.9rem;
@@ -302,7 +301,7 @@ h4 {
   min-height: 320px;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 1px solid rgba(34, 199, 255, 0.25);
+  border: 1px solid rgba(17, 17, 17, 0.12);
   box-shadow: var(--shadow);
 }
 
@@ -313,8 +312,8 @@ h4 {
 .hero-card {
   padding: 32px;
   border-radius: var(--radius-lg);
-  background: linear-gradient(160deg, rgba(34, 199, 255, 0.18), rgba(12, 17, 25, 0.92));
-  border: 1px solid rgba(34, 199, 255, 0.18);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(240, 239, 236, 0.9));
+  border: 1px solid rgba(17, 17, 17, 0.12);
   box-shadow: var(--shadow);
   display: grid;
   gap: 18px;
@@ -373,16 +372,17 @@ h4 {
   background: var(--bg-elevated);
   padding: 20px;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(17, 17, 17, 0.08);
   display: grid;
   gap: 12px;
   min-height: 170px;
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .service-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(34, 199, 255, 0.4);
+  border-color: rgba(17, 17, 17, 0.35);
+  box-shadow: 0 16px 30px rgba(17, 17, 17, 0.12);
 }
 
 .service-meta {
@@ -395,17 +395,17 @@ h4 {
 
 .price {
   font-size: 1.1rem;
-  color: var(--accent-strong);
+  color: var(--accent);
   font-weight: 600;
 }
 
 .banner {
   border-radius: var(--radius-lg);
   padding: 32px;
-  background: linear-gradient(120deg, rgba(34, 199, 255, 0.2), rgba(255, 255, 255, 0.04));
+  background: linear-gradient(120deg, rgba(17, 17, 17, 0.06), rgba(255, 255, 255, 0.6));
   display: grid;
   gap: 12px;
-  border: 1px solid rgba(34, 199, 255, 0.3);
+  border: 1px solid rgba(17, 17, 17, 0.18);
 }
 
 .banner span {
@@ -427,8 +427,8 @@ h4 {
   gap: 24px;
   padding: 32px;
   border-radius: var(--radius-lg);
-  background: linear-gradient(160deg, rgba(19, 23, 31, 0.92), rgba(12, 16, 23, 0.95));
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(244, 243, 240, 0.95));
+  border: 1px solid rgba(17, 17, 17, 0.08);
   box-shadow: var(--shadow);
 }
 
@@ -451,8 +451,8 @@ h4 {
 .booking-user {
   padding: 10px 14px;
   border-radius: 14px;
-  background: rgba(34, 199, 255, 0.12);
-  border: 1px solid rgba(34, 199, 255, 0.35);
+  background: rgba(17, 17, 17, 0.04);
+  border: 1px solid rgba(17, 17, 17, 0.15);
   display: grid;
   gap: 4px;
   font-size: 0.85rem;
@@ -474,7 +474,7 @@ h4 {
   padding: 20px;
   border-radius: var(--radius-md);
   background: var(--bg-elevated);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(17, 17, 17, 0.08);
   display: grid;
   gap: 16px;
 }
@@ -499,8 +499,8 @@ h4 {
   width: 36px;
   height: 36px;
   border-radius: 12px;
-  background: rgba(34, 199, 255, 0.18);
-  color: var(--accent-strong);
+  background: rgba(17, 17, 17, 0.08);
+  color: var(--text);
   display: grid;
   place-items: center;
   font-weight: 600;
@@ -518,7 +518,7 @@ h4 {
   gap: 16px;
   padding: 16px 18px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(17, 17, 17, 0.12);
   background: var(--bg-soft);
   text-align: left;
   cursor: pointer;
@@ -527,12 +527,12 @@ h4 {
 
 .service-option:hover {
   transform: translateY(-2px);
-  border-color: rgba(34, 199, 255, 0.5);
+  border-color: rgba(17, 17, 17, 0.35);
 }
 
 .service-option.is-active {
-  border-color: rgba(34, 199, 255, 0.8);
-  background: rgba(34, 199, 255, 0.12);
+  border-color: rgba(17, 17, 17, 0.6);
+  background: rgba(17, 17, 17, 0.08);
 }
 
 .service-info {
@@ -548,7 +548,7 @@ h4 {
 .service-action {
   padding: 8px 14px;
   border-radius: 999px;
-  background: rgba(34, 199, 255, 0.2);
+  background: rgba(17, 17, 17, 0.12);
   color: var(--text);
   font-size: 0.8rem;
   font-weight: 600;
@@ -559,7 +559,7 @@ h4 {
 .booking-empty {
   padding: 18px;
   border-radius: 14px;
-  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border: 1px dashed rgba(17, 17, 17, 0.2);
   color: var(--text-muted);
   font-size: 0.95rem;
   text-align: center;
@@ -571,8 +571,8 @@ h4 {
   gap: 12px;
   padding: 12px;
   border-radius: 14px;
-  background: rgba(15, 20, 28, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(17, 17, 17, 0.04);
+  border: 1px solid rgba(17, 17, 17, 0.1);
 }
 
 .booking-meta span {
@@ -591,8 +591,8 @@ h4 {
   gap: 18px;
   padding: 28px;
   border-radius: var(--radius-lg);
-  background: linear-gradient(160deg, rgba(19, 23, 31, 0.92), rgba(12, 16, 23, 0.95));
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(243, 242, 239, 0.95));
+  border: 1px solid rgba(17, 17, 17, 0.08);
   box-shadow: var(--shadow);
 }
 
@@ -607,6 +607,18 @@ h4 {
 }
 
 .reveal-on-scroll.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-on-scroll .reveal-item {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.reveal-on-scroll.is-visible .reveal-item {
   opacity: 1;
   transform: translateY(0);
 }
@@ -629,7 +641,7 @@ h4 {
 }
 
 .calendar-nav {
-  border-color: rgba(34, 199, 255, 0.35);
+  border-color: rgba(17, 17, 17, 0.35);
   color: var(--text);
 }
 
@@ -656,8 +668,8 @@ h4 {
 .calendar-day {
   width: 100%;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(20, 26, 34, 0.9);
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: var(--bg-elevated);
   color: var(--text);
   transition: border-color 0.2s ease, transform 0.2s ease;
   display: grid;
@@ -672,31 +684,31 @@ h4 {
 
 .calendar-day:hover {
   transform: translateY(-2px);
-  border-color: rgba(34, 199, 255, 0.5);
+  border-color: rgba(17, 17, 17, 0.35);
 }
 
 .calendar-day.is-active {
-  background: rgba(34, 199, 255, 0.2);
-  border-color: rgba(34, 199, 255, 0.8);
+  background: rgba(17, 17, 17, 0.08);
+  border-color: rgba(17, 17, 17, 0.6);
 }
 
 .calendar-indicator {
   width: 60%;
   height: 3px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(17, 17, 17, 0.12);
 }
 
 .calendar-indicator.is-available {
-  background: #2ad6c4;
+  background: #111111;
 }
 
 .calendar-indicator.is-full {
-  background: #f87171;
+  background: rgba(17, 17, 17, 0.45);
 }
 
 .calendar-indicator.is-loading {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(17, 17, 17, 0.2);
 }
 
 .slot-section {
@@ -744,8 +756,8 @@ h4 {
 .slot-button {
   justify-content: center;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(18, 24, 33, 0.85);
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: var(--bg-elevated);
   color: var(--text);
   font-size: 0.9rem;
   width: 100%;
@@ -754,19 +766,19 @@ h4 {
 
 .slot-button:hover {
   transform: translateY(-2px);
-  border-color: rgba(34, 199, 255, 0.5);
+  border-color: rgba(17, 17, 17, 0.35);
 }
 
 .slot-button.is-active {
-  background: linear-gradient(120deg, rgba(34, 199, 255, 0.6), rgba(122, 231, 255, 0.6));
-  color: #03121a;
+  background: var(--accent);
+  color: #ffffff;
   border-color: transparent;
 }
 
 .slot-empty {
   padding: 12px;
   border-radius: 12px;
-  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border: 1px dashed rgba(17, 17, 17, 0.18);
   color: var(--text-muted);
   font-size: 0.9rem;
   text-align: center;
@@ -779,8 +791,8 @@ h4 {
 }
 
 .date-card {
-  background: rgba(18, 24, 33, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-elevated);
+  border: 1px solid rgba(17, 17, 17, 0.08);
   border-radius: var(--radius-sm);
   padding: 12px;
   text-align: left;
@@ -801,12 +813,12 @@ h4 {
 
 .date-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(34, 199, 255, 0.4);
+  border-color: rgba(17, 17, 17, 0.35);
 }
 
 .date-card.is-active {
-  border-color: rgba(34, 199, 255, 0.85);
-  background: rgba(34, 199, 255, 0.12);
+  border-color: rgba(17, 17, 17, 0.6);
+  background: rgba(17, 17, 17, 0.08);
 }
 
 .form-row {
@@ -830,8 +842,8 @@ h4 {
   width: 100%;
   padding: 12px 14px;
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: var(--bg-soft);
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: var(--bg-elevated);
   color: var(--text);
 }
 
@@ -839,8 +851,8 @@ h4 {
 .select:focus,
 .textarea:focus {
   outline: none;
-  border-color: rgba(34, 199, 255, 0.6);
-  box-shadow: 0 0 0 2px rgba(34, 199, 255, 0.2);
+  border-color: rgba(17, 17, 17, 0.4);
+  box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.12);
 }
 
 .textarea {
@@ -855,28 +867,28 @@ h4 {
 }
 
 .form-status.success {
-  background: rgba(73, 187, 120, 0.18);
-  color: #b4f2c9;
-  border: 1px solid rgba(73, 187, 120, 0.35);
+  background: rgba(17, 17, 17, 0.04);
+  color: var(--text);
+  border: 1px solid rgba(17, 17, 17, 0.18);
 }
 
 .form-status.error {
-  background: rgba(214, 84, 84, 0.18);
-  color: #f5b1b1;
-  border: 1px solid rgba(214, 84, 84, 0.35);
+  background: rgba(17, 17, 17, 0.08);
+  color: var(--text);
+  border: 1px solid rgba(17, 17, 17, 0.28);
 }
 
 .form-status.loading {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(17, 17, 17, 0.05);
   color: var(--text-muted);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(17, 17, 17, 0.12);
 }
 
 .booking-summary {
   padding: 16px;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(18, 24, 33, 0.7);
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: rgba(17, 17, 17, 0.04);
   display: grid;
   gap: 10px;
 }
@@ -912,7 +924,7 @@ h4 {
   padding: 22px;
   border-radius: var(--radius-md);
   background: var(--bg-elevated);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(17, 17, 17, 0.08);
 }
 
 .info-card h4 {
@@ -923,8 +935,8 @@ h4 {
   margin-top: 28px;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(18, 24, 33, 0.7);
+  border: 1px solid rgba(17, 17, 17, 0.1);
+  background: var(--bg-elevated);
   box-shadow: var(--shadow);
   display: grid;
   gap: 0;
@@ -951,8 +963,8 @@ h4 {
   margin: 0 auto;
   padding: 32px;
   border-radius: var(--radius-lg);
-  background: rgba(18, 24, 33, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(17, 17, 17, 0.12);
   box-shadow: var(--shadow);
   display: grid;
   gap: 20px;
@@ -967,8 +979,8 @@ h4 {
 .token-card {
   padding: 16px;
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: var(--bg-soft);
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: var(--bg-elevated);
 }
 
 .admin-shell {
@@ -1001,14 +1013,14 @@ h4 {
 .admin-shell__nav a {
   padding: 8px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(17, 17, 17, 0.12);
   font-size: 0.85rem;
   color: var(--text-muted);
   transition: border-color 0.2s ease, color 0.2s ease;
 }
 
 .admin-shell__nav a.is-active {
-  border-color: rgba(34, 199, 255, 0.6);
+  border-color: rgba(17, 17, 17, 0.45);
   color: var(--text);
 }
 
@@ -1028,8 +1040,8 @@ h4 {
 .admin-card {
   padding: 18px;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(18, 24, 33, 0.75);
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: rgba(255, 255, 255, 0.9);
   display: grid;
   gap: 10px;
 }
@@ -1041,23 +1053,23 @@ h4 {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(17, 17, 17, 0.2);
   color: var(--text-muted);
 }
 
 .status-pill.confirmed {
-  border-color: rgba(73, 187, 120, 0.5);
-  color: #b4f2c9;
+  border-color: rgba(17, 17, 17, 0.35);
+  color: var(--text);
 }
 
 .status-pill.cancelled {
-  border-color: rgba(214, 84, 84, 0.5);
-  color: #f5b1b1;
+  border-color: rgba(17, 17, 17, 0.5);
+  color: var(--text);
 }
 
 .status-pill.completed {
-  border-color: rgba(34, 199, 255, 0.6);
-  color: var(--accent-strong);
+  border-color: rgba(17, 17, 17, 0.4);
+  color: var(--text);
 }
 
 .admin-actions {
@@ -1069,7 +1081,7 @@ h4 {
 .admin-actions button {
   padding: 8px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(17, 17, 17, 0.18);
   background: transparent;
   color: var(--text);
   font-size: 0.85rem;
@@ -1102,6 +1114,100 @@ h4 {
   gap: 12px;
 }
 
+.calendar-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.summary-card {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: var(--bg-elevated);
+  display: grid;
+  gap: 6px;
+}
+
+.summary-card strong {
+  font-size: 1.1rem;
+}
+
+.summary-sub {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.calendar-timeline {
+  display: grid;
+  gap: 12px;
+}
+
+.calendar-timeline__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.calendar-timeline__header h3 {
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+.timeline-list {
+  display: grid;
+  gap: 10px;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: minmax(70px, 90px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: var(--bg-elevated);
+}
+
+.timeline-item.block {
+  border-style: dashed;
+  background: var(--bg-soft);
+}
+
+.timeline-time {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.timeline-body {
+  display: grid;
+  gap: 4px;
+}
+
+.timeline-body span {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.timeline-tag {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(17, 17, 17, 0.2);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.timeline-item .status-pill,
+.timeline-item .timeline-tag {
+  justify-self: end;
+}
+
 .auth-link {
   font-size: 0.9rem;
   color: var(--text-muted);
@@ -1123,8 +1229,8 @@ h4 {
 .appointment-card {
   padding: 18px;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(18, 24, 33, 0.75);
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: rgba(255, 255, 255, 0.9);
   display: grid;
   gap: 8px;
 }
@@ -1152,7 +1258,7 @@ h4 {
 .orb.one {
   width: 160px;
   height: 160px;
-  background: radial-gradient(circle, rgba(34, 199, 255, 0.35), transparent 70%);
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.12), transparent 70%);
   top: 40px;
   left: 10%;
 }
@@ -1160,7 +1266,7 @@ h4 {
 .orb.two {
   width: 220px;
   height: 220px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.18), transparent 70%);
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.08), transparent 70%);
   bottom: -40px;
   right: 5%;
   animation-delay: 1.5s;
@@ -1214,6 +1320,21 @@ h4 {
   }
   100% {
     transform: translateX(-6%) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on-scroll,
+  .reveal-on-scroll .reveal-item,
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .orb {
+    animation: none;
   }
 }
 
@@ -1293,5 +1414,19 @@ h4 {
 
   .slot-grid {
     grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  }
+
+  .calendar-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-item {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .timeline-item .status-pill,
+  .timeline-item .timeline-tag {
+    justify-self: start;
   }
 }

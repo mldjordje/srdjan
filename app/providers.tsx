@@ -9,10 +9,27 @@ export default function Providers({
   children: React.ReactNode;
 }) {
   useEffect(() => {
-    const elements = Array.from(document.querySelectorAll("[data-reveal]"));
+    const elements = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]"));
     if (elements.length === 0) {
       return;
     }
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) {
+      elements.forEach((element) => element.classList.add("is-visible"));
+      return;
+    }
+
+    elements.forEach((element) => {
+      if (element.dataset.reveal === "stagger") {
+        const items = Array.from(
+          element.querySelectorAll<HTMLElement>("[data-reveal-item]")
+        );
+        items.forEach((item, index) => {
+          item.style.setProperty("--reveal-delay", `${index * 90}ms`);
+        });
+      }
+    });
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -23,7 +40,7 @@ export default function Providers({
           }
         });
       },
-      { threshold: 0.2 }
+      { threshold: 0.15, rootMargin: "0px 0px -10% 0px" }
     );
 
     elements.forEach((element) => observer.observe(element));

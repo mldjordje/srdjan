@@ -175,7 +175,9 @@ const buildSlots = (
 
   const slots: string[] = [];
 
-  for (let start = openMinutes; start + required <= closeMinutes; start += slotMinutes) {
+  const stepMinutes = Math.max(slotMinutes, required);
+
+  for (let start = openMinutes; start + required <= closeMinutes; start += stepMinutes) {
     if (isToday && start < nowMinutes) {
       continue;
     }
@@ -431,10 +433,7 @@ export default function BookingForm() {
       <div className="booking-locked">
         <div>
           <h3>Prijava je obavezna</h3>
-          <p>
-            Da bismo sacuvali vase termine i potvrdili rezervaciju, potrebno je
-            da budete ulogovani.
-          </p>
+          <p>Za zakazivanje je potrebna prijava.</p>
         </div>
         <div className="hero-actions">
           <Link className="button" href="/login">
@@ -453,7 +452,7 @@ export default function BookingForm() {
       <div className="booking-header">
         <div>
           <h3>Zakazi termin</h3>
-          <p>Izaberi uslugu, datum i vreme koje ti odgovara.</p>
+          <p>Izaberi uslugu, datum i vreme.</p>
         </div>
         <div className="booking-user">
           <span>Ulogovani ste</span>
@@ -467,7 +466,7 @@ export default function BookingForm() {
             <span className="step-pill">01</span>
             <div>
               <h4>Izaberi uslugu</h4>
-              <p>Prikazujemo slobodne termine na osnovu trajanja usluge.</p>
+              <p>Termini se prilagodjavaju trajanju usluge.</p>
             </div>
           </div>
           <div className="service-list">
@@ -506,7 +505,7 @@ export default function BookingForm() {
             <span className="step-pill">02</span>
             <div>
               <h4>Izaberi datum i vreme</h4>
-              <p>Termini se automatski prilagodjavaju trajanju usluge.</p>
+              <p>Izaberi datum i vreme koje ti odgovara.</p>
             </div>
           </div>
 
