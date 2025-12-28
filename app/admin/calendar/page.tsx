@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 
 import AdminShell from "@/components/admin/AdminShell";
+import { siteConfig } from "@/lib/site";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || "";
@@ -31,18 +32,13 @@ type StatusState = {
   message?: string;
 };
 
-type CalendarDay = {
-  value: string | null;
-  label: string;
-  inMonth: boolean;
-  inRange: boolean;
-};
-
-type TimelineItem = {
+type ScheduleItem = {
   id: string;
-  time: string;
+  dayIndex: number;
+  startRow: number;
+  span: number;
   title: string;
-  meta?: string;
+  subtitle?: string;
   type: "appointment" | "block";
   status?: string;
 };
@@ -81,14 +77,53 @@ const formatLongDate = (value: string) => {
   }).format(date);
 };
 
+const formatRangeLabel = (start: Date, end: Date) => {
+  const startLabel = new Intl.DateTimeFormat("sr-RS", {
+    day: "2-digit",
+    month: "short",
+  }).format(start);
+  const endLabel = new Intl.DateTimeFormat("sr-RS", {
+    day: "2-digit",
+    month: "short",
+  }).format(end);
+  return `${startLabel} - ${endLabel}`;
+};
+
+const timeToMinutes = (time: string) => {
+  const [hours, minutes] = time.split(":").map((part) => Number(part));
+  return hours * 60 + minutes;
+};
+
+const minutesToTime = (minutes: number) => {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+const parseDurationMinutes = (duration?: string | number) => {
+  if (typeof duration === "number") {
+    return duration;
+  }
+
+  if (!duration) {
+    return 0;
+  }
+
+  const value = duration.toLowerCase();
+  if (value.includes("h")) {
+    const number = Number(value.replace(/[^\d.]/g, ""));
+    return Number.isFinite(number) ? Math.round(number * 60) : 0;
+  }
+
+  const number = Number(value.replace(/[^\d]/g, ""));
+  return Number.isFinite(number) ? number : 0;
+};
+
 const addDays = (date: Date, days: number) => {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
   return next;
 };
-
-const addMonths = (date: Date, months: number) =>
-  new Date(date.getFullYear(), date.getMonth() + months, 1);
 
 const addMonthsClamped = (date: Date, months: number) => {
   const year = date.getFullYear();
@@ -98,42 +133,22 @@ const addMonthsClamped = (date: Date, months: number) => {
   return new Date(year, month, Math.min(day, lastDay));
 };
 
-const getMondayIndex = (day: number) => (day + 6) % 7;
+const getWeekStart = (date: Date) => {
+  const day = date.getDay();
+  const diff = (day + 6) % 7;
+  return addDays(date, -diff);
+};
 
-const buildCalendarDays = (
-  monthDate: Date,
-  minDate: Date,
-  maxDate: Date
-): CalendarDay[] => {
-  const year = monthDate.getFullYear();
-  const month = monthDate.getMonth();
-  const firstOfMonth = new Date(year, month, 1);
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const startOffset = getMondayIndex(firstOfMonth.getDay());
-  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
-  const days: CalendarDay[] = [];
+const buildTimeSlots = (open: string, close: string, stepMinutes: number) => {
+  const slots: string[] = [];
+  const startMinutes = timeToMinutes(open);
+  const endMinutes = timeToMinutes(close);
 
-  for (let i = 0; i < totalCells; i += 1) {
-    const dayNumber = i - startOffset + 1;
-    const inMonth = dayNumber >= 1 && dayNumber <= daysInMonth;
-    if (!inMonth) {
-      days.push({ value: null, label: "", inMonth: false, inRange: false });
-      continue;
-    }
-
-    const date = new Date(year, month, dayNumber);
-    const value = formatDate(date);
-    const inRange = date >= minDate && date <= maxDate;
-
-    days.push({
-      value,
-      label: String(dayNumber),
-      inMonth: true,
-      inRange,
-    });
+  for (let minutes = startMinutes; minutes < endMinutes; minutes += stepMinutes) {
+    slots.push(minutesToTime(minutes));
   }
 
-  return days;
+  return slots;
 };
 
 export default function AdminCalendarPage() {
@@ -142,12 +157,13 @@ export default function AdminCalendarPage() {
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }, []);
   const lastDay = useMemo(() => addMonthsClamped(today, MONTHS_AHEAD), [today]);
+  const { open, close, slotMinutes } = siteConfig.schedule;
+
   const [selectedDate, setSelectedDate] = useState(formatDate(today));
-  const [calendarMonth, setCalendarMonth] = useState(
-    new Date(today.getFullYear(), today.getMonth(), 1)
-  );
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [blocks, setBlocks] = useState<Block[]>([]);
+  const [appointmentsByDate, setAppointmentsByDate] = useState<
+    Record<string, Appointment[]>
+  >({});
+  const [blocksByDate, setBlocksByDate] = useState<Record<string, Block[]>>({});
   const [status, setStatus] = useState<StatusState>({ type: "idle" });
   const [blockForm, setBlockForm] = useState({
     date: formatDate(today),
@@ -156,59 +172,138 @@ export default function AdminCalendarPage() {
     note: "",
   });
 
-  const totalBlockedMinutes = useMemo(
-    () => blocks.reduce((sum, block) => sum + block.duration, 0),
-    [blocks]
+  const selectedDateObj = useMemo(
+    () => new Date(`${selectedDate}T00:00:00`),
+    [selectedDate]
+  );
+  const weekStart = useMemo(() => getWeekStart(selectedDateObj), [selectedDateObj]);
+  const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart]);
+  const weekDays = useMemo(
+    () => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)),
+    [weekStart]
+  );
+  const weekDateStrings = useMemo(
+    () => weekDays.map((day) => formatDate(day)),
+    [weekDays]
   );
 
-  const timelineItems = useMemo<TimelineItem[]>(() => {
-    const appointmentItems = appointments.map((appointment) => {
-      const metaParts = [appointment.clientName, appointment.duration].filter(Boolean);
-      return {
-        id: `appointment-${appointment.id}`,
-        time: appointment.time,
-        title: appointment.serviceName,
-        meta: metaParts.join(" | "),
-        type: "appointment" as const,
-        status: appointment.status || "pending",
-      };
-    });
+  const timeSlots = useMemo(
+    () => buildTimeSlots(open, close, slotMinutes),
+    [open, close, slotMinutes]
+  );
+  const slotCount = timeSlots.length;
 
-    const blockItems = blocks.map((block) => {
-      const metaParts = [`${block.duration} min`, block.note].filter(Boolean);
-      return {
-        id: `block-${block.id}`,
-        time: block.time,
-        title: "Blokada",
-        meta: metaParts.join(" | "),
-        type: "block" as const,
-      };
-    });
-
-    return [...appointmentItems, ...blockItems].sort((a, b) =>
-      a.time.localeCompare(b.time)
-    );
-  }, [appointments, blocks]);
-
-  const calendarDays = useMemo(
-    () => buildCalendarDays(calendarMonth, today, lastDay),
-    [calendarMonth, today, lastDay]
+  const gridStyles = useMemo(
+    () => ({
+      gridTemplateColumns: `repeat(${weekDays.length}, minmax(160px, 1fr))`,
+      gridTemplateRows: `var(--calendar-header-height) repeat(${slotCount}, var(--calendar-slot-height))`,
+      minWidth: `${weekDays.length * 160}px`,
+    }),
+    [weekDays.length, slotCount]
   );
 
-  const canGoPrev = calendarMonth > new Date(today.getFullYear(), today.getMonth(), 1);
-  const canGoNext =
-    calendarMonth < new Date(lastDay.getFullYear(), lastDay.getMonth(), 1);
-
-  const weekdayLabels = useMemo(() => {
-    const base = new Date(2024, 0, 1);
-    return Array.from({ length: 7 }).map((_, index) => formatWeekday(addDays(base, index)));
-  }, []);
+  const timeStyles = useMemo(
+    () => ({
+      gridTemplateRows: `var(--calendar-header-height) repeat(${slotCount}, var(--calendar-slot-height))`,
+    }),
+    [slotCount]
+  );
 
   const selectedDateLabel = selectedDate ? formatLongDate(selectedDate) : "";
+  const weekRangeLabel = useMemo(
+    () => formatRangeLabel(weekStart, weekEnd),
+    [weekStart, weekEnd]
+  );
+
+  const selectedAppointments = appointmentsByDate[selectedDate] ?? [];
+  const selectedBlocks = blocksByDate[selectedDate] ?? [];
+
+  const totalAppointments = useMemo(
+    () =>
+      Object.values(appointmentsByDate).reduce((sum, list) => sum + list.length, 0),
+    [appointmentsByDate]
+  );
+  const totalBlockedMinutes = useMemo(
+    () =>
+      Object.values(blocksByDate).reduce(
+        (sum, list) => sum + list.reduce((blockSum, block) => blockSum + block.duration, 0),
+        0
+      ),
+    [blocksByDate]
+  );
+
+  const canGoPrev = weekStart > today;
+  const canGoNext = addDays(weekStart, 7) <= lastDay;
+
+  const scheduleItems = useMemo(() => {
+    const items: ScheduleItem[] = [];
+    const openMinutes = timeToMinutes(open);
+    const closeMinutes = timeToMinutes(close);
+
+    weekDays.forEach((day, dayIndex) => {
+      const dateKey = formatDate(day);
+      const dayAppointments = appointmentsByDate[dateKey] ?? [];
+      const dayBlocks = blocksByDate[dateKey] ?? [];
+
+      dayAppointments.forEach((appointment) => {
+        const startMinutes = timeToMinutes(appointment.time);
+        const durationMinutes =
+          parseDurationMinutes(appointment.duration) || slotMinutes;
+
+        if (startMinutes < openMinutes || startMinutes >= closeMinutes) {
+          return;
+        }
+
+        const startIndex = Math.floor((startMinutes - openMinutes) / slotMinutes);
+        const rowStart = startIndex + 2;
+        const rawSpan = Math.ceil(durationMinutes / slotMinutes);
+        const maxSpan = slotCount - startIndex;
+        const span = Math.max(1, Math.min(rawSpan, maxSpan));
+
+        items.push({
+          id: `appointment-${appointment.id}`,
+          dayIndex,
+          startRow: rowStart,
+          span,
+          title: appointment.clientName,
+          subtitle: appointment.serviceName,
+          type: "appointment",
+          status: appointment.status || "pending",
+        });
+      });
+
+      dayBlocks.forEach((block) => {
+        const startMinutes = timeToMinutes(block.time);
+        const durationMinutes = block.duration || slotMinutes;
+
+        if (startMinutes < openMinutes || startMinutes >= closeMinutes) {
+          return;
+        }
+
+        const startIndex = Math.floor((startMinutes - openMinutes) / slotMinutes);
+        const rowStart = startIndex + 2;
+        const rawSpan = Math.ceil(durationMinutes / slotMinutes);
+        const maxSpan = slotCount - startIndex;
+        const span = Math.max(1, Math.min(rawSpan, maxSpan));
+
+        items.push({
+          id: `block-${block.id}`,
+          dayIndex,
+          startRow: rowStart,
+          span,
+          title: "Blokada",
+          subtitle: block.note || `${block.duration} min`,
+          type: "block",
+        });
+      });
+    });
+
+    return items;
+  }, [weekDays, appointmentsByDate, blocksByDate, open, close, slotMinutes, slotCount]);
 
   const fetchAppointments = async (date: string) => {
     if (!apiBaseUrl || !adminKey) {
-      return;
+      return [];
     }
 
     const response = await fetch(
@@ -226,15 +321,13 @@ export default function AdminCalendarPage() {
     }
 
     const items = Array.isArray(data.appointments) ? data.appointments : [];
-    items.sort((a: Appointment, b: Appointment) =>
-      `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)
-    );
-    setAppointments(items);
+    items.sort((a: Appointment, b: Appointment) => a.time.localeCompare(b.time));
+    return items;
   };
 
   const fetchBlocks = async (date: string) => {
     if (!apiBaseUrl || !adminKey) {
-      return;
+      return [];
     }
 
     const response = await fetch(
@@ -252,10 +345,11 @@ export default function AdminCalendarPage() {
     }
 
     const items = Array.isArray(data.blocks) ? data.blocks : [];
-    setBlocks(items);
+    items.sort((a: Block, b: Block) => a.time.localeCompare(b.time));
+    return items;
   };
 
-  const refreshData = async (date: string) => {
+  const refreshData = async (dates: string[]) => {
     if (!apiBaseUrl) {
       setStatus({
         type: "error",
@@ -275,11 +369,20 @@ export default function AdminCalendarPage() {
     setStatus({ type: "loading" });
 
     try {
-      await Promise.all([fetchAppointments(date), fetchBlocks(date)]);
+      const appointmentEntries = await Promise.all(
+        dates.map(async (date) => [date, await fetchAppointments(date)] as const)
+      );
+      const blockEntries = await Promise.all(
+        dates.map(async (date) => [date, await fetchBlocks(date)] as const)
+      );
+
+      setAppointmentsByDate(
+        Object.fromEntries(appointmentEntries) as Record<string, Appointment[]>
+      );
+      setBlocksByDate(Object.fromEntries(blockEntries) as Record<string, Block[]>);
       setStatus({ type: "success", message: "Kalendar je osvezen." });
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : "Doslo je do greske.";
       setStatus({ type: "error", message });
     }
   };
@@ -290,17 +393,15 @@ export default function AdminCalendarPage() {
     }
 
     setBlockForm((prev) => ({ ...prev, date: selectedDate }));
-    refreshData(selectedDate);
   }, [selectedDate]);
 
   useEffect(() => {
-    const [year, month] = selectedDate.split("-").map((part) => Number(part));
-    if (!year || !month) {
+    if (weekDateStrings.length === 0) {
       return;
     }
 
-    setCalendarMonth(new Date(year, month - 1, 1));
-  }, [selectedDate]);
+    refreshData(weekDateStrings);
+  }, [weekDateStrings]);
 
   const handleBlockChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -308,6 +409,10 @@ export default function AdminCalendarPage() {
       ...prev,
       [name]: value,
     }));
+
+    if (name === "date") {
+      setSelectedDate(value);
+    }
   };
 
   const handleCreateBlock = async (event: FormEvent<HTMLFormElement>) => {
@@ -340,10 +445,9 @@ export default function AdminCalendarPage() {
       }
 
       setBlockForm((prev) => ({ ...prev, time: "", duration: "20", note: "" }));
-      await refreshData(selectedDate);
+      await refreshData(weekDateStrings);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : "Doslo je do greske.";
       setStatus({ type: "error", message });
     }
   };
@@ -368,81 +472,34 @@ export default function AdminCalendarPage() {
         throw new Error(data?.message || "Ne mogu da obrisem blokadu.");
       }
 
-      await refreshData(selectedDate);
+      await refreshData(weekDateStrings);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : "Doslo je do greske.";
       setStatus({ type: "error", message });
     }
+  };
+
+  const getItemClass = (item: ScheduleItem) => {
+    if (item.type === "block") {
+      return "calendar-item calendar-item--block";
+    }
+
+    const statusClass =
+      item.status && ["pending", "confirmed", "completed", "cancelled"].includes(item.status)
+        ? item.status
+        : "pending";
+    return `calendar-item calendar-item--${statusClass}`;
   };
 
   return (
     <AdminShell title="Kalendar" subtitle="Upravljanje dostupnoscu termina">
       <div className="admin-grid">
-        {status.type !== "idle" && status.message && (
-          <div className={`form-status ${status.type}`}>{status.message}</div>
-        )}
-
         <div className="calendar-layout">
           <aside className="calendar-sidebar">
-            <div>
-              <h3>Izaberi datum</h3>
-              <div className="calendar">
-                <div className="calendar-header">
-                  <button
-                    className="button small outline calendar-nav"
-                    type="button"
-                    disabled={!canGoPrev}
-                    onClick={() => setCalendarMonth(addMonths(calendarMonth, -1))}
-                  >
-                    Prethodni
-                  </button>
-                  <div className="calendar-title">{formatMonthLabel(calendarMonth)}</div>
-                  <button
-                    className="button small outline calendar-nav"
-                    type="button"
-                    disabled={!canGoNext}
-                    onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))}
-                  >
-                    Sledeci
-                  </button>
-                </div>
-
-                <div className="calendar-weekdays">
-                  {weekdayLabels.map((day) => (
-                    <span key={day}>{day}</span>
-                  ))}
-                </div>
-
-                <div className="calendar-grid">
-                  {calendarDays.map((day, index) => {
-                    if (!day.inMonth) {
-                      return <div key={`empty-${index}`} className="calendar-cell" />;
-                    }
-
-                    const isActive = day.value === selectedDate;
-                    const isDisabled = !day.inRange;
-
-                    return (
-                      <button
-                        key={day.value}
-                        type="button"
-                        className={`calendar-day ${isActive ? "is-active" : ""}`}
-                        disabled={isDisabled}
-                        onClick={() => {
-                          const value = day.value;
-                          if (!value) {
-                            return;
-                          }
-                          setSelectedDate(value);
-                        }}
-                      >
-                        <span>{day.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+            <div className="calendar-selected">
+              <span>Izabrani datum</span>
+              <strong>{selectedDateLabel || "Izaberi datum"}</strong>
+              <span className="calendar-selected__meta">{selectedDate}</span>
             </div>
 
             <form className="calendar-form" onSubmit={handleCreateBlock}>
@@ -455,6 +512,8 @@ export default function AdminCalendarPage() {
                   className="input"
                   type="date"
                   value={blockForm.date}
+                  min={formatDate(today)}
+                  max={formatDate(lastDay)}
                   onChange={handleBlockChange}
                   required
                 />
@@ -502,88 +561,153 @@ export default function AdminCalendarPage() {
           </aside>
 
           <div className="calendar-main">
-            <div className="calendar-summary">
-              <div className="summary-card">
-                <span>Datum</span>
-                <strong>{selectedDateLabel || "Izaberi datum"}</strong>
-                <span className="summary-sub">{selectedDate}</span>
+            <div className="calendar-toolbar">
+              <div className="calendar-toolbar__title">
+                <h2>{formatMonthLabel(weekStart)}</h2>
+                <span>{weekRangeLabel}</span>
               </div>
-              <div className="summary-card">
-                <span>Zakazano</span>
-                <strong>{appointments.length}</strong>
-                <span className="summary-sub">termina</span>
+              <div className="calendar-toolbar__stats">
+                <div className="calendar-metric">
+                  <strong>{totalAppointments}</strong>
+                  <span>termina</span>
+                </div>
+                <div className="calendar-metric">
+                  <strong>{totalBlockedMinutes}</strong>
+                  <span>min blokirano</span>
+                </div>
               </div>
-              <div className="summary-card">
-                <span>Blokirano</span>
-                <strong>{blocks.length}</strong>
-                <span className="summary-sub">{totalBlockedMinutes} min</span>
+              <div className="calendar-toolbar__actions">
+                <button
+                  className="button small outline"
+                  type="button"
+                  disabled={!canGoPrev}
+                  onClick={() => setSelectedDate(formatDate(addDays(weekStart, -7)))}
+                >
+                  Prethodni
+                </button>
+                <button
+                  className="button small ghost"
+                  type="button"
+                  onClick={() => setSelectedDate(formatDate(today))}
+                >
+                  Danas
+                </button>
+                <button
+                  className="button small outline"
+                  type="button"
+                  disabled={!canGoNext}
+                  onClick={() => setSelectedDate(formatDate(addDays(weekStart, 7)))}
+                >
+                  Sledeci
+                </button>
               </div>
             </div>
 
-            <div className="calendar-timeline">
-              <div className="calendar-timeline__header">
-                <h3>Raspored dana</h3>
-                <span>{timelineItems.length} stavki</span>
-              </div>
-              {timelineItems.length === 0 && (
-                <div className="admin-card">Nema stavki za izabrani datum.</div>
-              )}
-              {timelineItems.length > 0 && (
-                <div className="timeline-list">
-                  {timelineItems.map((item) => (
-                    <div key={item.id} className={`timeline-item ${item.type}`}>
-                      <div className="timeline-time">{item.time}</div>
-                      <div className="timeline-body">
-                        <strong>{item.title}</strong>
-                        {item.meta && <span>{item.meta}</span>}
-                      </div>
-                      {item.type === "appointment" ? (
-                        <div className={`status-pill ${item.status || "pending"}`}>
-                          {statusLabels[item.status || "pending"] || item.status}
-                        </div>
-                      ) : (
-                        <div className="timeline-tag">Blokada</div>
-                      )}
+            {status.type !== "idle" && status.message && (
+              <div className={`form-status ${status.type}`}>{status.message}</div>
+            )}
+
+            <div className="calendar-schedule">
+              <div className="calendar-schedule__scroll">
+                <div className="calendar-schedule__times" style={timeStyles}>
+                  <div className="calendar-time-header" />
+                  {timeSlots.map((time) => (
+                    <div key={time} className="calendar-time">
+                      {time}
                     </div>
                   ))}
                 </div>
-              )}
+
+                <div className="calendar-schedule__grid" style={gridStyles}>
+                  {weekDays.map((day, index) => {
+                    const dateKey = formatDate(day);
+                    const isActive = dateKey === selectedDate;
+                    const isToday = dateKey === formatDate(today);
+                    const inRange = day >= today && day <= lastDay;
+                    return (
+                      <button
+                        key={dateKey}
+                        type="button"
+                        className={`calendar-day-header ${isActive ? "is-active" : ""} ${
+                          isToday ? "is-today" : ""
+                        }`}
+                        style={{ gridColumn: index + 1, gridRow: 1 }}
+                        disabled={!inRange}
+                        onClick={() => setSelectedDate(dateKey)}
+                      >
+                        <span className="calendar-day-number">{day.getDate()}</span>
+                        <span className="calendar-day-label">
+                          {formatWeekday(day).toUpperCase()}
+                        </span>
+                      </button>
+                    );
+                  })}
+
+                  {timeSlots.map((slot, rowIndex) =>
+                    weekDays.map((_, colIndex) => (
+                      <div
+                        key={`${slot}-${colIndex}`}
+                        className="calendar-slot"
+                        style={{ gridColumn: colIndex + 1, gridRow: rowIndex + 2 }}
+                      />
+                    ))
+                  )}
+
+                  {scheduleItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className={getItemClass(item)}
+                      style={{
+                        gridColumn: item.dayIndex + 1,
+                        gridRow: `${item.startRow} / span ${item.span}`,
+                      }}
+                    >
+                      <strong>{item.title}</strong>
+                      {item.subtitle && <span>{item.subtitle}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <div className="calendar-list">
-              <h3>Termini</h3>
-              {appointments.length === 0 && <div className="admin-card">Nema termina.</div>}
-              {appointments.map((appointment) => (
-                <div key={appointment.id} className="admin-card">
-                  <div className={`status-pill ${appointment.status || "pending"}`}>
-                    {statusLabels[appointment.status || "pending"] || appointment.status}
+            <div className="calendar-detail-grid">
+              <div className="calendar-list">
+                <h3>Termini {selectedDateLabel}</h3>
+                {selectedAppointments.length === 0 && (
+                  <div className="admin-card">Nema termina.</div>
+                )}
+                {selectedAppointments.map((appointment) => (
+                  <div key={appointment.id} className="admin-card">
+                    <div className={`status-pill ${appointment.status || "pending"}`}>
+                      {statusLabels[appointment.status || "pending"] || appointment.status}
+                    </div>
+                    <strong>{appointment.serviceName}</strong>
+                    <span>
+                      {appointment.time} | {appointment.clientName}
+                    </span>
                   </div>
-                  <strong>{appointment.serviceName}</strong>
-                  <span>
-                    {appointment.time} | {appointment.clientName}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
 
-            <div className="calendar-list">
-              <h3>Blokade</h3>
-              {blocks.length === 0 && <div className="admin-card">Nema blokada.</div>}
-              {blocks.map((block) => (
-                <div key={block.id} className="admin-card">
-                  <strong>
-                    {block.time} ({block.duration} min)
-                  </strong>
-                  {block.note && <span>{block.note}</span>}
-                  <button
-                    className="button outline"
-                    type="button"
-                    onClick={() => handleDeleteBlock(block.id)}
-                  >
-                    Obrisi
-                  </button>
-                </div>
-              ))}
+              <div className="calendar-list">
+                <h3>Blokade {selectedDateLabel}</h3>
+                {selectedBlocks.length === 0 && <div className="admin-card">Nema blokada.</div>}
+                {selectedBlocks.map((block) => (
+                  <div key={block.id} className="admin-card">
+                    <strong>
+                      {block.time} ({block.duration} min)
+                    </strong>
+                    {block.note && <span>{block.note}</span>}
+                    <button
+                      className="button outline"
+                      type="button"
+                      onClick={() => handleDeleteBlock(block.id)}
+                    >
+                      Obrisi
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
