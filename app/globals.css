@@ -692,6 +692,17 @@ h4 {
   border-color: rgba(17, 17, 17, 0.6);
 }
 
+.calendar-day:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.calendar-day:disabled:hover {
+  transform: none;
+  border-color: rgba(17, 17, 17, 0.12);
+}
+
 .calendar-indicator {
   width: 60%;
   height: 3px;

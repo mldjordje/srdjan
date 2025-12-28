@@ -8,7 +8,7 @@ import { services } from "@/lib/services";
 import { siteConfig } from "@/lib/site";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-const DAYS_AHEAD = 14;
+const MONTHS_AHEAD = 3;
 
 type StatusState = {
   type: "idle" | "sending" | "success" | "error";
@@ -112,6 +112,14 @@ const addDays = (date: Date, days: number) => {
   return next;
 };
 
+const addMonthsClamped = (date: Date, months: number) => {
+  const year = date.getFullYear();
+  const month = date.getMonth() + months;
+  const day = date.getDate();
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  return new Date(year, month, Math.min(day, lastDay));
+};
+
 const addMonths = (date: Date, months: number) =>
   new Date(date.getFullYear(), date.getMonth() + months, 1);
 
@@ -151,6 +159,18 @@ const buildCalendarDays = (
   }
 
   return days;
+};
+
+const buildDateRange = (startDate: Date, endDate: Date) => {
+  const dates: string[] = [];
+  let cursor = new Date(startDate);
+
+  while (cursor <= endDate) {
+    dates.push(formatDate(cursor));
+    cursor = addDays(cursor, 1);
+  }
+
+  return dates;
 };
 
 const buildSlots = (
@@ -197,11 +217,8 @@ export default function BookingForm() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }, []);
-  const lastDay = useMemo(() => addDays(today, DAYS_AHEAD - 1), [today]);
-  const dateList = useMemo(
-    () => Array.from({ length: DAYS_AHEAD }, (_, index) => formatDate(addDays(today, index))),
-    [today]
-  );
+  const lastDay = useMemo(() => addMonthsClamped(today, MONTHS_AHEAD), [today]);
+  const dateList = useMemo(() => buildDateRange(today, lastDay), [today, lastDay]);
 
   const [client, setClient] = useState<ClientProfile | null>(null);
   const [formData, setFormData] = useState({

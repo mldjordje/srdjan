@@ -6,7 +6,7 @@ import AdminShell from "@/components/admin/AdminShell";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || "";
-const DAYS_AHEAD = 14;
+const MONTHS_AHEAD = 3;
 
 type Appointment = {
   id: string;
@@ -29,6 +29,13 @@ type Block = {
 type StatusState = {
   type: "idle" | "loading" | "success" | "error";
   message?: string;
+};
+
+type CalendarDay = {
+  value: string | null;
+  label: string;
+  inMonth: boolean;
+  inRange: boolean;
 };
 
 type TimelineItem = {
@@ -54,11 +61,15 @@ const formatDate = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const formatDateLabel = (date: Date) =>
+const formatMonthLabel = (date: Date) =>
+  new Intl.DateTimeFormat("sr-RS", {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+
+const formatWeekday = (date: Date) =>
   new Intl.DateTimeFormat("sr-RS", {
     weekday: "short",
-    day: "2-digit",
-    month: "short",
   }).format(date);
 
 const formatLongDate = (value: string) => {
@@ -70,27 +81,76 @@ const formatLongDate = (value: string) => {
   }).format(date);
 };
 
-const buildDateOptions = () => {
-  const today = new Date();
-  const list = [] as { value: string; label: string }[];
+const addDays = (date: Date, days: number) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+};
 
-  for (let i = 0; i < DAYS_AHEAD; i += 1) {
-    const next = new Date(today);
-    next.setDate(today.getDate() + i);
-    list.push({ value: formatDate(next), label: formatDateLabel(next) });
+const addMonths = (date: Date, months: number) =>
+  new Date(date.getFullYear(), date.getMonth() + months, 1);
+
+const addMonthsClamped = (date: Date, months: number) => {
+  const year = date.getFullYear();
+  const month = date.getMonth() + months;
+  const day = date.getDate();
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  return new Date(year, month, Math.min(day, lastDay));
+};
+
+const getMondayIndex = (day: number) => (day + 6) % 7;
+
+const buildCalendarDays = (
+  monthDate: Date,
+  minDate: Date,
+  maxDate: Date
+): CalendarDay[] => {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const firstOfMonth = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const startOffset = getMondayIndex(firstOfMonth.getDay());
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+  const days: CalendarDay[] = [];
+
+  for (let i = 0; i < totalCells; i += 1) {
+    const dayNumber = i - startOffset + 1;
+    const inMonth = dayNumber >= 1 && dayNumber <= daysInMonth;
+    if (!inMonth) {
+      days.push({ value: null, label: "", inMonth: false, inRange: false });
+      continue;
+    }
+
+    const date = new Date(year, month, dayNumber);
+    const value = formatDate(date);
+    const inRange = date >= minDate && date <= maxDate;
+
+    days.push({
+      value,
+      label: String(dayNumber),
+      inMonth: true,
+      inRange,
+    });
   }
 
-  return list;
+  return days;
 };
 
 export default function AdminCalendarPage() {
-  const dateOptions = useMemo(() => buildDateOptions(), []);
-  const [selectedDate, setSelectedDate] = useState(dateOptions[0]?.value ?? "");
+  const today = useMemo(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }, []);
+  const lastDay = useMemo(() => addMonthsClamped(today, MONTHS_AHEAD), [today]);
+  const [selectedDate, setSelectedDate] = useState(formatDate(today));
+  const [calendarMonth, setCalendarMonth] = useState(
+    new Date(today.getFullYear(), today.getMonth(), 1)
+  );
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [status, setStatus] = useState<StatusState>({ type: "idle" });
   const [blockForm, setBlockForm] = useState({
-    date: dateOptions[0]?.value ?? "",
+    date: formatDate(today),
     time: "",
     duration: "20",
     note: "",
@@ -129,6 +189,20 @@ export default function AdminCalendarPage() {
       a.time.localeCompare(b.time)
     );
   }, [appointments, blocks]);
+
+  const calendarDays = useMemo(
+    () => buildCalendarDays(calendarMonth, today, lastDay),
+    [calendarMonth, today, lastDay]
+  );
+
+  const canGoPrev = calendarMonth > new Date(today.getFullYear(), today.getMonth(), 1);
+  const canGoNext =
+    calendarMonth < new Date(lastDay.getFullYear(), lastDay.getMonth(), 1);
+
+  const weekdayLabels = useMemo(() => {
+    const base = new Date(2024, 0, 1);
+    return Array.from({ length: 7 }).map((_, index) => formatWeekday(addDays(base, index)));
+  }, []);
 
   const selectedDateLabel = selectedDate ? formatLongDate(selectedDate) : "";
 
@@ -219,6 +293,15 @@ export default function AdminCalendarPage() {
     refreshData(selectedDate);
   }, [selectedDate]);
 
+  useEffect(() => {
+    const [year, month] = selectedDate.split("-").map((part) => Number(part));
+    if (!year || !month) {
+      return;
+    }
+
+    setCalendarMonth(new Date(year, month - 1, 1));
+  }, [selectedDate]);
+
   const handleBlockChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setBlockForm((prev) => ({
@@ -304,18 +387,61 @@ export default function AdminCalendarPage() {
           <aside className="calendar-sidebar">
             <div>
               <h3>Izaberi datum</h3>
-              <div className="date-grid">
-                {dateOptions.map((date) => (
+              <div className="calendar">
+                <div className="calendar-header">
                   <button
-                    key={date.value}
+                    className="button small outline calendar-nav"
                     type="button"
-                    className={`date-card ${date.value === selectedDate ? "is-active" : ""}`}
-                    onClick={() => setSelectedDate(date.value)}
+                    disabled={!canGoPrev}
+                    onClick={() => setCalendarMonth(addMonths(calendarMonth, -1))}
                   >
-                    <span>{date.label}</span>
-                    <strong>{date.value}</strong>
+                    Prethodni
                   </button>
-                ))}
+                  <div className="calendar-title">{formatMonthLabel(calendarMonth)}</div>
+                  <button
+                    className="button small outline calendar-nav"
+                    type="button"
+                    disabled={!canGoNext}
+                    onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))}
+                  >
+                    Sledeci
+                  </button>
+                </div>
+
+                <div className="calendar-weekdays">
+                  {weekdayLabels.map((day) => (
+                    <span key={day}>{day}</span>
+                  ))}
+                </div>
+
+                <div className="calendar-grid">
+                  {calendarDays.map((day, index) => {
+                    if (!day.inMonth) {
+                      return <div key={`empty-${index}`} className="calendar-cell" />;
+                    }
+
+                    const isActive = day.value === selectedDate;
+                    const isDisabled = !day.inRange;
+
+                    return (
+                      <button
+                        key={day.value}
+                        type="button"
+                        className={`calendar-day ${isActive ? "is-active" : ""}`}
+                        disabled={isDisabled}
+                        onClick={() => {
+                          const value = day.value;
+                          if (!value) {
+                            return;
+                          }
+                          setSelectedDate(value);
+                        }}
+                      >
+                        <span>{day.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
