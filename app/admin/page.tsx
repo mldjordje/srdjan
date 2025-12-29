@@ -32,7 +32,7 @@ export default function AdminLoginPage() {
     if (credentials.user === adminUser && credentials.pass === adminPass) {
       localStorage.setItem("db_admin_auth", "true");
       setStatus({ type: "success", message: "Ulogovani ste u CMS." });
-      router.push("/admin/appointments");
+      router.push("/admin/termini");
       return;
     }
 

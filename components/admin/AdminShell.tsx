@@ -12,7 +12,7 @@ type AdminShellProps = {
 };
 
 const navItems = [
-  { href: "/admin/appointments", label: "Termini" },
+  { href: "/admin/termini", label: "Termini" },
   { href: "/admin/calendar", label: "Kalendar" },
   { href: "/admin/clients", label: "Klijenti" },
 ];
@@ -76,15 +76,21 @@ export default function AdminShell({ title, subtitle, children }: AdminShellProp
             {subtitle && <p>{subtitle}</p>}
           </div>
           <nav className="admin-shell__nav">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={pathname === item.href ? "is-active" : ""}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {navItems.map((item) => {
+              const isActive =
+                pathname === item.href ||
+                (item.href === "/admin/termini" && pathname === "/admin/appointments");
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={isActive ? "is-active" : ""}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
         </div>
         {children}
