@@ -31,6 +31,7 @@ export default function Home() {
             <a href="#services">Usluge</a>
             <a href="#booking">Zakazivanje</a>
             <a href="#studio">Studio</a>
+            <Link href="/moji-termini">Moji termini</Link>
             <Link href="/login">Prijava</Link>
             <Link className="button small outline" href="/register">
               Registracija

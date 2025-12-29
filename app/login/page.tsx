@@ -174,6 +174,7 @@ export default function ClientLoginPage() {
           <nav className="nav-links">
             <Link href="/">Pocetna</Link>
             <Link href="/#booking">Zakazi termin</Link>
+            <Link href="/moji-termini">Moji termini</Link>
             <Link href="/register">Registracija</Link>
           </nav>
         </div>
@@ -243,6 +244,9 @@ export default function ClientLoginPage() {
               <div className="hero-actions">
                 <Link className="button" href="/#booking">
                   Zakazi novi termin
+                </Link>
+                <Link className="button outline" href="/moji-termini">
+                  Moji termini
                 </Link>
                 <button
                   className="button outline"

@@ -1108,6 +1108,121 @@ h4 {
   gap: 20px;
 }
 
+.appointments-layout {
+  padding: 90px 0 120px;
+  display: grid;
+  gap: 32px;
+}
+
+.appointments-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.appointments-header h1 {
+  font-size: clamp(2.2rem, 4vw, 3.2rem);
+}
+
+.appointments-header p {
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+.appointments-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.appointments-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.overview-card {
+  padding: 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: var(--bg-elevated);
+  display: grid;
+  gap: 8px;
+  box-shadow: var(--shadow-soft);
+}
+
+.overview-card span {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.overview-card strong {
+  font-size: 1.4rem;
+}
+
+.overview-card p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.appointments-section {
+  display: grid;
+  gap: 16px;
+}
+
+.appointments-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.appointments-section__header h2 {
+  color: var(--text);
+  font-size: 1.4rem;
+}
+
+.appointments-list {
+  display: grid;
+  gap: 12px;
+}
+
+.appointment-item {
+  padding: 16px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 14px 26px rgba(17, 17, 17, 0.06);
+}
+
+.appointment-item strong {
+  display: block;
+  font-size: 1.05rem;
+}
+
+.appointment-item span {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.appointments-empty {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px dashed rgba(17, 17, 17, 0.2);
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
 .token-list {
   display: grid;
   gap: 14px;
@@ -2018,6 +2133,16 @@ h4 {
   .calendar-toolbar {
     align-items: flex-start;
   }
+
+  .appointments-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .appointments-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 
 @media (max-width: 600px) {
@@ -2126,5 +2251,10 @@ h4 {
   .timeline-item .status-pill,
   .timeline-item .timeline-tag {
     justify-self: start;
+  }
+
+  .appointment-item {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
