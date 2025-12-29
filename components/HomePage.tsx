@@ -13,6 +13,8 @@ export default function HomePage() {
   const [showLoader, setShowLoader] = useState(true);
   const prefersReducedMotion = useReducedMotion();
   const year = new Date().getFullYear();
+  const easeOut: [number, number, number, number] = [0.16, 1, 0.3, 1];
+  const easeSmooth: [number, number, number, number] = [0.2, 0.9, 0.3, 1];
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setShowLoader(false), 1400);
@@ -33,7 +35,7 @@ export default function HomePage() {
       y: 0,
       transition: prefersReducedMotion
         ? { duration: 0 }
-        : { duration: 0.8, ease: [0.16, 1, 0.3, 1] },
+        : { duration: 0.8, ease: easeOut },
     },
   };
 
@@ -53,7 +55,7 @@ export default function HomePage() {
       y: 0,
       transition: prefersReducedMotion
         ? { duration: 0 }
-        : { duration: 0.55, ease: [0.16, 1, 0.3, 1] },
+        : { duration: 0.55, ease: easeOut },
     },
   };
 
@@ -91,7 +93,7 @@ export default function HomePage() {
               transition={
                 prefersReducedMotion
                   ? { duration: 0 }
-                  : { duration: 0.9, ease: [0.2, 0.9, 0.3, 1] }
+                  : { duration: 0.9, ease: easeSmooth }
               }
             >
               <div className="preloader-brand">
