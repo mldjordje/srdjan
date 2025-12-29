@@ -1254,6 +1254,71 @@ h4 {
   gap: 12px;
 }
 
+.calendar-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.calendar-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 8, 8, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.calendar-modal__card {
+  position: relative;
+  width: min(420px, 92vw);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(17, 17, 17, 0.15);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+  z-index: 1;
+}
+
+.calendar-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.calendar-modal__header span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.calendar-modal__tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.calendar-modal__tabs .button {
+  width: 100%;
+}
+
+.calendar-modal__close {
+  border: none;
+  background: rgba(17, 17, 17, 0.08);
+  color: var(--text);
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
 .month-picker {
   padding: 16px;
   border-radius: var(--radius-md);
@@ -1368,6 +1433,12 @@ h4 {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg);
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.08);
 }
 
 .calendar-toolbar__title {
@@ -1950,6 +2021,16 @@ h4 {
 }
 
 @media (max-width: 600px) {
+  .calendar-modal {
+    align-items: end;
+  }
+
+  .calendar-modal__card {
+    width: 100%;
+    border-radius: 18px 18px 0 0;
+    padding: 16px 16px 20px;
+  }
+
   .section {
     padding: 56px 0;
   }

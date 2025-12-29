@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 
 import AdminShell from "@/components/admin/AdminShell";
+import { services } from "@/lib/services";
 import { siteConfig } from "@/lib/site";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -28,6 +29,16 @@ type Block = {
   time: string;
   duration: number;
   note?: string;
+};
+
+type AppointmentFormState = {
+  date: string;
+  time: string;
+  serviceId: string;
+  clientName: string;
+  phone: string;
+  email: string;
+  notes: string;
 };
 
 type StatusState = {
@@ -248,16 +259,29 @@ export default function AdminCalendarPage() {
   >({});
   const [blocksByDate, setBlocksByDate] = useState<Record<string, Block[]>>({});
   const [status, setStatus] = useState<StatusState>({ type: "idle" });
+  const [appointmentStatus, setAppointmentStatus] = useState<StatusState>({
+    type: "idle",
+  });
+  const [isSlotModalOpen, setIsSlotModalOpen] = useState(false);
+  const [slotAction, setSlotAction] = useState<"appointment" | "block">("appointment");
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ date: string; time: string } | null>(
     null
   );
-  const blockFormRef = useRef<HTMLFormElement | null>(null);
   const [blockForm, setBlockForm] = useState({
     date: formatDate(firstWorkingDay),
     time: "",
     duration: "20",
     note: "",
+  });
+  const [appointmentForm, setAppointmentForm] = useState<AppointmentFormState>({
+    date: formatDate(firstWorkingDay),
+    time: "",
+    serviceId: services[0]?.id ?? "",
+    clientName: "",
+    phone: "",
+    email: "",
+    notes: "",
   });
 
   const selectedDateObj = useMemo(
@@ -325,6 +349,10 @@ export default function AdminCalendarPage() {
 
   const selectedAppointments = appointmentsByDate[selectedDate] ?? [];
   const selectedBlocks = blocksByDate[selectedDate] ?? [];
+  const selectedService = useMemo(
+    () => services.find((service) => service.id === appointmentForm.serviceId),
+    [appointmentForm.serviceId]
+  );
 
   const totalAppointments = useMemo(
     () =>
@@ -532,6 +560,7 @@ export default function AdminCalendarPage() {
     }
 
     setBlockForm((prev) => ({ ...prev, date: selectedDate }));
+    setAppointmentForm((prev) => ({ ...prev, date: selectedDate }));
   }, [selectedDate]);
 
   useEffect(() => {
@@ -594,6 +623,40 @@ export default function AdminCalendarPage() {
     }
   };
 
+  const handleAppointmentChange = (
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = event.target;
+
+    if (name === "date") {
+      const normalized = normalizeToWorkingDay(value);
+      if (normalized !== value) {
+        setAppointmentStatus({
+          type: "error",
+          message: "Vikendom ne radimo. Izabran je prvi radni dan.",
+        });
+      }
+      setAppointmentForm((prev) => ({
+        ...prev,
+        date: normalized,
+      }));
+      setSelectedDate(normalized);
+      if (appointmentForm.time) {
+        setSelectedSlot({ date: normalized, time: appointmentForm.time });
+      }
+      return;
+    }
+
+    if (name === "time") {
+      setSelectedSlot({ date: appointmentForm.date, time: value });
+    }
+
+    setAppointmentForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
   const handleSlotSelect = (date: string, time: string) => {
     const dateObj = new Date(`${date}T00:00:00`);
     if (!isWorkingDay(dateObj)) {
@@ -601,6 +664,9 @@ export default function AdminCalendarPage() {
     }
 
     setEditingBlockId(null);
+    setSlotAction("appointment");
+    setAppointmentStatus({ type: "idle" });
+    setIsSlotModalOpen(true);
     setSelectedSlot({ date, time });
     setSelectedDate(date);
     setBlockForm((prev) => ({
@@ -609,10 +675,16 @@ export default function AdminCalendarPage() {
       time,
       duration: prev.duration || String(slotMinutes),
     }));
-    blockFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setAppointmentForm((prev) => ({
+      ...prev,
+      date,
+      time,
+    }));
   };
 
   const handleEditBlock = (block: Block) => {
+    setSlotAction("block");
+    setIsSlotModalOpen(true);
     setEditingBlockId(block.id);
     setSelectedSlot({ date: block.date, time: block.time });
     setSelectedDate(block.date);
@@ -622,12 +694,12 @@ export default function AdminCalendarPage() {
       duration: String(block.duration),
       note: block.note || "",
     });
-    blockFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const handleCancelEdit = () => {
     setEditingBlockId(null);
     setSelectedSlot(null);
+    setIsSlotModalOpen(false);
     setBlockForm((prev) => ({
       ...prev,
       time: "",
@@ -685,11 +757,104 @@ export default function AdminCalendarPage() {
 
       setEditingBlockId(null);
       setSelectedSlot(null);
+      setIsSlotModalOpen(false);
       setBlockForm((prev) => ({ ...prev, time: "", duration: "20", note: "" }));
       await refreshData(weekDateStrings);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Doslo je do greske.";
       setStatus({ type: "error", message });
+    }
+  };
+
+  const handleCreateAppointment = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!apiBaseUrl) {
+      setAppointmentStatus({
+        type: "error",
+        message: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+      });
+      return;
+    }
+
+    if (!selectedService) {
+      setAppointmentStatus({
+        type: "error",
+        message: "Izaberi uslugu pre zakazivanja.",
+      });
+      return;
+    }
+
+    if (!appointmentForm.clientName.trim() || !appointmentForm.phone.trim()) {
+      setAppointmentStatus({
+        type: "error",
+        message: "Unesi ime klijenta i telefon.",
+      });
+      return;
+    }
+
+    if (!appointmentForm.date || !appointmentForm.time) {
+      setAppointmentStatus({
+        type: "error",
+        message: "Izaberi datum i vreme.",
+      });
+      return;
+    }
+
+    const bookingDate = new Date(`${appointmentForm.date}T00:00:00`);
+    if (!isWorkingDay(bookingDate)) {
+      setAppointmentStatus({
+        type: "error",
+        message: "Vikendom ne radimo. Izaberi radni dan.",
+      });
+      return;
+    }
+
+    setAppointmentStatus({ type: "loading" });
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/appointments.php`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          clientName: appointmentForm.clientName.trim(),
+          phone: appointmentForm.phone.trim(),
+          email: appointmentForm.email.trim(),
+          serviceId: selectedService.id,
+          serviceName: selectedService.name,
+          duration: selectedService.duration,
+          price: selectedService.price,
+          date: appointmentForm.date,
+          time: appointmentForm.time,
+          notes: appointmentForm.notes.trim(),
+          source: "admin",
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Ne mogu da sacuvam termin.");
+      }
+
+      setAppointmentStatus({
+        type: "success",
+        message: "Termin je sacuvan.",
+      });
+      setAppointmentForm((prev) => ({
+        ...prev,
+        clientName: "",
+        phone: "",
+        email: "",
+        notes: "",
+      }));
+      setSelectedSlot(null);
+      setIsSlotModalOpen(false);
+      await refreshData(weekDateStrings);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      setAppointmentStatus({ type: "error", message });
     }
   };
 
@@ -722,6 +887,13 @@ export default function AdminCalendarPage() {
       const message = error instanceof Error ? error.message : "Doslo je do greske.";
       setStatus({ type: "error", message });
     }
+  };
+
+  const handleCloseModal = () => {
+    setIsSlotModalOpen(false);
+    setEditingBlockId(null);
+    setSelectedSlot(null);
+    setAppointmentStatus({ type: "idle" });
   };
 
   const getItemClass = (item: ScheduleItem) => {
@@ -803,79 +975,6 @@ export default function AdminCalendarPage() {
                 })}
               </div>
             </div>
-
-            <form className="calendar-form" onSubmit={handleCreateBlock} ref={blockFormRef}>
-              <h4>{editingBlockId ? "Izmeni blokadu" : "Dodaj blokadu"}</h4>
-              {selectedSlot && (
-                <div className="calendar-selected-slot">
-                  Izabran termin: {selectedSlot.date} | {selectedSlot.time}
-                </div>
-              )}
-              <div className="form-row">
-                <label htmlFor="date">Datum</label>
-                <input
-                  id="date"
-                  name="date"
-                  className="input"
-                  type="date"
-                  value={blockForm.date}
-                  min={formatDate(firstWorkingDay)}
-                  max={formatDate(lastDay)}
-                  onChange={handleBlockChange}
-                  required
-                />
-              </div>
-              <div className="form-row">
-                <label htmlFor="time">Vreme</label>
-                <input
-                  id="time"
-                  name="time"
-                  className="input"
-                  type="time"
-                  value={blockForm.time}
-                  onChange={handleBlockChange}
-                  required
-                />
-              </div>
-              <div className="form-row">
-                <label htmlFor="duration">Trajanje (min)</label>
-                <input
-                  id="duration"
-                  name="duration"
-                  className="input"
-                  type="number"
-                  min="10"
-                  step="10"
-                  value={blockForm.duration}
-                  onChange={handleBlockChange}
-                  required
-                />
-              </div>
-              <div className="form-row">
-                <label htmlFor="note">Napomena</label>
-                <input
-                  id="note"
-                  name="note"
-                  className="input"
-                  value={blockForm.note}
-                  onChange={handleBlockChange}
-                />
-              </div>
-              <div className="calendar-form__actions">
-                {editingBlockId && (
-                  <button
-                    className="button outline"
-                    type="button"
-                    onClick={handleCancelEdit}
-                  >
-                    Otkazi izmenu
-                  </button>
-                )}
-                <button className="button" type="submit">
-                  {editingBlockId ? "Sacuvaj izmene" : "Sacuvaj blokadu"}
-                </button>
-              </div>
-            </form>
           </aside>
 
           <div className="calendar-main">
@@ -1066,6 +1165,226 @@ export default function AdminCalendarPage() {
           </div>
         </div>
       </div>
+
+      {isSlotModalOpen && (
+        <div className="calendar-modal" role="dialog" aria-modal="true">
+          <div className="calendar-modal__backdrop" onClick={handleCloseModal} />
+          <div className="calendar-modal__card">
+            <div className="calendar-modal__header">
+              <div>
+                <strong>{slotAction === "block" ? "Blokiraj termin" : "Rezervisi termin"}</strong>
+                {selectedSlot && (
+                  <span>
+                    {selectedSlot.date} | {selectedSlot.time}
+                  </span>
+                )}
+              </div>
+              <button
+                className="calendar-modal__close"
+                type="button"
+                onClick={handleCloseModal}
+                aria-label="Zatvori"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="calendar-modal__tabs">
+              <button
+                className={`button small ${slotAction === "appointment" ? "" : "outline"}`}
+                type="button"
+                onClick={() => {
+                  setSlotAction("appointment");
+                  setEditingBlockId(null);
+                }}
+              >
+                Rezervisi
+              </button>
+              <button
+                className={`button small ${slotAction === "block" ? "" : "outline"}`}
+                type="button"
+                onClick={() => setSlotAction("block")}
+              >
+                Blokiraj
+              </button>
+            </div>
+
+            {slotAction === "appointment" ? (
+              <form className="calendar-form" onSubmit={handleCreateAppointment}>
+                <div className="form-row">
+                  <label htmlFor="appointment-date">Datum</label>
+                  <input
+                    id="appointment-date"
+                    name="date"
+                    className="input"
+                    type="date"
+                    value={appointmentForm.date}
+                    min={formatDate(firstWorkingDay)}
+                    max={formatDate(lastDay)}
+                    onChange={handleAppointmentChange}
+                    required
+                  />
+                </div>
+                <div className="form-row">
+                  <label htmlFor="appointment-time">Vreme</label>
+                  <input
+                    id="appointment-time"
+                    name="time"
+                    className="input"
+                    type="time"
+                    value={appointmentForm.time}
+                    onChange={handleAppointmentChange}
+                    required
+                  />
+                </div>
+                <div className="form-row">
+                  <label htmlFor="appointment-service">Usluga</label>
+                  <select
+                    id="appointment-service"
+                    name="serviceId"
+                    className="select"
+                    value={appointmentForm.serviceId}
+                    onChange={handleAppointmentChange}
+                    required
+                  >
+                    <option value="" disabled>
+                      Izaberi uslugu
+                    </option>
+                    {services.map((service) => (
+                      <option key={service.id} value={service.id}>
+                        {service.name} ({service.duration})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-row">
+                  <label htmlFor="appointment-client">Ime klijenta</label>
+                  <input
+                    id="appointment-client"
+                    name="clientName"
+                    className="input"
+                    value={appointmentForm.clientName}
+                    onChange={handleAppointmentChange}
+                    required
+                  />
+                </div>
+                <div className="form-row">
+                  <label htmlFor="appointment-phone">Telefon</label>
+                  <input
+                    id="appointment-phone"
+                    name="phone"
+                    className="input"
+                    type="tel"
+                    inputMode="tel"
+                    value={appointmentForm.phone}
+                    onChange={handleAppointmentChange}
+                    required
+                  />
+                </div>
+                <div className="form-row">
+                  <label htmlFor="appointment-email">Email (opciono)</label>
+                  <input
+                    id="appointment-email"
+                    name="email"
+                    className="input"
+                    type="email"
+                    value={appointmentForm.email}
+                    onChange={handleAppointmentChange}
+                  />
+                </div>
+                <div className="form-row">
+                  <label htmlFor="appointment-notes">Napomena</label>
+                  <input
+                    id="appointment-notes"
+                    name="notes"
+                    className="input"
+                    value={appointmentForm.notes}
+                    onChange={handleAppointmentChange}
+                  />
+                </div>
+                {appointmentStatus.type !== "idle" && appointmentStatus.message && (
+                  <div className={`form-status ${appointmentStatus.type}`}>
+                    {appointmentStatus.message}
+                  </div>
+                )}
+                <div className="calendar-form__actions">
+                  <button className="button" type="submit">
+                    Sacuvaj termin
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form className="calendar-form" onSubmit={handleCreateBlock}>
+                <h4>{editingBlockId ? "Izmeni blokadu" : "Dodaj blokadu"}</h4>
+                <div className="form-row">
+                  <label htmlFor="date">Datum</label>
+                  <input
+                    id="date"
+                    name="date"
+                    className="input"
+                    type="date"
+                    value={blockForm.date}
+                    min={formatDate(firstWorkingDay)}
+                    max={formatDate(lastDay)}
+                    onChange={handleBlockChange}
+                    required
+                  />
+                </div>
+                <div className="form-row">
+                  <label htmlFor="time">Vreme</label>
+                  <input
+                    id="time"
+                    name="time"
+                    className="input"
+                    type="time"
+                    value={blockForm.time}
+                    onChange={handleBlockChange}
+                    required
+                  />
+                </div>
+                <div className="form-row">
+                  <label htmlFor="duration">Trajanje (min)</label>
+                  <input
+                    id="duration"
+                    name="duration"
+                    className="input"
+                    type="number"
+                    min="10"
+                    step="10"
+                    value={blockForm.duration}
+                    onChange={handleBlockChange}
+                    required
+                  />
+                </div>
+                <div className="form-row">
+                  <label htmlFor="note">Napomena</label>
+                  <input
+                    id="note"
+                    name="note"
+                    className="input"
+                    value={blockForm.note}
+                    onChange={handleBlockChange}
+                  />
+                </div>
+                <div className="calendar-form__actions">
+                  {editingBlockId && (
+                    <button
+                      className="button outline"
+                      type="button"
+                      onClick={handleCancelEdit}
+                    >
+                      Otkazi izmenu
+                    </button>
+                  )}
+                  <button className="button" type="submit">
+                    {editingBlockId ? "Sacuvaj izmene" : "Sacuvaj blokadu"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </AdminShell>
   );
 }
