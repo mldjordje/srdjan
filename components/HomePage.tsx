@@ -29,10 +29,15 @@ export default function HomePage() {
   }, [showLoader]);
 
   const sectionVariants = {
-    hidden: { opacity: 0, y: prefersReducedMotion ? 0 : 26 },
+    hidden: {
+      opacity: 0,
+      y: prefersReducedMotion ? 0 : 26,
+      scale: prefersReducedMotion ? 1 : 0.98,
+    },
     visible: {
       opacity: 1,
       y: 0,
+      scale: 1,
       transition: prefersReducedMotion
         ? { duration: 0 }
         : { duration: 0.8, ease: easeOut },
@@ -49,15 +54,50 @@ export default function HomePage() {
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: prefersReducedMotion ? 0 : 16 },
+    hidden: {
+      opacity: 0,
+      y: prefersReducedMotion ? 0 : 16,
+      scale: prefersReducedMotion ? 1 : 0.98,
+    },
     visible: {
       opacity: 1,
       y: 0,
+      scale: 1,
       transition: prefersReducedMotion
         ? { duration: 0 }
         : { duration: 0.55, ease: easeOut },
     },
   };
+
+  const cardVariants = {
+    hidden: {
+      opacity: 0,
+      y: prefersReducedMotion ? 0 : 20,
+      scale: prefersReducedMotion ? 1 : 0.96,
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: prefersReducedMotion
+        ? { duration: 0 }
+        : { duration: 0.7, ease: easeOut },
+    },
+  };
+
+  const heroBgVariants = {
+    hidden: { opacity: 0, scale: prefersReducedMotion ? 1 : 1.06 },
+    visible: {
+      opacity: 0.9,
+      scale: 1,
+      transition: prefersReducedMotion
+        ? { duration: 0 }
+        : { duration: 1.1, ease: easeSmooth },
+    },
+  };
+
+  const cardHover = prefersReducedMotion ? {} : { y: -8, scale: 1.02 };
+  const cardTap = prefersReducedMotion ? {} : { scale: 0.98 };
 
   return (
     <div className="page">
@@ -166,6 +206,15 @@ export default function HomePage() {
           animate="visible"
           variants={sectionVariants}
         >
+          <motion.div className="hero-minimal__bg" variants={heroBgVariants}>
+            <Image
+              src="/image.png"
+              alt="Doctor Barber studio"
+              fill
+              priority
+              sizes="100vw"
+            />
+          </motion.div>
           <div className="hero-minimal__glow" aria-hidden="true" />
           <div className="hero-minimal__grain" aria-hidden="true" />
           <div className="container hero-minimal__inner">
@@ -198,7 +247,12 @@ export default function HomePage() {
           variants={sectionVariants}
         >
           <div className="container">
-            <motion.div className="booking-stage__frame" variants={itemVariants}>
+            <motion.div
+              className="booking-stage__frame"
+              variants={cardVariants}
+              whileHover={cardHover}
+              whileTap={cardTap}
+            >
               <BookingForm />
             </motion.div>
           </div>
@@ -222,7 +276,9 @@ export default function HomePage() {
                 <motion.div
                   key={service.id}
                   className="service-card"
-                  variants={itemVariants}
+                  variants={cardVariants}
+                  whileHover={cardHover}
+                  whileTap={cardTap}
                 >
                   <h3>{service.name}</h3>
                   <div className="service-meta">
@@ -250,15 +306,30 @@ export default function HomePage() {
               <p>Brzo, jasno i bez cekanja. Zakazi, potvrdi, dodji na vreme.</p>
             </motion.div>
             <motion.div className="info-grid" variants={staggerVariants}>
-              <motion.div className="info-card" variants={itemVariants}>
+              <motion.div
+                className="info-card"
+                variants={cardVariants}
+                whileHover={cardHover}
+                whileTap={cardTap}
+              >
                 <h4>Potvrda termina</h4>
                 <p>Javljamo SMS-om ili pozivom. Ako nema termina, saljemo novi.</p>
               </motion.div>
-              <motion.div className="info-card" variants={itemVariants}>
+              <motion.div
+                className="info-card"
+                variants={cardVariants}
+                whileHover={cardHover}
+                whileTap={cardTap}
+              >
                 <h4>Priprema</h4>
                 <p>Dodji 5 minuta ranije. Raspored je precizan.</p>
               </motion.div>
-              <motion.div className="info-card" variants={itemVariants}>
+              <motion.div
+                className="info-card"
+                variants={cardVariants}
+                whileHover={cardHover}
+                whileTap={cardTap}
+              >
                 <h4>Politika otkazivanja</h4>
                 <p>Otkazivanje bar 6 sati ranije.</p>
               </motion.div>
@@ -280,15 +351,30 @@ export default function HomePage() {
               <p>Mirna atmosfera i ogranicen broj termina.</p>
             </motion.div>
             <motion.div className="info-grid" variants={staggerVariants}>
-              <motion.div className="info-card" variants={itemVariants}>
+              <motion.div
+                className="info-card"
+                variants={cardVariants}
+                whileHover={cardHover}
+                whileTap={cardTap}
+              >
                 <h4>Radno vreme</h4>
                 <p>{siteConfig.hours}</p>
               </motion.div>
-              <motion.div className="info-card" variants={itemVariants}>
+              <motion.div
+                className="info-card"
+                variants={cardVariants}
+                whileHover={cardHover}
+                whileTap={cardTap}
+              >
                 <h4>Lokacija</h4>
                 <p>Lokacija se salje uz potvrdu.</p>
               </motion.div>
-              <motion.div className="info-card" variants={itemVariants}>
+              <motion.div
+                className="info-card"
+                variants={cardVariants}
+                whileHover={cardHover}
+                whileTap={cardTap}
+              >
                 <h4>Kontakt</h4>
                 <p>
                   {siteConfig.phone && <span>{siteConfig.phone}</span>}
@@ -304,7 +390,12 @@ export default function HomePage() {
                 </p>
               </motion.div>
             </motion.div>
-            <motion.div className="map-card" variants={itemVariants}>
+            <motion.div
+              className="map-card"
+              variants={cardVariants}
+              whileHover={cardHover}
+              whileTap={cardTap}
+            >
               <iframe
                 title="Doctor Barber lokacija"
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2903.2545068929708!2d21.8622563!3d43.3089314!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x4755b0b14f921bab%3A0xa0b0730c4935e4ae!2sDoctor%20Barber!5e0!3m2!1sen!2srs!4v1766882078982!5m2!1sen!2srs"

@@ -326,6 +326,26 @@ h4 {
   isolation: isolate;
 }
 
+.hero-minimal__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.9;
+}
+
+.hero-minimal__bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(10, 10, 10, 0.65), rgba(255, 255, 255, 0.08));
+  mix-blend-mode: multiply;
+}
+
+.hero-minimal__bg img {
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.05) brightness(0.9);
+}
+
 .hero-minimal__glow {
   position: absolute;
   inset: -25% 0;
@@ -333,11 +353,13 @@ h4 {
     radial-gradient(circle at 70% 20%, rgba(0, 0, 0, 0.05), transparent 55%);
   opacity: 0.8;
   animation: auroraShift 20s ease-in-out infinite;
+  z-index: 1;
 }
 
 .hero-minimal__grain {
   position: absolute;
   inset: 0;
+  z-index: 2;
   background-image: repeating-linear-gradient(
     110deg,
     rgba(0, 0, 0, 0.03) 0,
@@ -351,7 +373,7 @@ h4 {
 
 .hero-minimal__inner {
   position: relative;
-  z-index: 1;
+  z-index: 3;
   display: grid;
   justify-items: center;
 }
