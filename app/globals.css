@@ -507,6 +507,11 @@ h4 {
   gap: 10px;
 }
 
+.booking-calendar {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .booking-submit {
   display: flex;
   flex-wrap: wrap;

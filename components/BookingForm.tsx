@@ -38,6 +38,14 @@ type Appointment = {
   status?: string;
 };
 
+type CalendarBooking = {
+  serviceName: string;
+  date: string;
+  time: string;
+  durationMinutes: number;
+  note: string;
+};
+
 type AvailabilityItem = {
   time: string;
   duration?: string | number;
@@ -115,6 +123,64 @@ const parseDurationMinutes = (duration?: string | number) => {
 
   const number = Number(value.replace(/[^\d]/g, ""));
   return Number.isFinite(number) ? number : 0;
+};
+
+const padIcs = (value: number) => String(value).padStart(2, "0");
+
+const formatIcsLocal = (date: Date) =>
+  `${date.getFullYear()}${padIcs(date.getMonth() + 1)}${padIcs(
+    date.getDate()
+  )}T${padIcs(date.getHours())}${padIcs(date.getMinutes())}${padIcs(
+    date.getSeconds()
+  )}`;
+
+const formatIcsUtc = (date: Date) =>
+  `${date.getUTCFullYear()}${padIcs(date.getUTCMonth() + 1)}${padIcs(
+    date.getUTCDate()
+  )}T${padIcs(date.getUTCHours())}${padIcs(date.getUTCMinutes())}${padIcs(
+    date.getUTCSeconds()
+  )}Z`;
+
+const escapeIcsText = (value: string) =>
+  value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
+
+const buildIcs = (booking: CalendarBooking) => {
+  const start = new Date(`${booking.date}T${booking.time}:00`);
+  if (Number.isNaN(start.getTime())) {
+    return null;
+  }
+
+  const durationMinutes = booking.durationMinutes || siteConfig.schedule.slotMinutes;
+  const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+  const stamp = formatIcsUtc(new Date());
+  const uid = `db-${start.getTime()}-${Math.random().toString(36).slice(2, 10)}`;
+  const summary = escapeIcsText(booking.serviceName);
+  const descriptionParts = [
+    `Usluga: ${booking.serviceName}`,
+    booking.note ? `Napomena: ${booking.note}` : "",
+    siteConfig.locationNote ? `Lokacija: ${siteConfig.locationNote}` : "",
+  ].filter(Boolean);
+  const description = escapeIcsText(descriptionParts.join("\n"));
+  const location = escapeIcsText(siteConfig.city || siteConfig.locationNote || "");
+
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//DoctorBarber//Booking//SR",
+    "CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART;TZID=Europe/Belgrade:${formatIcsLocal(start)}`,
+    `DTEND;TZID=Europe/Belgrade:${formatIcsLocal(end)}`,
+    `SUMMARY:${summary}`,
+    description ? `DESCRIPTION:${description}` : "",
+    location ? `LOCATION:${location}` : "",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ]
+    .filter(Boolean)
+    .join("\r\n");
 };
 
 const addDays = (date: Date, days: number) => {
@@ -284,6 +350,7 @@ export default function BookingForm() {
     Record<string, string[]>
   >({});
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [lastBooked, setLastBooked] = useState<CalendarBooking | null>(null);
   const [calendarMonth, setCalendarMonth] = useState(
     new Date(firstWorkingDay.getFullYear(), firstWorkingDay.getMonth(), 1)
   );
@@ -477,6 +544,8 @@ export default function BookingForm() {
 
     setStatus({ type: "sending" });
 
+    const durationMinutes = parseDurationMinutes(selectedService.duration);
+
     const payload = {
       clientName: client.name,
       phone: client.phone,
@@ -511,6 +580,13 @@ export default function BookingForm() {
         type: "success",
         message: "Termin je poslat! Javljamo potvrdu uskoro.",
       });
+      setLastBooked({
+        serviceName: selectedService.name,
+        date: formData.date,
+        time: formData.time,
+        durationMinutes,
+        note: formData.note.trim(),
+      });
       if (client?.token) {
         fetchClientAppointments(client.token);
       }
@@ -525,6 +601,27 @@ export default function BookingForm() {
         error instanceof Error ? error.message : "Doslo je do greske.";
       setStatus({ type: "error", message });
     }
+  };
+
+  const handleAddToCalendar = () => {
+    if (!lastBooked) {
+      return;
+    }
+
+    const ics = buildIcs(lastBooked);
+    if (!ics) {
+      return;
+    }
+
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `termin-${lastBooked.date}.ics`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 500);
   };
 
   const servicePrice = selectedService?.price
@@ -881,6 +978,14 @@ export default function BookingForm() {
 
           {status.type !== "idle" && status.message && (
             <div className={`form-status ${status.type}`}>{status.message}</div>
+          )}
+
+          {status.type === "success" && lastBooked && (
+            <div className="booking-calendar">
+              <button className="button outline" type="button" onClick={handleAddToCalendar}>
+                Ubaci u kalendar
+              </button>
+            </div>
           )}
 
           <div className="booking-submit">
