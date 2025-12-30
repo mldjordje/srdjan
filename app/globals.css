@@ -1255,9 +1255,9 @@ h4 {
 }
 
 .form-status.success {
-  background: rgba(17, 17, 17, 0.04);
-  color: var(--text);
-  border: 1px solid rgba(17, 17, 17, 0.18);
+  background: rgba(46, 148, 84, 0.08);
+  color: #185b2f;
+  border: 1px solid rgba(46, 148, 84, 0.6);
 }
 
 .form-status.error {

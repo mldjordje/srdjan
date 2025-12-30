@@ -578,7 +578,7 @@ export default function BookingForm() {
 
       setStatus({
         type: "success",
-        message: "Termin je poslat! Javljamo potvrdu uskoro.",
+        message: "Vas termin je potvrdjen.",
       });
       setLastBooked({
         serviceName: selectedService.name,
