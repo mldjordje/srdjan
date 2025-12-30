@@ -168,6 +168,56 @@ h4 {
   background: rgba(17, 17, 17, 0.06);
 }
 
+.nav-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.nav-toggle {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(17, 17, 17, 0.2);
+  background: rgba(17, 17, 17, 0.04);
+  color: var(--text);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.nav-toggle__label {
+  line-height: 1;
+}
+
+.nav-toggle__icon {
+  display: grid;
+  gap: 4px;
+}
+
+.nav-toggle__icon span {
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--text);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.nav--has-toggle.is-open .nav-toggle__icon span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.nav--has-toggle.is-open .nav-toggle__icon span:nth-child(2) {
+  opacity: 0;
+}
+
+.nav--has-toggle.is-open .nav-toggle__icon span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
 .button {
   display: inline-flex;
   align-items: center;
@@ -2281,6 +2331,53 @@ h4 {
     align-items: flex-start;
   }
 
+  .nav--has-toggle .nav-inner {
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .nav--has-toggle .nav-top {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .nav--has-toggle .nav-toggle {
+    display: inline-flex;
+  }
+
+  .nav--has-toggle .nav-links {
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 0 4px;
+  }
+
+  .nav--has-toggle .nav-links.is-open {
+    display: flex;
+  }
+
+  .nav--has-toggle .nav-links a {
+    width: 100%;
+    text-align: left;
+  }
+
+  .nav--has-toggle .nav-links a:not(.button) {
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: rgba(17, 17, 17, 0.04);
+    border: 1px solid rgba(17, 17, 17, 0.12);
+  }
+
+  .nav--has-toggle .nav-links a:not(.button):hover {
+    background: rgba(17, 17, 17, 0.08);
+  }
+
+  .nav--has-toggle .nav-links .button {
+    justify-content: center;
+  }
+
   .section {
     padding: 70px 0;
   }
@@ -2475,6 +2572,17 @@ h4 {
 
   .booking-submit .button {
     width: 100%;
+  }
+
+  .booking-submit .button {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    border-radius: 18px;
+    box-shadow: 0 10px 20px rgba(17, 17, 17, 0.14);
+  }
+
+  .booking-submit .button.outline {
+    box-shadow: none;
   }
 
   .date-grid {

@@ -11,6 +11,7 @@ import { siteConfig } from "@/lib/site";
 
 export default function HomePage() {
   const [showLoader, setShowLoader] = useState(true);
+  const [isNavOpen, setIsNavOpen] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const year = new Date().getFullYear();
   const easeOut: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -27,6 +28,9 @@ export default function HomePage() {
       document.body.style.overflow = "";
     };
   }, [showLoader]);
+
+  const handleNavToggle = () => setIsNavOpen((prev) => !prev);
+  const handleNavClose = () => setIsNavOpen(false);
 
   const sectionVariants = {
     hidden: {
@@ -166,33 +170,62 @@ export default function HomePage() {
         )}
       </AnimatePresence>
 
-      <header className="nav">
+      <header className={`nav nav--has-toggle${isNavOpen ? " is-open" : ""}`}>
         <div className="container nav-inner">
-          <div className="brand">
-            <div className="brand-mark">
-              <Image
-                src="/logo.png"
-                alt="Doctor Barber"
-                width={36}
-                height={36}
-                priority
-              />
+          <div className="nav-top">
+            <div className="brand">
+              <div className="brand-mark">
+                <Image
+                  src="/logo.png"
+                  alt="Doctor Barber"
+                  width={36}
+                  height={36}
+                  priority
+                />
+              </div>
+              <div className="brand-title">
+                <span>Doctor Barber</span>
+                <span>Barber Studio</span>
+              </div>
             </div>
-            <div className="brand-title">
-              <span>Doctor Barber</span>
-              <span>Barber Studio</span>
-            </div>
+            <button
+              className="nav-toggle"
+              type="button"
+              aria-expanded={isNavOpen}
+              aria-controls="primary-navigation"
+              onClick={handleNavToggle}
+            >
+              <span className="nav-toggle__label">Meni</span>
+              <span className="nav-toggle__icon" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
+            </button>
           </div>
-          <nav className="nav-links">
-            <a href="#services">Usluge</a>
-            <a href="#booking">Zakazivanje</a>
-            <a href="#studio">Studio</a>
-            <Link href="/moji-termini">Moji termini</Link>
-            <Link href="/login">Prijava</Link>
-            <Link className="button small outline" href="/register">
+          <nav
+            id="primary-navigation"
+            className={`nav-links${isNavOpen ? " is-open" : ""}`}
+          >
+            <a href="#services" onClick={handleNavClose}>
+              Usluge
+            </a>
+            <a href="#booking" onClick={handleNavClose}>
+              Zakazivanje
+            </a>
+            <a href="#studio" onClick={handleNavClose}>
+              Studio
+            </a>
+            <Link href="/moji-termini" onClick={handleNavClose}>
+              Moji termini
+            </Link>
+            <Link href="/login" onClick={handleNavClose}>
+              Prijava
+            </Link>
+            <Link className="button small outline" href="/register" onClick={handleNavClose}>
               Registracija
             </Link>
-            <Link className="button small ghost" href="/admin">
+            <Link className="button small ghost" href="/admin" onClick={handleNavClose}>
               CMS
             </Link>
           </nav>
@@ -269,7 +302,7 @@ export default function HomePage() {
           <div className="container">
             <motion.div className="section-header" variants={itemVariants}>
               <h2>Usluge</h2>
-              <p>Jasne cene i trajanje. Izaberi tretman koji ti odgovara.</p>
+              <p>Pregled usluga i trajanja. Cene prikazujemo u zakazivanju.</p>
             </motion.div>
             <motion.div className="services-grid" variants={staggerVariants}>
               {services.map((service) => (
@@ -283,9 +316,6 @@ export default function HomePage() {
                   <h3>{service.name}</h3>
                   <div className="service-meta">
                     <span>{service.duration}</span>
-                    <span className="price">
-                      RSD {service.price.toLocaleString("sr-RS")}
-                    </span>
                   </div>
                 </motion.div>
               ))}
@@ -306,15 +336,6 @@ export default function HomePage() {
               <p>Brzo, jasno i bez cekanja. Zakazi, potvrdi, dodji na vreme.</p>
             </motion.div>
             <motion.div className="info-grid" variants={staggerVariants}>
-              <motion.div
-                className="info-card"
-                variants={cardVariants}
-                whileHover={cardHover}
-                whileTap={cardTap}
-              >
-                <h4>Potvrda termina</h4>
-                <p>Javljamo SMS-om ili pozivom. Ako nema termina, saljemo novi.</p>
-              </motion.div>
               <motion.div
                 className="info-card"
                 variants={cardVariants}
