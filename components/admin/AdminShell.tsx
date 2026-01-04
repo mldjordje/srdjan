@@ -45,6 +45,10 @@ export default function AdminShell({
     router.replace("/admin");
   };
 
+  const handleRefresh = () => {
+    window.location.reload();
+  };
+
   if (!ready) {
     return null;
   }
@@ -85,6 +89,9 @@ export default function AdminShell({
                 </Link>
               );
             })}
+            <button className="button small ghost" type="button" onClick={handleRefresh}>
+              Osvezi
+            </button>
             <button className="button small ghost" type="button" onClick={handleLogout}>
               Odjava
             </button>

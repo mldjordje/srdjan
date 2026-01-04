@@ -404,6 +404,7 @@ export default function BookingForm() {
   const weekSwipeStart = useRef<{ x: number; y: number } | null>(null);
   const swipeAnimationTimeout = useRef<number | null>(null);
   const [weekTransition, setWeekTransition] = useState<"next" | "prev" | null>(null);
+  const submitRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("db_client_token");
@@ -690,6 +691,18 @@ export default function BookingForm() {
     anchor.click();
     anchor.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 500);
+  };
+
+  const scrollToSubmit = () => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (!window.matchMedia("(max-width: 900px)").matches) {
+      return;
+    }
+    if (submitRef.current) {
+      submitRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   };
 
   const handleWeekSwipeStart = (event: TouchEvent<HTMLDivElement>) => {
@@ -1130,9 +1143,10 @@ export default function BookingForm() {
                             className={`slot-button ${
                               slot === formData.time ? "is-active" : ""
                             }`}
-                            onPress={() =>
-                              setFormData((prev) => ({ ...prev, time: slot }))
-                            }
+                            onPress={() => {
+                              setFormData((prev) => ({ ...prev, time: slot }));
+                              window.setTimeout(scrollToSubmit, 0);
+                            }}
                           >
                             {formatSlotLabel(slot)}
                           </Button>
@@ -1154,9 +1168,10 @@ export default function BookingForm() {
                             className={`slot-button ${
                               slot === formData.time ? "is-active" : ""
                             }`}
-                            onPress={() =>
-                              setFormData((prev) => ({ ...prev, time: slot }))
-                            }
+                            onPress={() => {
+                              setFormData((prev) => ({ ...prev, time: slot }));
+                              window.setTimeout(scrollToSubmit, 0);
+                            }}
                           >
                             {formatSlotLabel(slot)}
                           </Button>
@@ -1194,7 +1209,7 @@ export default function BookingForm() {
             </div>
           )}
 
-          <div className="booking-submit">
+          <div className="booking-submit" ref={submitRef}>
             <button
               className="button outline booking-back"
               type="button"
