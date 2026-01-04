@@ -27,6 +27,14 @@ type StatusState = {
   message?: string;
 };
 
+const statusLabels: Record<string, string> = {
+  pending: "Na cekanju",
+  confirmed: "Potvrdjen",
+  completed: "Zavrsen",
+  cancelled: "Otkazan",
+  no_show: "Nije dosao",
+};
+
 const formatLongDate = (value: string) => {
   const date = new Date(`${value}T00:00:00`);
   return new Intl.DateTimeFormat("sr-RS", {
@@ -288,7 +296,7 @@ export default function MyAppointmentsPage() {
                 </div>
                 {appointment.status && (
                   <span className={`status-pill ${appointment.status}`}>
-                    {appointment.status}
+                    {statusLabels[appointment.status] || appointment.status}
                   </span>
                 )}
               </article>
@@ -315,7 +323,7 @@ export default function MyAppointmentsPage() {
                 </div>
                 {appointment.status && (
                   <span className={`status-pill ${appointment.status}`}>
-                    {appointment.status}
+                    {statusLabels[appointment.status] || appointment.status}
                   </span>
                 )}
               </article>

@@ -14,6 +14,7 @@ Copy `.env.example` to `.env.local` and update values:
 - `NEXT_PUBLIC_ADMIN_KEY`
 - `NEXT_PUBLIC_ADMIN_USER`
 - `NEXT_PUBLIC_ADMIN_PASS`
+- `NEXT_PUBLIC_CALENDAR_KEY` (optional, iOS sync; match `calendar_key` in `api/config.php`)
 
 ## Routes
 - `/` landing + booking

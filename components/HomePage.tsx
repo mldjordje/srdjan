@@ -352,7 +352,7 @@ export default function HomePage() {
                 whileTap={cardTap}
               >
                 <h4>Politika otkazivanja</h4>
-                <p>Otkazivanje bar 6 sati ranije.</p>
+                <p>Otkazivanje obavezno minimum 2 sata ranije. U suprotnom se termin smatra naplatnim.</p>
               </motion.div>
             </motion.div>
           </div>

@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type TouchEvent,
+} from "react";
 
 import AdminShell from "@/components/admin/AdminShell";
 import { services } from "@/lib/services";
@@ -36,6 +44,13 @@ type Block = {
   time: string;
   duration: number;
   note?: string;
+};
+
+type Client = {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
 };
 
 type AppointmentFormState = {
@@ -82,13 +97,12 @@ const statusLabels: Record<string, string> = {
   confirmed: "Potvrdjen",
   completed: "Zavrsen",
   cancelled: "Otkazan",
+  no_show: "Nije dosao",
 };
 
 const statusOptions = [
-  { value: "pending", label: "Na cekanju" },
   { value: "confirmed", label: "Potvrdjen" },
-  { value: "completed", label: "Zavrsen" },
-  { value: "cancelled", label: "Otkazan" },
+  { value: "no_show", label: "Nije dosao (ispalio)" },
 ];
 
 const sourceLabels: Record<string, string> = {
@@ -136,6 +150,8 @@ const formatRangeLabel = (start: Date, end: Date) => {
 };
 
 const normalizeTimeInput = (value: string) => (value ? value.slice(0, 5) : "");
+
+const normalizePhoneValue = (value: string) => value.replace(/\D+/g, "");
 
 const timeToMinutes = (time: string) => {
   const [hours, minutes] = time.split(":").map((part) => Number(part));
@@ -310,6 +326,10 @@ export default function AdminCalendarPage() {
     email: "",
     notes: "",
   });
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientsStatus, setClientsStatus] = useState<StatusState>({ type: "idle" });
+  const [selectedClientId, setSelectedClientId] = useState("");
+  const weekSwipeStart = useRef<{ x: number; y: number } | null>(null);
 
   const selectedDateObj = useMemo(
     () => new Date(`${selectedDate}T00:00:00`),
@@ -401,6 +421,11 @@ export default function AdminCalendarPage() {
 
   const canGoPrev = weekStart > firstWorkingDay;
   const canGoNext = addDays(weekStart, 7) <= lastDay;
+  const calendarKey = process.env.NEXT_PUBLIC_CALENDAR_KEY || adminKey;
+  const calendarFeedUrl =
+    apiBaseUrl && calendarKey
+      ? `${apiBaseUrl}/calendar-feed.php?adminKey=${encodeURIComponent(calendarKey)}`
+      : "";
 
   const scheduleItems = useMemo(() => {
     const items: ScheduleItem[] = [];
@@ -548,6 +573,34 @@ export default function AdminCalendarPage() {
     return items;
   };
 
+  const fetchClients = async () => {
+    if (!apiBaseUrl || !adminKey) {
+      return;
+    }
+
+    setClientsStatus({ type: "loading" });
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/clients.php`, {
+        headers: {
+          "X-Admin-Key": adminKey,
+        },
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Ne mogu da preuzmem klijente.");
+      }
+
+      const items = Array.isArray(data.clients) ? data.clients : [];
+      setClients(items);
+      setClientsStatus({ type: "success" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      setClientsStatus({ type: "error", message });
+    }
+  };
+
   const refreshData = async (dates: string[]) => {
     if (!apiBaseUrl) {
       setStatus({
@@ -611,6 +664,10 @@ export default function AdminCalendarPage() {
   }, [selectedDate]);
 
   useEffect(() => {
+    fetchClients();
+  }, []);
+
+  useEffect(() => {
     if (weekDateStrings.length === 0) {
       return;
     }
@@ -635,6 +692,51 @@ export default function AdminCalendarPage() {
     return match?.id ?? "";
   };
 
+  const resolveClientId = (appointment: Appointment) => {
+    if (clients.length === 0) {
+      return "";
+    }
+
+    const email = (appointment.email || "").trim().toLowerCase();
+    const phone = normalizePhoneValue(appointment.phone || "");
+    const name = (appointment.clientName || "").trim().toLowerCase();
+
+    const match = clients.find((client) => {
+      if (email && client.email && client.email.toLowerCase() === email) {
+        return true;
+      }
+      const clientPhone = normalizePhoneValue(client.phone || "");
+      if (phone && clientPhone && clientPhone === phone) {
+        return true;
+      }
+      if (name && client.name && client.name.trim().toLowerCase() === name) {
+        return true;
+      }
+      return false;
+    });
+
+    return match?.id ?? "";
+  };
+
+  const handleClientSelect = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextId = event.target.value;
+    setSelectedClientId(nextId);
+
+    if (!nextId) {
+      return;
+    }
+
+    const selected = clients.find((client) => client.id === nextId);
+    if (selected) {
+      setAppointmentForm((prev) => ({
+        ...prev,
+        clientName: selected.name || "",
+        phone: selected.phone || "",
+        email: selected.email || "",
+      }));
+    }
+  };
+
   const handleOpenAppointmentModal = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
     setAppointmentActionStatus({ type: "idle" });
@@ -643,6 +745,32 @@ export default function AdminCalendarPage() {
   const handleCloseAppointmentModal = () => {
     setSelectedAppointment(null);
     setAppointmentActionStatus({ type: "idle" });
+  };
+
+  const handleWeekSwipeStart = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    weekSwipeStart.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleWeekSwipeEnd = (event: TouchEvent<HTMLDivElement>) => {
+    if (!weekSwipeStart.current) {
+      return;
+    }
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - weekSwipeStart.current.x;
+    const deltaY = touch.clientY - weekSwipeStart.current.y;
+    weekSwipeStart.current = null;
+
+    if (Math.abs(deltaX) < 60 || Math.abs(deltaX) <= Math.abs(deltaY)) {
+      return;
+    }
+
+    if (deltaX < 0 && canGoNext) {
+      setSelectedDate(formatDate(addDays(weekStart, 7)));
+    } else if (deltaX > 0 && canGoPrev) {
+      setSelectedDate(formatDate(addDays(weekStart, -7)));
+    }
   };
 
   const handleBlockChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -702,6 +830,10 @@ export default function AdminCalendarPage() {
       setSelectedSlot({ date: appointmentForm.date, time: value });
     }
 
+    if (name === "clientName" || name === "phone" || name === "email") {
+      setSelectedClientId("");
+    }
+
     setAppointmentForm((prev) => ({
       ...prev,
       [name]: value,
@@ -716,6 +848,7 @@ export default function AdminCalendarPage() {
 
     setEditingBlockId(null);
     setEditingAppointment(null);
+    setSelectedClientId("");
     setSlotAction("appointment");
     setAppointmentStatus({ type: "idle" });
     setIsSlotModalOpen(true);
@@ -764,12 +897,14 @@ export default function AdminCalendarPage() {
   const handleEditAppointment = (appointment: Appointment) => {
     const resolvedServiceId = resolveServiceId(appointment);
     const normalizedTime = normalizeTimeInput(appointment.time);
+    const resolvedClientId = resolveClientId(appointment);
 
     setEditingBlockId(null);
     setEditingAppointment(appointment);
     setSlotAction("appointment");
     setAppointmentStatus({ type: "idle" });
     setIsSlotModalOpen(true);
+    setSelectedClientId(resolvedClientId);
     setSelectedSlot({ date: appointment.date, time: normalizedTime });
     setSelectedDate(appointment.date);
     setAppointmentForm({
@@ -1107,7 +1242,8 @@ export default function AdminCalendarPage() {
     }
 
     const statusClass =
-      item.status && ["pending", "confirmed", "completed", "cancelled"].includes(item.status)
+      item.status &&
+      ["pending", "confirmed", "completed", "cancelled", "no_show"].includes(item.status)
         ? item.status
         : "pending";
     return `calendar-item calendar-item--${statusClass} is-editable`;
@@ -1122,8 +1258,54 @@ export default function AdminCalendarPage() {
               <div className={`form-status ${status.type}`}>{status.message}</div>
             )}
 
+            <div className="calendar-toolbar">
+              <div className="calendar-toolbar__title">
+                <h2>{formatMonthLabel(weekStart)}</h2>
+                <span>{weekRangeLabel}</span>
+              </div>
+              <div className="calendar-toolbar__stats">
+                <div className="calendar-metric">
+                  <strong>{totalAppointments}</strong>
+                  <span>termina</span>
+                </div>
+                <div className="calendar-metric">
+                  <strong>{totalBlockedMinutes}</strong>
+                  <span>min blokirano</span>
+                </div>
+              </div>
+              <div className="calendar-toolbar__actions">
+                <button
+                  className="button small outline"
+                  type="button"
+                  disabled={!canGoPrev}
+                  onClick={() => setSelectedDate(formatDate(addDays(weekStart, -7)))}
+                >
+                  Prethodni
+                </button>
+                <button
+                  className="button small ghost"
+                  type="button"
+                  onClick={() => setSelectedDate(formatDate(getNextWorkingDay(today)))}
+                >
+                  Danas
+                </button>
+                <button
+                  className="button small outline"
+                  type="button"
+                  disabled={!canGoNext}
+                  onClick={() => setSelectedDate(formatDate(addDays(weekStart, 7)))}
+                >
+                  Sledeci
+                </button>
+              </div>
+            </div>
+
             <div className="calendar-schedule">
-              <div className="calendar-schedule__scroll">
+              <div
+                className="calendar-schedule__scroll"
+                onTouchStart={handleWeekSwipeStart}
+                onTouchEnd={handleWeekSwipeEnd}
+              >
                 <div className="calendar-schedule__times" style={timeStyles}>
                   <div className="calendar-time-header" />
                   {timeSlots.map((time) => (
@@ -1213,48 +1395,6 @@ export default function AdminCalendarPage() {
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
-
-            <div className="calendar-toolbar">
-              <div className="calendar-toolbar__title">
-                <h2>{formatMonthLabel(weekStart)}</h2>
-                <span>{weekRangeLabel}</span>
-              </div>
-              <div className="calendar-toolbar__stats">
-                <div className="calendar-metric">
-                  <strong>{totalAppointments}</strong>
-                  <span>termina</span>
-                </div>
-                <div className="calendar-metric">
-                  <strong>{totalBlockedMinutes}</strong>
-                  <span>min blokirano</span>
-                </div>
-              </div>
-              <div className="calendar-toolbar__actions">
-                <button
-                  className="button small outline"
-                  type="button"
-                  disabled={!canGoPrev}
-                  onClick={() => setSelectedDate(formatDate(addDays(weekStart, -7)))}
-                >
-                  Prethodni
-                </button>
-                <button
-                  className="button small ghost"
-                  type="button"
-                  onClick={() => setSelectedDate(formatDate(getNextWorkingDay(today)))}
-                >
-                  Danas
-                </button>
-                <button
-                  className="button small outline"
-                  type="button"
-                  disabled={!canGoNext}
-                  onClick={() => setSelectedDate(formatDate(addDays(weekStart, 7)))}
-                >
-                  Sledeci
-                </button>
               </div>
             </div>
 
@@ -1371,6 +1511,33 @@ export default function AdminCalendarPage() {
                 })}
               </div>
             </div>
+
+            <div className="calendar-sync">
+              <strong>iOS sync</strong>
+              <p>Read-only pretplata kalendara za iPhone i Apple Watch.</p>
+              {calendarFeedUrl ? (
+                <div className="calendar-sync__actions">
+                  <input
+                    className="input"
+                    readOnly
+                    value={calendarFeedUrl}
+                    onFocus={(event) => event.currentTarget.select()}
+                  />
+                  <a
+                    className="button small outline"
+                    href={calendarFeedUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Otvori feed
+                  </a>
+                </div>
+              ) : (
+                <div className="form-status error">
+                  Dodaj API bazu i admin key da bi generisao feed.
+                </div>
+              )}
+            </div>
           </aside>
         </div>
       </div>
@@ -1476,6 +1643,23 @@ export default function AdminCalendarPage() {
                     {services.map((service) => (
                       <option key={service.id} value={service.id}>
                         {service.name} ({service.duration})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-row">
+                  <label htmlFor="appointment-client-select">Izaberi klijenta</label>
+                  <select
+                    id="appointment-client-select"
+                    className="select"
+                    value={selectedClientId}
+                    onChange={handleClientSelect}
+                    disabled={clientsStatus.type === "loading"}
+                  >
+                    <option value="">Novi klijent</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name} {client.phone ? `(${client.phone})` : ""}
                       </option>
                     ))}
                   </select>

@@ -27,6 +27,14 @@ type StatusState = {
   message?: string;
 };
 
+const statusLabels: Record<string, string> = {
+  pending: "Na cekanju",
+  confirmed: "Potvrdjen",
+  completed: "Zavrsen",
+  cancelled: "Otkazan",
+  no_show: "Nije dosao",
+};
+
 export default function ClientLoginPage() {
   const [formData, setFormData] = useState({
     phone: "",
@@ -268,7 +276,9 @@ export default function ClientLoginPage() {
                     <div>
                       {appointment.date} | {appointment.time}
                     </div>
-                    {appointment.status && <span>{appointment.status}</span>}
+                    {appointment.status && (
+                      <span>{statusLabels[appointment.status] || appointment.status}</span>
+                    )}
                   </div>
                 ))}
               </div>

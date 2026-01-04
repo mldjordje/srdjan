@@ -25,6 +25,13 @@ type Appointment = {
   createdAt?: string;
 };
 
+type Client = {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+};
+
 type AppointmentFormState = {
   clientName: string;
   phone: string;
@@ -57,6 +64,7 @@ const statusOptions = [
   { value: "confirmed", label: "Potvrdjen" },
   { value: "completed", label: "Zavrsen" },
   { value: "cancelled", label: "Otkazan" },
+  { value: "no_show", label: "Nije dosao" },
 ];
 
 const statusLabels: Record<string, string> = {
@@ -64,12 +72,15 @@ const statusLabels: Record<string, string> = {
   confirmed: "Potvrdjen",
   completed: "Zavrsen",
   cancelled: "Otkazan",
+  no_show: "Nije dosao",
 };
 
 const sourceLabels: Record<string, string> = {
   web: "Online",
   admin: "Rucno",
 };
+
+const normalizePhoneValue = (value: string) => value.replace(/\D+/g, "");
 
 const formatDateInput = (date: Date) => {
   const year = date.getFullYear();
@@ -113,6 +124,9 @@ export default function AdminAppointmentsManager() {
   const [formState, setFormState] = useState<AppointmentFormState>(() =>
     buildDefaultFormState()
   );
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientsStatus, setClientsStatus] = useState<StatusState>({ type: "idle" });
+  const [selectedClientId, setSelectedClientId] = useState("");
 
   const hasUnknownService =
     formState.serviceId !== "" &&
@@ -205,14 +219,56 @@ export default function AdminAppointmentsManager() {
     }
   };
 
+  const fetchClients = async () => {
+    if (!apiBaseUrl) {
+      setClientsStatus({
+        type: "error",
+        message: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+      });
+      return;
+    }
+
+    if (!adminKey) {
+      setClientsStatus({
+        type: "error",
+        message: "Dodaj NEXT_PUBLIC_ADMIN_KEY u .env da bi CMS radio.",
+      });
+      return;
+    }
+
+    setClientsStatus({ type: "loading" });
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/clients.php`, {
+        headers: {
+          "X-Admin-Key": adminKey,
+        },
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Ne mogu da preuzmem klijente.");
+      }
+
+      const items = Array.isArray(data.clients) ? data.clients : [];
+      setClients(items);
+      setClientsStatus({ type: "success" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      setClientsStatus({ type: "error", message });
+    }
+  };
+
   useEffect(() => {
     fetchAppointments();
+    fetchClients();
   }, []);
 
   const resetForm = (overrides: Partial<AppointmentFormState> = {}) => {
     setEditingId(null);
     setFormState(buildDefaultFormState(overrides));
     setFormStatus({ type: "idle" });
+    setSelectedClientId("");
   };
 
   const handleFilterChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -224,6 +280,9 @@ export default function AdminAppointmentsManager() {
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = event.target;
+    if (name === "clientName" || name === "phone" || name === "email") {
+      setSelectedClientId("");
+    }
     setFormState((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -246,6 +305,51 @@ export default function AdminAppointmentsManager() {
       ...prev,
       serviceId: nextServiceId,
     }));
+  };
+
+  const resolveClientId = (appointment: Appointment) => {
+    if (clients.length === 0) {
+      return "";
+    }
+
+    const email = (appointment.email || "").trim().toLowerCase();
+    const phone = normalizePhoneValue(appointment.phone || "");
+    const name = (appointment.clientName || "").trim().toLowerCase();
+
+    const match = clients.find((client) => {
+      if (email && client.email && client.email.toLowerCase() === email) {
+        return true;
+      }
+      const clientPhone = normalizePhoneValue(client.phone || "");
+      if (phone && clientPhone && clientPhone === phone) {
+        return true;
+      }
+      if (name && client.name && client.name.trim().toLowerCase() === name) {
+        return true;
+      }
+      return false;
+    });
+
+    return match?.id ?? "";
+  };
+
+  const handleClientSelect = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextId = event.target.value;
+    setSelectedClientId(nextId);
+
+    if (!nextId) {
+      return;
+    }
+
+    const selected = clients.find((client) => client.id === nextId);
+    if (selected) {
+      setFormState((prev) => ({
+        ...prev,
+        clientName: selected.name || "",
+        phone: selected.phone || "",
+        email: selected.email || "",
+      }));
+    }
   };
 
   const validateForm = () => {
@@ -354,6 +458,7 @@ export default function AdminAppointmentsManager() {
   };
 
   const handleEdit = (appointment: Appointment) => {
+    const resolvedClientId = resolveClientId(appointment);
     setEditingId(appointment.id);
     setFormState(
       buildDefaultFormState({
@@ -374,6 +479,7 @@ export default function AdminAppointmentsManager() {
         source: appointment.source ?? "web",
       })
     );
+    setSelectedClientId(resolvedClientId);
     setFormStatus({ type: "idle" });
   };
 
@@ -622,6 +728,23 @@ export default function AdminAppointmentsManager() {
                   onChange={handleInputChange}
                   required
                 />
+              </div>
+              <div className="form-row">
+                <label htmlFor="client-select">Izaberi klijenta</label>
+                <select
+                  id="client-select"
+                  className="select"
+                  value={selectedClientId}
+                  onChange={handleClientSelect}
+                  disabled={clientsStatus.type === "loading"}
+                >
+                  <option value="">Novi klijent</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name} {client.phone ? `(${client.phone})` : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="form-row">
                 <label htmlFor="clientName">Ime klijenta</label>

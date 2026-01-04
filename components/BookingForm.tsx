@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type TouchEvent } from "react";
 import Link from "next/link";
 import { Button } from "@heroui/react";
 
@@ -33,6 +33,7 @@ type ClientProfile = {
 type Appointment = {
   id: string;
   serviceName: string;
+  price?: number;
   date: string;
   time: string;
   status?: string;
@@ -85,6 +86,14 @@ const formatWeekday = (date: Date) =>
   new Intl.DateTimeFormat("sr-RS", {
     weekday: "short",
   }).format(date);
+
+const statusLabels: Record<string, string> = {
+  pending: "Na cekanju",
+  confirmed: "Potvrdjen",
+  completed: "Zavrsen",
+  cancelled: "Otkazan",
+  no_show: "Nije dosao",
+};
 
 const formatSlotLabel = (time: string) => {
   const [hours, minutes] = time.split(":").map((part) => Number(part));
@@ -199,6 +208,12 @@ const addDays = (date: Date, days: number) => {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
   return next;
+};
+
+const getWeekStart = (date: Date) => {
+  const day = date.getDay();
+  const diff = (day + 6) % 7;
+  return addDays(date, -diff);
 };
 
 const isWorkingDay = (date: Date) => WORKING_DAYS.includes(date.getDay());
@@ -366,6 +381,7 @@ export default function BookingForm() {
   const [calendarMonth, setCalendarMonth] = useState(
     new Date(firstWorkingDay.getFullYear(), firstWorkingDay.getMonth(), 1)
   );
+  const weekSwipeStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("db_client_token");
@@ -426,6 +442,16 @@ export default function BookingForm() {
   const calendarDays = useMemo(
     () => buildCalendarDays(calendarMonth, firstWorkingDay, lastDay),
     [calendarMonth, firstWorkingDay, lastDay]
+  );
+
+  const selectedDateObj = useMemo(
+    () => new Date(`${formData.date}T00:00:00`),
+    [formData.date]
+  );
+  const weekStart = useMemo(() => getWeekStart(selectedDateObj), [selectedDateObj]);
+  const weekDays = useMemo(
+    () => WORKING_DAY_ORDER.map((dayIndex) => addDays(weekStart, dayIndex - 1)),
+    [weekStart]
   );
 
   useEffect(() => {
@@ -636,6 +662,38 @@ export default function BookingForm() {
     window.setTimeout(() => URL.revokeObjectURL(url), 500);
   };
 
+  const handleWeekSwipeStart = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    weekSwipeStart.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleWeekSwipeEnd = (event: TouchEvent<HTMLDivElement>) => {
+    if (!weekSwipeStart.current) {
+      return;
+    }
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - weekSwipeStart.current.x;
+    const deltaY = touch.clientY - weekSwipeStart.current.y;
+    weekSwipeStart.current = null;
+
+    if (Math.abs(deltaX) < 60 || Math.abs(deltaX) <= Math.abs(deltaY)) {
+      return;
+    }
+
+    if (deltaX < 0 && canGoNextWeek) {
+      setFormData((prev) => ({
+        ...prev,
+        date: formatDate(addDays(weekStart, 7)),
+      }));
+    } else if (deltaX > 0 && canGoPrevWeek) {
+      setFormData((prev) => ({
+        ...prev,
+        date: formatDate(addDays(weekStart, -7)),
+      }));
+    }
+  };
+
   const servicePrice = selectedService?.price
     ? `RSD ${selectedService.price.toLocaleString("sr-RS")}`
     : "-";
@@ -644,6 +702,8 @@ export default function BookingForm() {
     calendarMonth > new Date(firstWorkingDay.getFullYear(), firstWorkingDay.getMonth(), 1);
   const canGoNext =
     calendarMonth < new Date(lastDay.getFullYear(), lastDay.getMonth(), 1);
+  const canGoPrevWeek = weekStart > firstWorkingDay;
+  const canGoNextWeek = addDays(weekStart, 7) <= lastDay;
 
   const weekdayLabels = useMemo(() => {
     const base = new Date(2024, 0, 1);
@@ -673,6 +733,20 @@ export default function BookingForm() {
       .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime())
       .slice(0, 2);
   }, [clientAppointments]);
+
+  const unpaidAppointments = useMemo(
+    () => clientAppointments.filter((appointment) => appointment.status === "no_show"),
+    [clientAppointments]
+  );
+
+  const unpaidTotal = useMemo(
+    () =>
+      unpaidAppointments.reduce(
+        (sum, appointment) => sum + (appointment.price ? Number(appointment.price) : 0),
+        0
+      ),
+    [unpaidAppointments]
+  );
 
   if (!client) {
     return (
@@ -705,6 +779,27 @@ export default function BookingForm() {
           <strong>{client.name}</strong>
         </div>
       </div>
+
+      {unpaidAppointments.length > 0 && (
+        <div className="booking-debt">
+          <strong>
+            Upozorenje: imate {unpaidAppointments.length} neplacenih termina.
+          </strong>
+          <span>
+            Ukupno za naplatu: RSD {unpaidTotal.toLocaleString("sr-RS")}
+          </span>
+          <div className="booking-debt__items">
+            {unpaidAppointments.map((appointment) => (
+              <div key={appointment.id} className="booking-debt__item">
+                <span>{formatLongDate(appointment.date)}</span>
+                <span>
+                  RSD {(appointment.price ?? 0).toLocaleString("sr-RS")}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="booking-stepper">
         <button
@@ -746,7 +841,9 @@ export default function BookingForm() {
               <span>
                 {formatLongDate(appointment.date)} | {appointment.displayTime}
               </span>
-              {appointment.status && <em>{appointment.status}</em>}
+              {appointment.status && (
+                <em>{statusLabels[appointment.status] || appointment.status}</em>
+              )}
             </div>
           ))}
         </div>
@@ -857,16 +954,67 @@ export default function BookingForm() {
                   </Button>
                 </div>
 
-                <div className="calendar-weekdays">
-                  {weekdayLabels.map((day) => (
-                    <span key={day}>{day}</span>
-                  ))}
-                </div>
+              <div className="calendar-weekdays">
+                {weekdayLabels.map((day) => (
+                  <span key={day}>{day}</span>
+                ))}
+              </div>
 
-                <div className="calendar-grid">
-                  {calendarDays.map((day, index) => {
-                    if (!day.inMonth) {
-                      return <div key={`empty-${index}`} className="calendar-cell" />;
+              <div
+                className="calendar-week"
+                onTouchStart={handleWeekSwipeStart}
+                onTouchEnd={handleWeekSwipeEnd}
+              >
+                {weekDays.map((day) => {
+                  const value = formatDate(day);
+                  const isActive = value === formData.date;
+                  const slots = availabilityByDate[value];
+                  const hasSlots = slots ? slots.length > 0 : false;
+                  const inRange = day >= firstWorkingDay && day <= lastDay;
+                  const isDisabled =
+                    !inRange || (slots !== undefined && slots.length === 0);
+
+                  return (
+                    <Button
+                      key={value}
+                      size="sm"
+                      variant="flat"
+                      radius="sm"
+                      className={`calendar-week-day ${isActive ? "is-active" : ""}`}
+                      isDisabled={isDisabled}
+                      onPress={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          date: value,
+                        }));
+                      }}
+                    >
+                      <span className="calendar-week-day__label">
+                        {formatWeekday(day)}
+                      </span>
+                      <span className="calendar-week-day__date">
+                        {day.getDate()}
+                      </span>
+                      {inRange && (
+                        <span
+                          className={`calendar-indicator ${
+                            slots === undefined
+                              ? "is-loading"
+                              : hasSlots
+                              ? "is-available"
+                              : "is-full"
+                          }`}
+                        />
+                      )}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              <div className="calendar-grid">
+                {calendarDays.map((day, index) => {
+                  if (!day.inMonth) {
+                    return <div key={`empty-${index}`} className="calendar-cell" />;
                     }
 
                     const isActive = day.value === formData.date;
