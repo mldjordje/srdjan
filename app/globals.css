@@ -2704,7 +2704,29 @@ h4 {
 
 @media (max-width: 600px) {
   .admin-shell--full {
-    padding: 20px 12px 70px;
+    padding: 12px 0 70px;
+  }
+
+  .admin-shell--full .calendar-layout {
+    gap: 12px;
+  }
+
+  .admin-shell--full .calendar-main {
+    gap: 12px;
+  }
+
+  .admin-shell--full .calendar-toolbar {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    margin: 0;
+    padding: 10px 12px;
+  }
+
+  .admin-shell--full .calendar-schedule {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
   }
 
   .calendar-modal {
