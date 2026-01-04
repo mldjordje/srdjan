@@ -2817,6 +2817,18 @@ h4 {
     display: grid;
   }
 
+  .booking-form .calendar-weekdays {
+    display: grid;
+  }
+
+  .booking-form .calendar-grid {
+    display: grid;
+  }
+
+  .booking-form .calendar-week {
+    display: none;
+  }
+
   .service-option {
     flex-direction: column;
     align-items: flex-start;

@@ -344,7 +344,7 @@ const buildSlots = (
 
   const slots: string[] = [];
 
-  const stepMinutes = Math.max(slotMinutes, required);
+  const stepMinutes = slotMinutes;
 
   for (let start = openMinutes; start + required <= closeMinutes; start += stepMinutes) {
     if (isToday && start < nowMinutes) {
