@@ -209,7 +209,7 @@ export default function AdminAppointmentsManager() {
 
       const items = Array.isArray(data.appointments) ? data.appointments : [];
       items.sort((a: Appointment, b: Appointment) =>
-        `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)
+        `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`)
       );
       setAppointments(items);
       setStatus({ type: "success", message: "Termini su osvezeni." });
@@ -584,6 +584,55 @@ export default function AdminAppointmentsManager() {
         </div>
 
         <div className="admin-card">
+          <h3>Lista termina</h3>
+          {filteredAppointments.length === 0 && status.type !== "loading" && (
+            <div className="admin-card">Nema termina za prikaz.</div>
+          )}
+          {filteredAppointments.map((appointment) => (
+            <div key={appointment.id} className="admin-card">
+              <div className={`status-pill ${appointment.status || "pending"}`}>
+                {statusLabels[appointment.status || "pending"] || appointment.status}
+              </div>
+              <strong>{appointment.serviceName}</strong>
+              <span>
+                {appointment.date} | {normalizeTimeInput(appointment.time)}
+              </span>
+              <div>{appointment.clientName}</div>
+              <span>{appointment.phone}</span>
+              {appointment.email && <span>{appointment.email}</span>}
+              {appointment.notes && <span>Napomena: {appointment.notes}</span>}
+              <span>Izvor: {sourceLabels[appointment.source || ""] || "Nepoznato"}</span>
+              {appointment.createdAt && <span>Kreirano: {appointment.createdAt}</span>}
+              <div className="admin-actions">
+                <button
+                  className="button outline"
+                  type="button"
+                  onClick={() => handleEdit(appointment)}
+                >
+                  Izmeni
+                </button>
+                <button
+                  className="button outline"
+                  type="button"
+                  onClick={() => handleDelete(appointment.id)}
+                >
+                  Obrisi
+                </button>
+                {statusOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => updateStatus(appointment.id, option.value)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="admin-card">
           <h3>Pretraga termina</h3>
           <div className="form-grid">
             <div className="form-row">
@@ -840,53 +889,6 @@ export default function AdminAppointmentsManager() {
             </div>
           </form>
         </div>
-
-        {filteredAppointments.length === 0 && status.type !== "loading" && (
-          <div className="admin-card">Nema termina za prikaz.</div>
-        )}
-
-        {filteredAppointments.map((appointment) => (
-          <div key={appointment.id} className="admin-card">
-            <div className={`status-pill ${appointment.status || "pending"}`}>
-              {statusLabels[appointment.status || "pending"] || appointment.status}
-            </div>
-            <strong>{appointment.serviceName}</strong>
-            <span>
-              {appointment.date} | {normalizeTimeInput(appointment.time)}
-            </span>
-            <div>{appointment.clientName}</div>
-            <span>{appointment.phone}</span>
-            {appointment.email && <span>{appointment.email}</span>}
-            {appointment.notes && <span>Napomena: {appointment.notes}</span>}
-            <span>Izvor: {sourceLabels[appointment.source || ""] || "Nepoznato"}</span>
-            {appointment.createdAt && <span>Kreirano: {appointment.createdAt}</span>}
-            <div className="admin-actions">
-              <button
-                className="button outline"
-                type="button"
-                onClick={() => handleEdit(appointment)}
-              >
-                Izmeni
-              </button>
-              <button
-                className="button outline"
-                type="button"
-                onClick={() => handleDelete(appointment.id)}
-              >
-                Obrisi
-              </button>
-              {statusOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => updateStatus(appointment.id, option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
       </div>
     </AdminShell>
   );
