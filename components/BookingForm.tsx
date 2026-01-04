@@ -146,6 +146,22 @@ const parseDurationMinutes = (duration?: string | number) => {
   return Number.isFinite(number) ? number : 0;
 };
 
+type BreakWindow = {
+  start: string;
+  end: string;
+};
+
+const buildBreakWindows = (breaks: BreakWindow[] = []) =>
+  breaks
+    .map((window) => ({
+      start: timeToMinutes(window.start),
+      end: timeToMinutes(window.end),
+    }))
+    .filter((window) => window.end > window.start);
+
+const isBreakOverlap = (start: number, end: number, breaks: { start: number; end: number }[]) =>
+  breaks.some((window) => start < window.end && end > window.start);
+
 const padIcs = (value: number) => String(value).padStart(2, "0");
 
 const formatIcsLocal = (date: Date) =>
@@ -311,13 +327,14 @@ const buildSlots = (
     return [];
   }
 
-  const { open, close, slotMinutes } = siteConfig.schedule;
+  const { open, close, slotMinutes, breaks = [] } = siteConfig.schedule;
   const openMinutes = timeToMinutes(open);
   const closeMinutes = timeToMinutes(close);
   const now = new Date();
   const isToday = date === formatDate(now);
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const required = durationMinutes || slotMinutes;
+  const breakWindows = buildBreakWindows(breaks);
 
   const reserved = [...appointments, ...blocks].map((item) => {
     const start = timeToMinutes(item.time);
@@ -335,6 +352,9 @@ const buildSlots = (
     }
 
     const end = start + required;
+    if (isBreakOverlap(start, end, breakWindows)) {
+      continue;
+    }
     const overlap = reserved.some((item) => start < item.end && end > item.start);
     if (!overlap) {
       slots.push(minutesToTime(start));

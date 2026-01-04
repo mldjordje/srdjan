@@ -46,6 +46,11 @@ type Block = {
   note?: string;
 };
 
+type BreakWindow = {
+  start: string;
+  end: string;
+};
+
 type Client = {
   id: string;
   name: string;
@@ -267,12 +272,29 @@ const getWeekStart = (date: Date) => {
   return addDays(date, -diff);
 };
 
-const buildTimeSlots = (open: string, close: string, stepMinutes: number) => {
+const buildTimeSlots = (
+  open: string,
+  close: string,
+  stepMinutes: number,
+  breaks: BreakWindow[] = []
+) => {
   const slots: string[] = [];
   const startMinutes = timeToMinutes(open);
   const endMinutes = timeToMinutes(close);
+  const breakWindows = breaks
+    .map((window) => ({
+      start: timeToMinutes(window.start),
+      end: timeToMinutes(window.end),
+    }))
+    .filter((window) => window.end > window.start);
 
   for (let minutes = startMinutes; minutes < endMinutes; minutes += stepMinutes) {
+    const isBreak = breakWindows.some(
+      (window) => minutes >= window.start && minutes < window.end
+    );
+    if (isBreak) {
+      continue;
+    }
     slots.push(minutesToTime(minutes));
   }
 
@@ -286,7 +308,7 @@ export default function AdminCalendarPage() {
   }, []);
   const firstWorkingDay = useMemo(() => getNextWorkingDay(today), [today]);
   const lastDay = useMemo(() => addMonthsClamped(today, MONTHS_AHEAD), [today]);
-  const { open, close, slotMinutes } = siteConfig.schedule;
+  const { open, close, slotMinutes, breaks = [] } = siteConfig.schedule;
 
   const [selectedDate, setSelectedDate] = useState(formatDate(firstWorkingDay));
   const [calendarMonth, setCalendarMonth] = useState(
@@ -352,10 +374,17 @@ export default function AdminCalendarPage() {
   );
 
   const timeSlots = useMemo(
-    () => buildTimeSlots(open, close, slotMinutes),
-    [open, close, slotMinutes]
+    () => buildTimeSlots(open, close, slotMinutes, breaks),
+    [open, close, slotMinutes, breaks]
   );
   const slotCount = timeSlots.length;
+  const slotIndexByTime = useMemo(() => {
+    const map: Record<string, number> = {};
+    timeSlots.forEach((slot, index) => {
+      map[slot] = index;
+    });
+    return map;
+  }, [timeSlots]);
 
   const weekdayLabels = useMemo(() => {
     const base = new Date(2024, 0, 1);
@@ -434,7 +463,11 @@ export default function AdminCalendarPage() {
           return;
         }
 
-        const startIndex = Math.floor((startMinutes - openMinutes) / slotMinutes);
+        const startKey = minutesToTime(startMinutes);
+        const startIndex = slotIndexByTime[startKey];
+        if (startIndex === undefined) {
+          return;
+        }
         const rowStart = startIndex + 2;
         const rawSpan = Math.ceil(durationMinutes / slotMinutes);
         const maxSpan = slotCount - startIndex;
@@ -465,7 +498,11 @@ export default function AdminCalendarPage() {
           return;
         }
 
-        const startIndex = Math.floor((startMinutes - openMinutes) / slotMinutes);
+        const startKey = minutesToTime(startMinutes);
+        const startIndex = slotIndexByTime[startKey];
+        if (startIndex === undefined) {
+          return;
+        }
         const rowStart = startIndex + 2;
         const rawSpan = Math.ceil(durationMinutes / slotMinutes);
         const maxSpan = slotCount - startIndex;
@@ -489,7 +526,16 @@ export default function AdminCalendarPage() {
     });
 
     return items;
-  }, [weekDays, appointmentsByDate, blocksByDate, open, close, slotMinutes, slotCount]);
+  }, [
+    weekDays,
+    appointmentsByDate,
+    blocksByDate,
+    open,
+    close,
+    slotMinutes,
+    slotCount,
+    slotIndexByTime,
+  ]);
 
   const busySlots = useMemo(() => {
     const map = new Set<string>();
@@ -1264,31 +1310,10 @@ export default function AdminCalendarPage() {
       <div className="admin-grid">
           <div className="calendar-layout">
             <div className="calendar-main">
-              <div className="calendar-toolbar">
-                <div className="calendar-toolbar__actions">
-                  <button
-                    className="button small outline"
-                    type="button"
-                    disabled={!canGoPrev}
-                    onClick={() => setSelectedDate(formatDate(addDays(weekStart, -7)))}
-                  >
-                    Prethodni
-                  </button>
-                  <button
-                    className="button small outline"
-                    type="button"
-                    disabled={!canGoNext}
-                    onClick={() => setSelectedDate(formatDate(addDays(weekStart, 7)))}
-                  >
-                    Sledeci
-                  </button>
-                </div>
-              </div>
-
               <div className="calendar-schedule">
                 <div
                   className="calendar-schedule__scroll"
-                onTouchStart={handleWeekSwipeStart}
+                  onTouchStart={handleWeekSwipeStart}
                 onTouchEnd={handleWeekSwipeEnd}
               >
                 <div className="calendar-schedule__times" style={timeStyles}>
