@@ -95,6 +95,18 @@ const formatSlotLabel = (time: string) => {
   }).format(date);
 };
 
+const normalizeTime = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+  const match = trimmed.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) {
+    return trimmed;
+  }
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
+};
+
 const timeToMinutes = (time: string) => {
   const [hours, minutes] = time.split(":").map((part) => Number(part));
   return hours * 60 + minutes;
@@ -649,10 +661,14 @@ export default function BookingForm() {
     const now = new Date();
     return clientAppointments
       .filter((appointment) => appointment.status !== "cancelled")
-      .map((appointment) => ({
-        ...appointment,
-        dateTime: new Date(`${appointment.date}T${appointment.time}:00`),
-      }))
+      .map((appointment) => {
+        const time = normalizeTime(appointment.time) || "00:00";
+        return {
+          ...appointment,
+          displayTime: time,
+          dateTime: new Date(`${appointment.date}T${time}:00`),
+        };
+      })
       .filter((appointment) => appointment.dateTime >= now)
       .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime())
       .slice(0, 2);
@@ -728,7 +744,7 @@ export default function BookingForm() {
             <div key={appointment.id} className="booking-upcoming__item">
               <strong>{appointment.serviceName}</strong>
               <span>
-                {formatLongDate(appointment.date)} | {appointment.time}
+                {formatLongDate(appointment.date)} | {appointment.displayTime}
               </span>
               {appointment.status && <em>{appointment.status}</em>}
             </div>

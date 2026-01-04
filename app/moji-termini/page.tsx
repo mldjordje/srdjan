@@ -37,8 +37,22 @@ const formatLongDate = (value: string) => {
   }).format(date);
 };
 
-const buildDateTime = (appointment: Appointment) =>
-  new Date(`${appointment.date}T${appointment.time}:00`);
+const normalizeTime = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+  const match = trimmed.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) {
+    return trimmed;
+  }
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
+};
+
+const buildDateTime = (appointment: Appointment) => {
+  const time = normalizeTime(appointment.time) || "00:00";
+  return new Date(`${appointment.date}T${time}:00`);
+};
 
 export default function MyAppointmentsPage() {
   const [client, setClient] = useState<ClientProfile | null>(null);
@@ -269,7 +283,7 @@ export default function MyAppointmentsPage() {
                 <div>
                   <strong>{appointment.serviceName}</strong>
                   <span>
-                    {formatLongDate(appointment.date)} | {appointment.time}
+                    {formatLongDate(appointment.date)} | {normalizeTime(appointment.time)}
                   </span>
                 </div>
                 {appointment.status && (
@@ -296,7 +310,7 @@ export default function MyAppointmentsPage() {
                 <div>
                   <strong>{appointment.serviceName}</strong>
                   <span>
-                    {formatLongDate(appointment.date)} | {appointment.time}
+                    {formatLongDate(appointment.date)} | {normalizeTime(appointment.time)}
                   </span>
                 </div>
                 {appointment.status && (
