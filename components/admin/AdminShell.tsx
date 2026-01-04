@@ -62,6 +62,21 @@ export default function AdminShell({ title, subtitle, children }: AdminShellProp
           <nav className="nav-links">
             <Link href="/">Pocetna</Link>
             <Link href="/#booking">Zakazi termin</Link>
+            {navItems.map((item) => {
+              const isActive =
+                pathname === item.href ||
+                (item.href === "/admin/termini" && pathname === "/admin/appointments");
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`admin-link ${isActive ? "is-active" : ""}`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
             <button className="button small ghost" type="button" onClick={handleLogout}>
               Odjava
             </button>
@@ -75,23 +90,6 @@ export default function AdminShell({ title, subtitle, children }: AdminShellProp
             <h1>{title}</h1>
             {subtitle && <p>{subtitle}</p>}
           </div>
-          <nav className="admin-shell__nav">
-            {navItems.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                (item.href === "/admin/termini" && pathname === "/admin/appointments");
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={isActive ? "is-active" : ""}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
         </div>
         {children}
       </main>

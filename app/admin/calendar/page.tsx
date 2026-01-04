@@ -1118,48 +1118,6 @@ export default function AdminCalendarPage() {
       <div className="admin-grid">
         <div className="calendar-layout">
           <div className="calendar-main">
-            <div className="calendar-toolbar">
-              <div className="calendar-toolbar__title">
-                <h2>{formatMonthLabel(weekStart)}</h2>
-                <span>{weekRangeLabel}</span>
-              </div>
-              <div className="calendar-toolbar__stats">
-                <div className="calendar-metric">
-                  <strong>{totalAppointments}</strong>
-                  <span>termina</span>
-                </div>
-                <div className="calendar-metric">
-                  <strong>{totalBlockedMinutes}</strong>
-                  <span>min blokirano</span>
-                </div>
-              </div>
-              <div className="calendar-toolbar__actions">
-                <button
-                  className="button small outline"
-                  type="button"
-                  disabled={!canGoPrev}
-                  onClick={() => setSelectedDate(formatDate(addDays(weekStart, -7)))}
-                >
-                  Prethodni
-                </button>
-                <button
-                  className="button small ghost"
-                  type="button"
-                  onClick={() => setSelectedDate(formatDate(getNextWorkingDay(today)))}
-                >
-                  Danas
-                </button>
-                <button
-                  className="button small outline"
-                  type="button"
-                  disabled={!canGoNext}
-                  onClick={() => setSelectedDate(formatDate(addDays(weekStart, 7)))}
-                >
-                  Sledeci
-                </button>
-              </div>
-            </div>
-
             {status.type !== "idle" && status.message && (
               <div className={`form-status ${status.type}`}>{status.message}</div>
             )}
@@ -1255,6 +1213,48 @@ export default function AdminCalendarPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+
+            <div className="calendar-toolbar">
+              <div className="calendar-toolbar__title">
+                <h2>{formatMonthLabel(weekStart)}</h2>
+                <span>{weekRangeLabel}</span>
+              </div>
+              <div className="calendar-toolbar__stats">
+                <div className="calendar-metric">
+                  <strong>{totalAppointments}</strong>
+                  <span>termina</span>
+                </div>
+                <div className="calendar-metric">
+                  <strong>{totalBlockedMinutes}</strong>
+                  <span>min blokirano</span>
+                </div>
+              </div>
+              <div className="calendar-toolbar__actions">
+                <button
+                  className="button small outline"
+                  type="button"
+                  disabled={!canGoPrev}
+                  onClick={() => setSelectedDate(formatDate(addDays(weekStart, -7)))}
+                >
+                  Prethodni
+                </button>
+                <button
+                  className="button small ghost"
+                  type="button"
+                  onClick={() => setSelectedDate(formatDate(getNextWorkingDay(today)))}
+                >
+                  Danas
+                </button>
+                <button
+                  className="button small outline"
+                  type="button"
+                  disabled={!canGoNext}
+                  onClick={() => setSelectedDate(formatDate(addDays(weekStart, 7)))}
+                >
+                  Sledeci
+                </button>
               </div>
             </div>
 

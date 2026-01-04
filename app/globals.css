@@ -168,6 +168,15 @@ h4 {
   background: rgba(17, 17, 17, 0.06);
 }
 
+.nav-links .admin-link {
+  font-weight: 700;
+}
+
+.nav-links .admin-link.is-active {
+  color: var(--text);
+  background: rgba(17, 17, 17, 0.08);
+}
+
 .nav-top {
   display: flex;
   align-items: center;
