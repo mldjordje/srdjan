@@ -9,6 +9,8 @@ type AdminShellProps = {
   title: string;
   subtitle?: string;
   children: ReactNode;
+  hideHeader?: boolean;
+  fullWidth?: boolean;
 };
 
 const navItems = [
@@ -17,7 +19,13 @@ const navItems = [
   { href: "/admin/clients", label: "Klijenti" },
 ];
 
-export default function AdminShell({ title, subtitle, children }: AdminShellProps) {
+export default function AdminShell({
+  title,
+  subtitle,
+  children,
+  hideHeader = false,
+  fullWidth = false,
+}: AdminShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
@@ -84,13 +92,15 @@ export default function AdminShell({ title, subtitle, children }: AdminShellProp
         </div>
       </header>
 
-      <main className="admin-shell container">
-        <div className="admin-shell__header">
-          <div className="admin-shell__title">
-            <h1>{title}</h1>
-            {subtitle && <p>{subtitle}</p>}
+      <main className={`admin-shell${fullWidth ? " admin-shell--full" : " container"}`}>
+        {!hideHeader && (
+          <div className="admin-shell__header">
+            <div className="admin-shell__title">
+              <h1>{title}</h1>
+              {subtitle && <p>{subtitle}</p>}
+            </div>
           </div>
-        </div>
+        )}
         {children}
       </main>
     </div>

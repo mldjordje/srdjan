@@ -1080,6 +1080,14 @@ h4 {
   touch-action: pan-y;
 }
 
+.calendar-week.is-swipe-next {
+  animation: calendarSwipeNext 0.24s ease;
+}
+
+.calendar-week.is-swipe-prev {
+  animation: calendarSwipePrev 0.24s ease;
+}
+
 .calendar-week-day {
   width: 100%;
   border-radius: 14px;
@@ -1583,6 +1591,23 @@ h4 {
   padding: 70px 0 120px;
 }
 
+.admin-shell--full {
+  padding: 30px 18px 90px;
+  width: 100%;
+}
+
+.admin-shell--full .calendar-layout {
+  width: 100%;
+}
+
+.admin-shell--full .calendar-main {
+  min-width: 0;
+}
+
+.admin-shell--full .calendar-schedule {
+  width: 100%;
+}
+
 .admin-shell__header {
   display: flex;
   align-items: flex-end;
@@ -2062,6 +2087,36 @@ h4 {
   min-width: 0;
   flex: 1 1 auto;
   width: 100%;
+}
+
+.calendar-schedule__grid.is-swipe-next {
+  animation: calendarSwipeNext 0.24s ease;
+}
+
+.calendar-schedule__grid.is-swipe-prev {
+  animation: calendarSwipePrev 0.24s ease;
+}
+
+@keyframes calendarSwipeNext {
+  from {
+    transform: translateX(14px);
+    opacity: 0.7;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes calendarSwipePrev {
+  from {
+    transform: translateX(-14px);
+    opacity: 0.7;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 .calendar-day-header {
@@ -2648,6 +2703,10 @@ h4 {
 }
 
 @media (max-width: 600px) {
+  .admin-shell--full {
+    padding: 20px 12px 70px;
+  }
+
   .calendar-modal {
     align-items: end;
   }

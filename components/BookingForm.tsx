@@ -382,6 +382,8 @@ export default function BookingForm() {
     new Date(firstWorkingDay.getFullYear(), firstWorkingDay.getMonth(), 1)
   );
   const weekSwipeStart = useRef<{ x: number; y: number } | null>(null);
+  const swipeAnimationTimeout = useRef<number | null>(null);
+  const [weekTransition, setWeekTransition] = useState<"next" | "prev" | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("db_client_token");
@@ -433,6 +435,14 @@ export default function BookingForm() {
 
     fetchClientAppointments(client.token);
   }, [client?.token]);
+
+  useEffect(() => {
+    return () => {
+      if (swipeAnimationTimeout.current) {
+        window.clearTimeout(swipeAnimationTimeout.current);
+      }
+    };
+  }, []);
 
   const selectedService = useMemo(
     () => services.find((service) => service.id === formData.serviceId),
@@ -682,16 +692,25 @@ export default function BookingForm() {
     }
 
     if (deltaX < 0 && canGoNextWeek) {
+      setWeekTransition("next");
       setFormData((prev) => ({
         ...prev,
         date: formatDate(addDays(weekStart, 7)),
       }));
     } else if (deltaX > 0 && canGoPrevWeek) {
+      setWeekTransition("prev");
       setFormData((prev) => ({
         ...prev,
         date: formatDate(addDays(weekStart, -7)),
       }));
     }
+
+    if (swipeAnimationTimeout.current) {
+      window.clearTimeout(swipeAnimationTimeout.current);
+    }
+    swipeAnimationTimeout.current = window.setTimeout(() => {
+      setWeekTransition(null);
+    }, 240);
   };
 
   const servicePrice = selectedService?.price
@@ -961,7 +980,9 @@ export default function BookingForm() {
               </div>
 
               <div
-                className="calendar-week"
+                className={`calendar-week${
+                  weekTransition ? ` is-swipe-${weekTransition}` : ""
+                }`}
                 onTouchStart={handleWeekSwipeStart}
                 onTouchEnd={handleWeekSwipeEnd}
               >

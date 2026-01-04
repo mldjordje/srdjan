@@ -330,6 +330,8 @@ export default function AdminCalendarPage() {
   const [clientsStatus, setClientsStatus] = useState<StatusState>({ type: "idle" });
   const [selectedClientId, setSelectedClientId] = useState("");
   const weekSwipeStart = useRef<{ x: number; y: number } | null>(null);
+  const swipeAnimationTimeout = useRef<number | null>(null);
+  const [weekTransition, setWeekTransition] = useState<"next" | "prev" | null>(null);
 
   const selectedDateObj = useMemo(
     () => new Date(`${selectedDate}T00:00:00`),
@@ -404,20 +406,6 @@ export default function AdminCalendarPage() {
   const hasUnknownService =
     appointmentForm.serviceId !== "" &&
     !services.some((service) => service.id === appointmentForm.serviceId);
-
-  const totalAppointments = useMemo(
-    () =>
-      Object.values(appointmentsByDate).reduce((sum, list) => sum + list.length, 0),
-    [appointmentsByDate]
-  );
-  const totalBlockedMinutes = useMemo(
-    () =>
-      Object.values(blocksByDate).reduce(
-        (sum, list) => sum + list.reduce((blockSum, block) => blockSum + block.duration, 0),
-        0
-      ),
-    [blocksByDate]
-  );
 
   const canGoPrev = weekStart > firstWorkingDay;
   const canGoNext = addDays(weekStart, 7) <= lastDay;
@@ -668,6 +656,14 @@ export default function AdminCalendarPage() {
   }, []);
 
   useEffect(() => {
+    return () => {
+      if (swipeAnimationTimeout.current) {
+        window.clearTimeout(swipeAnimationTimeout.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (weekDateStrings.length === 0) {
       return;
     }
@@ -767,10 +763,19 @@ export default function AdminCalendarPage() {
     }
 
     if (deltaX < 0 && canGoNext) {
+      setWeekTransition("next");
       setSelectedDate(formatDate(addDays(weekStart, 7)));
     } else if (deltaX > 0 && canGoPrev) {
+      setWeekTransition("prev");
       setSelectedDate(formatDate(addDays(weekStart, -7)));
     }
+
+    if (swipeAnimationTimeout.current) {
+      window.clearTimeout(swipeAnimationTimeout.current);
+    }
+    swipeAnimationTimeout.current = window.setTimeout(() => {
+      setWeekTransition(null);
+    }, 240);
   };
 
   const handleBlockChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -1250,59 +1255,39 @@ export default function AdminCalendarPage() {
   };
 
   return (
-    <AdminShell title="Kalendar" subtitle="Upravljanje dostupnoscu termina">
+    <AdminShell
+      title="Kalendar"
+      subtitle="Upravljanje dostupnoscu termina"
+      hideHeader
+      fullWidth
+    >
       <div className="admin-grid">
-        <div className="calendar-layout">
-          <div className="calendar-main">
-            {status.type !== "idle" && status.message && (
-              <div className={`form-status ${status.type}`}>{status.message}</div>
-            )}
-
-            <div className="calendar-toolbar">
-              <div className="calendar-toolbar__title">
-                <h2>{formatMonthLabel(weekStart)}</h2>
-                <span>{weekRangeLabel}</span>
-              </div>
-              <div className="calendar-toolbar__stats">
-                <div className="calendar-metric">
-                  <strong>{totalAppointments}</strong>
-                  <span>termina</span>
+          <div className="calendar-layout">
+            <div className="calendar-main">
+              <div className="calendar-toolbar">
+                <div className="calendar-toolbar__actions">
+                  <button
+                    className="button small outline"
+                    type="button"
+                    disabled={!canGoPrev}
+                    onClick={() => setSelectedDate(formatDate(addDays(weekStart, -7)))}
+                  >
+                    Prethodni
+                  </button>
+                  <button
+                    className="button small outline"
+                    type="button"
+                    disabled={!canGoNext}
+                    onClick={() => setSelectedDate(formatDate(addDays(weekStart, 7)))}
+                  >
+                    Sledeci
+                  </button>
                 </div>
-                <div className="calendar-metric">
-                  <strong>{totalBlockedMinutes}</strong>
-                  <span>min blokirano</span>
-                </div>
               </div>
-              <div className="calendar-toolbar__actions">
-                <button
-                  className="button small outline"
-                  type="button"
-                  disabled={!canGoPrev}
-                  onClick={() => setSelectedDate(formatDate(addDays(weekStart, -7)))}
-                >
-                  Prethodni
-                </button>
-                <button
-                  className="button small ghost"
-                  type="button"
-                  onClick={() => setSelectedDate(formatDate(getNextWorkingDay(today)))}
-                >
-                  Danas
-                </button>
-                <button
-                  className="button small outline"
-                  type="button"
-                  disabled={!canGoNext}
-                  onClick={() => setSelectedDate(formatDate(addDays(weekStart, 7)))}
-                >
-                  Sledeci
-                </button>
-              </div>
-            </div>
 
-            <div className="calendar-schedule">
-              <div
-                className="calendar-schedule__scroll"
+              <div className="calendar-schedule">
+                <div
+                  className="calendar-schedule__scroll"
                 onTouchStart={handleWeekSwipeStart}
                 onTouchEnd={handleWeekSwipeEnd}
               >
@@ -1315,7 +1300,12 @@ export default function AdminCalendarPage() {
                   ))}
                 </div>
 
-                <div className="calendar-schedule__grid" style={gridStyles}>
+                <div
+                  className={`calendar-schedule__grid${
+                    weekTransition ? ` is-swipe-${weekTransition}` : ""
+                  }`}
+                  style={gridStyles}
+                >
                   {weekDays.map((day, index) => {
                     const dateKey = formatDate(day);
                     const isActive = dateKey === selectedDate;
@@ -1394,13 +1384,17 @@ export default function AdminCalendarPage() {
                       {item.subtitle && <span>{item.subtitle}</span>}
                     </div>
                   ))}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="calendar-detail-grid">
-              <div className="calendar-list">
-                <h3>Termini {selectedDateLabel}</h3>
+              {status.type === "error" && status.message && (
+                <div className="form-status error">{status.message}</div>
+              )}
+
+              <div className="calendar-detail-grid">
+                <div className="calendar-list">
+                  <h3>Termini {selectedDateLabel}</h3>
                 {selectedAppointments.length === 0 && (
                   <div className="admin-card">Nema termina.</div>
                 )}
