@@ -1117,71 +1117,6 @@ export default function AdminCalendarPage() {
     <AdminShell title="Kalendar" subtitle="Upravljanje dostupnoscu termina">
       <div className="admin-grid">
         <div className="calendar-layout">
-          <aside className="calendar-sidebar">
-            <div className="calendar-selected">
-              <span>Izabrani datum</span>
-              <strong>{selectedDateLabel || "Izaberi datum"}</strong>
-              <span className="calendar-selected__meta">{selectedDate}</span>
-            </div>
-
-            <div className="month-picker">
-              <div className="month-picker__header">
-                <button
-                  className="button small outline"
-                  type="button"
-                  disabled={!canGoPrevMonth}
-                  onClick={() => setCalendarMonth(addMonths(calendarMonth, -1))}
-                >
-                  Prethodni
-                </button>
-                <div className="month-picker__title">
-                  {formatMonthLabel(calendarMonth)}
-                </div>
-                <button
-                  className="button small outline"
-                  type="button"
-                  disabled={!canGoNextMonth}
-                  onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))}
-                >
-                  Sledeci
-                </button>
-              </div>
-              <div className="month-picker__weekdays">
-                {weekdayLabels.map((day) => (
-                  <span key={day}>{day}</span>
-                ))}
-              </div>
-              <div className="month-picker__grid">
-                {monthDays.map((day, index) => {
-                  if (!day.inMonth) {
-                    return <div key={`empty-${index}`} className="month-day empty" />;
-                  }
-
-                  const isActive = day.value === selectedDate;
-                  const isDisabled = !day.inRange;
-
-                  return (
-                    <button
-                      key={day.value}
-                      type="button"
-                      className={`month-day ${isActive ? "is-active" : ""}`}
-                      disabled={isDisabled}
-                      onClick={() => {
-                        const value = day.value;
-                        if (!value) {
-                          return;
-                        }
-                        setSelectedDate(value);
-                      }}
-                    >
-                      {day.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </aside>
-
           <div className="calendar-main">
             <div className="calendar-toolbar">
               <div className="calendar-toolbar__title">
@@ -1373,6 +1308,70 @@ export default function AdminCalendarPage() {
               </div>
             </div>
           </div>
+          <aside className="calendar-sidebar">
+            <div className="calendar-selected">
+              <span>Izabrani datum</span>
+              <strong>{selectedDateLabel || "Izaberi datum"}</strong>
+              <span className="calendar-selected__meta">{selectedDate}</span>
+            </div>
+
+            <div className="month-picker">
+              <div className="month-picker__header">
+                <button
+                  className="button small outline"
+                  type="button"
+                  disabled={!canGoPrevMonth}
+                  onClick={() => setCalendarMonth(addMonths(calendarMonth, -1))}
+                >
+                  Prethodni
+                </button>
+                <div className="month-picker__title">
+                  {formatMonthLabel(calendarMonth)}
+                </div>
+                <button
+                  className="button small outline"
+                  type="button"
+                  disabled={!canGoNextMonth}
+                  onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))}
+                >
+                  Sledeci
+                </button>
+              </div>
+              <div className="month-picker__weekdays">
+                {weekdayLabels.map((day) => (
+                  <span key={day}>{day}</span>
+                ))}
+              </div>
+              <div className="month-picker__grid">
+                {monthDays.map((day, index) => {
+                  if (!day.inMonth) {
+                    return <div key={`empty-${index}`} className="month-day empty" />;
+                  }
+
+                  const isActive = day.value === selectedDate;
+                  const isDisabled = !day.inRange;
+
+                  return (
+                    <button
+                      key={day.value}
+                      type="button"
+                      className={`month-day ${isActive ? "is-active" : ""}`}
+                      disabled={isDisabled}
+                      onClick={() => {
+                        const value = day.value;
+                        if (!value) {
+                          return;
+                        }
+                        setSelectedDate(value);
+                      }}
+                    >
+                      {day.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
 

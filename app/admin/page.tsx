@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -18,6 +18,12 @@ export default function AdminLoginPage() {
   const [credentials, setCredentials] = useState({ user: "", pass: "" });
   const [status, setStatus] = useState<StatusState>({ type: "idle" });
 
+  useEffect(() => {
+    if (localStorage.getItem("db_admin_auth") === "true") {
+      router.replace("/admin/calendar");
+    }
+  }, [router]);
+
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setCredentials((prev) => ({
@@ -32,7 +38,7 @@ export default function AdminLoginPage() {
     if (credentials.user === adminUser && credentials.pass === adminPass) {
       localStorage.setItem("db_admin_auth", "true");
       setStatus({ type: "success", message: "Ulogovani ste u CMS." });
-      router.push("/admin/termini");
+      router.push("/admin/calendar");
       return;
     }
 

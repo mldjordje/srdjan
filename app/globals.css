@@ -1601,7 +1601,7 @@ h4 {
 
 .calendar-layout {
   display: grid;
-  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
   gap: 24px;
   align-items: start;
 }
