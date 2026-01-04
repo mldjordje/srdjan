@@ -753,13 +753,14 @@ export default function BookingForm() {
                   key={service.id}
                   type="button"
                   className={`service-option ${isActive ? "is-active" : ""}`}
-                  onClick={() =>
+                  onClick={() => {
                     setFormData((prev) => ({
                       ...prev,
                       serviceId: service.id,
                       time: "",
-                    }))
-                  }
+                    }));
+                    setActiveStep(2);
+                  }}
                 >
                   <div className="service-info">
                     <strong>{service.name}</strong>

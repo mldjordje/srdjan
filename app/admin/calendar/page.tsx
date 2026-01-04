@@ -16,11 +16,18 @@ const getWorkdayColumn = (day: number) => WORKING_DAY_ORDER.indexOf(day);
 type Appointment = {
   id: string;
   clientName: string;
+  phone?: string;
+  email?: string;
+  serviceId?: string;
   serviceName: string;
+  duration?: string;
+  price?: number;
   date: string;
   time: string;
-  duration?: string;
+  notes?: string;
   status?: string;
+  source?: string;
+  createdAt?: string;
 };
 
 type Block = {
@@ -67,6 +74,7 @@ type ScheduleItem = {
   note?: string;
   type: "appointment" | "block";
   status?: string;
+  appointment?: Appointment;
 };
 
 const statusLabels: Record<string, string> = {
@@ -74,6 +82,18 @@ const statusLabels: Record<string, string> = {
   confirmed: "Potvrdjen",
   completed: "Zavrsen",
   cancelled: "Otkazan",
+};
+
+const statusOptions = [
+  { value: "pending", label: "Na cekanju" },
+  { value: "confirmed", label: "Potvrdjen" },
+  { value: "completed", label: "Zavrsen" },
+  { value: "cancelled", label: "Otkazan" },
+];
+
+const sourceLabels: Record<string, string> = {
+  web: "Online",
+  admin: "Rucno",
 };
 
 const formatDate = (date: Date) => {
@@ -114,6 +134,8 @@ const formatRangeLabel = (start: Date, end: Date) => {
   }).format(end);
   return `${startLabel} - ${endLabel}`;
 };
+
+const normalizeTimeInput = (value: string) => (value ? value.slice(0, 5) : "");
 
 const timeToMinutes = (time: string) => {
   const [hours, minutes] = time.split(":").map((part) => Number(part));
@@ -262,9 +284,14 @@ export default function AdminCalendarPage() {
   const [appointmentStatus, setAppointmentStatus] = useState<StatusState>({
     type: "idle",
   });
+  const [appointmentActionStatus, setAppointmentActionStatus] = useState<StatusState>({
+    type: "idle",
+  });
   const [isSlotModalOpen, setIsSlotModalOpen] = useState(false);
   const [slotAction, setSlotAction] = useState<"appointment" | "block">("appointment");
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ date: string; time: string } | null>(
     null
   );
@@ -353,6 +380,10 @@ export default function AdminCalendarPage() {
     () => services.find((service) => service.id === appointmentForm.serviceId),
     [appointmentForm.serviceId]
   );
+  const isEditingAppointment = Boolean(editingAppointment);
+  const hasUnknownService =
+    appointmentForm.serviceId !== "" &&
+    !services.some((service) => service.id === appointmentForm.serviceId);
 
   const totalAppointments = useMemo(
     () =>
@@ -409,6 +440,7 @@ export default function AdminCalendarPage() {
           duration: durationMinutes,
           type: "appointment",
           status: appointment.status || "pending",
+          appointment,
         });
       });
 
@@ -594,6 +626,25 @@ export default function AdminCalendarPage() {
     return isWorkingDay(date) ? value : formatDate(getNextWorkingDay(date));
   };
 
+  const resolveServiceId = (appointment: Appointment) => {
+    if (appointment.serviceId) {
+      return appointment.serviceId;
+    }
+
+    const match = services.find((service) => service.name === appointment.serviceName);
+    return match?.id ?? "";
+  };
+
+  const handleOpenAppointmentModal = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setAppointmentActionStatus({ type: "idle" });
+  };
+
+  const handleCloseAppointmentModal = () => {
+    setSelectedAppointment(null);
+    setAppointmentActionStatus({ type: "idle" });
+  };
+
   const handleBlockChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
 
@@ -664,6 +715,7 @@ export default function AdminCalendarPage() {
     }
 
     setEditingBlockId(null);
+    setEditingAppointment(null);
     setSlotAction("appointment");
     setAppointmentStatus({ type: "idle" });
     setIsSlotModalOpen(true);
@@ -686,6 +738,7 @@ export default function AdminCalendarPage() {
     setSlotAction("block");
     setIsSlotModalOpen(true);
     setEditingBlockId(block.id);
+    setEditingAppointment(null);
     setSelectedSlot({ date: block.date, time: block.time });
     setSelectedDate(block.date);
     setBlockForm({
@@ -706,6 +759,131 @@ export default function AdminCalendarPage() {
       duration: "20",
       note: "",
     }));
+  };
+
+  const handleEditAppointment = (appointment: Appointment) => {
+    const resolvedServiceId = resolveServiceId(appointment);
+    const normalizedTime = normalizeTimeInput(appointment.time);
+
+    setEditingBlockId(null);
+    setEditingAppointment(appointment);
+    setSlotAction("appointment");
+    setAppointmentStatus({ type: "idle" });
+    setIsSlotModalOpen(true);
+    setSelectedSlot({ date: appointment.date, time: normalizedTime });
+    setSelectedDate(appointment.date);
+    setAppointmentForm({
+      date: appointment.date,
+      time: normalizedTime,
+      serviceId: resolvedServiceId || services[0]?.id || "",
+      clientName: appointment.clientName ?? "",
+      phone: appointment.phone ?? "",
+      email: appointment.email ?? "",
+      notes: appointment.notes ?? "",
+    });
+    setAppointmentActionStatus({ type: "idle" });
+    setSelectedAppointment(null);
+  };
+
+  const handleDeleteAppointment = async (appointment: Appointment) => {
+    if (!apiBaseUrl || !adminKey) {
+      return;
+    }
+
+    const confirmed = window.confirm("Da li sigurno zelis da obrises termin?");
+    if (!confirmed) {
+      return;
+    }
+
+    setAppointmentActionStatus({ type: "loading" });
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/appointments.php`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Admin-Key": adminKey,
+        },
+        body: JSON.stringify({
+          adminAction: "delete",
+          id: appointment.id,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Ne mogu da obrisem termin.");
+      }
+
+      setAppointmentsByDate((prev) => {
+        const next = { ...prev };
+        const list = next[appointment.date] ?? [];
+        next[appointment.date] = list.filter((item) => item.id !== appointment.id);
+        return next;
+      });
+
+      setSelectedAppointment(null);
+      setEditingAppointment(null);
+      setAppointmentActionStatus({ type: "success", message: "Termin je obrisan." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      setAppointmentActionStatus({ type: "error", message });
+    }
+  };
+
+  const handleUpdateAppointmentStatus = async (
+    appointment: Appointment,
+    nextStatus: string
+  ) => {
+    if (appointment.status === nextStatus) {
+      return;
+    }
+
+    if (!apiBaseUrl || !adminKey) {
+      return;
+    }
+
+    setAppointmentActionStatus({ type: "loading" });
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/appointments.php`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Admin-Key": adminKey,
+        },
+        body: JSON.stringify({
+          adminAction: "update_status",
+          id: appointment.id,
+          status: nextStatus,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Ne mogu da sacuvam status.");
+      }
+
+      setAppointmentsByDate((prev) => {
+        const next = { ...prev };
+        const list = next[appointment.date] ?? [];
+        next[appointment.date] = list.map((item) =>
+          item.id === appointment.id ? { ...item, status: nextStatus } : item
+        );
+        return next;
+      });
+
+      setSelectedAppointment((prev) =>
+        prev ? { ...prev, status: nextStatus } : prev
+      );
+      setEditingAppointment((prev) =>
+        prev ? { ...prev, status: nextStatus } : prev
+      );
+      setAppointmentActionStatus({ type: "success", message: "Status je sacuvan." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      setAppointmentActionStatus({ type: "error", message });
+    }
   };
 
   const handleCreateBlock = async (event: FormEvent<HTMLFormElement>) => {
@@ -766,7 +944,7 @@ export default function AdminCalendarPage() {
     }
   };
 
-  const handleCreateAppointment = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSaveAppointment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!apiBaseUrl) {
@@ -777,7 +955,24 @@ export default function AdminCalendarPage() {
       return;
     }
 
-    if (!selectedService) {
+    if (!adminKey) {
+      setAppointmentStatus({
+        type: "error",
+        message: "Dodaj NEXT_PUBLIC_ADMIN_KEY u .env da bi CMS radio.",
+      });
+      return;
+    }
+
+    const resolvedServiceId =
+      selectedService?.id || editingAppointment?.serviceId || appointmentForm.serviceId;
+    const resolvedServiceName =
+      selectedService?.name || editingAppointment?.serviceName || "";
+    const resolvedDuration =
+      selectedService?.duration || editingAppointment?.duration || "";
+    const resolvedPrice =
+      selectedService?.price ?? editingAppointment?.price ?? 0;
+
+    if (!resolvedServiceId || !resolvedServiceName || !resolvedDuration) {
       setAppointmentStatus({
         type: "error",
         message: "Izaberi uslugu pre zakazivanja.",
@@ -813,23 +1008,31 @@ export default function AdminCalendarPage() {
     setAppointmentStatus({ type: "loading" });
 
     try {
+      const payload = {
+        clientName: appointmentForm.clientName.trim(),
+        phone: appointmentForm.phone.trim(),
+        email: appointmentForm.email.trim(),
+        serviceId: resolvedServiceId,
+        serviceName: resolvedServiceName,
+        duration: resolvedDuration,
+        price: resolvedPrice,
+        date: appointmentForm.date,
+        time: normalizeTimeInput(appointmentForm.time),
+        notes: appointmentForm.notes.trim(),
+        status: editingAppointment?.status ?? "pending",
+        source: editingAppointment?.source ?? "admin",
+      };
+
       const response = await fetch(`${apiBaseUrl}/appointments.php`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-Admin-Key": adminKey,
         },
         body: JSON.stringify({
-          clientName: appointmentForm.clientName.trim(),
-          phone: appointmentForm.phone.trim(),
-          email: appointmentForm.email.trim(),
-          serviceId: selectedService.id,
-          serviceName: selectedService.name,
-          duration: selectedService.duration,
-          price: selectedService.price,
-          date: appointmentForm.date,
-          time: appointmentForm.time,
-          notes: appointmentForm.notes.trim(),
-          source: "admin",
+          adminAction: editingAppointment ? "update" : "create",
+          id: editingAppointment?.id,
+          ...payload,
         }),
       });
       const data = await response.json();
@@ -840,7 +1043,7 @@ export default function AdminCalendarPage() {
 
       setAppointmentStatus({
         type: "success",
-        message: "Termin je sacuvan.",
+        message: editingAppointment ? "Termin je izmenjen." : "Termin je sacuvan.",
       });
       setAppointmentForm((prev) => ({
         ...prev,
@@ -849,6 +1052,7 @@ export default function AdminCalendarPage() {
         email: "",
         notes: "",
       }));
+      setEditingAppointment(null);
       setSelectedSlot(null);
       setIsSlotModalOpen(false);
       await refreshData(weekDateStrings);
@@ -892,6 +1096,7 @@ export default function AdminCalendarPage() {
   const handleCloseModal = () => {
     setIsSlotModalOpen(false);
     setEditingBlockId(null);
+    setEditingAppointment(null);
     setSelectedSlot(null);
     setAppointmentStatus({ type: "idle" });
   };
@@ -905,7 +1110,7 @@ export default function AdminCalendarPage() {
       item.status && ["pending", "confirmed", "completed", "cancelled"].includes(item.status)
         ? item.status
         : "pending";
-    return `calendar-item calendar-item--${statusClass}`;
+    return `calendar-item calendar-item--${statusClass} is-editable`;
   };
 
   return (
@@ -1094,16 +1299,20 @@ export default function AdminCalendarPage() {
                         gridRow: `${item.startRow} / span ${item.span}`,
                       }}
                       onClick={() => {
-                        if (item.type !== "block" || !item.sourceId) {
+                        if (item.type === "block" && item.sourceId) {
+                          handleEditBlock({
+                            id: item.sourceId,
+                            date: item.date,
+                            time: item.time,
+                            duration: item.duration || slotMinutes,
+                            note: item.note,
+                          });
                           return;
                         }
-                        handleEditBlock({
-                          id: item.sourceId,
-                          date: item.date,
-                          time: item.time,
-                          duration: item.duration || slotMinutes,
-                          note: item.note,
-                        });
+
+                        if (item.type === "appointment" && item.appointment) {
+                          handleOpenAppointmentModal(item.appointment);
+                        }
                       }}
                     >
                       <strong>{item.title}</strong>
@@ -1127,7 +1336,8 @@ export default function AdminCalendarPage() {
                     </div>
                     <strong>{appointment.serviceName}</strong>
                     <span>
-                      {appointment.time} | {appointment.clientName}
+                      {normalizeTimeInput(appointment.time)} |{" "}
+                      <span className="calendar-client-name">{appointment.clientName}</span>
                     </span>
                   </div>
                 ))}
@@ -1172,7 +1382,15 @@ export default function AdminCalendarPage() {
           <div className="calendar-modal__card">
             <div className="calendar-modal__header">
               <div>
-                <strong>{slotAction === "block" ? "Blokiraj termin" : "Rezervisi termin"}</strong>
+                <strong>
+                  {slotAction === "block"
+                    ? editingBlockId
+                      ? "Izmeni blokadu"
+                      : "Blokiraj termin"
+                    : isEditingAppointment
+                    ? "Izmeni termin"
+                    : "Rezervisi termin"}
+                </strong>
                 {selectedSlot && (
                   <span>
                     {selectedSlot.date} | {selectedSlot.time}
@@ -1203,6 +1421,7 @@ export default function AdminCalendarPage() {
               <button
                 className={`button small ${slotAction === "block" ? "" : "outline"}`}
                 type="button"
+                disabled={isEditingAppointment}
                 onClick={() => setSlotAction("block")}
               >
                 Blokiraj
@@ -1210,7 +1429,7 @@ export default function AdminCalendarPage() {
             </div>
 
             {slotAction === "appointment" ? (
-              <form className="calendar-form" onSubmit={handleCreateAppointment}>
+              <form className="calendar-form" onSubmit={handleSaveAppointment}>
                 <div className="form-row">
                   <label htmlFor="appointment-date">Datum</label>
                   <input
@@ -1250,6 +1469,11 @@ export default function AdminCalendarPage() {
                     <option value="" disabled>
                       Izaberi uslugu
                     </option>
+                    {hasUnknownService && (
+                      <option value={appointmentForm.serviceId}>
+                        {editingAppointment?.serviceName || "Nepoznata usluga"}
+                      </option>
+                    )}
                     {services.map((service) => (
                       <option key={service.id} value={service.id}>
                         {service.name} ({service.duration})
@@ -1309,7 +1533,7 @@ export default function AdminCalendarPage() {
                 )}
                 <div className="calendar-form__actions">
                   <button className="button" type="submit">
-                    Sacuvaj termin
+                    {isEditingAppointment ? "Sacuvaj izmene" : "Sacuvaj termin"}
                   </button>
                 </div>
               </form>
@@ -1382,6 +1606,103 @@ export default function AdminCalendarPage() {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {selectedAppointment && (
+        <div className="calendar-modal" role="dialog" aria-modal="true">
+          <div className="calendar-modal__backdrop" onClick={handleCloseAppointmentModal} />
+          <div className="calendar-modal__card">
+            <div className="calendar-modal__header">
+              <div>
+                <strong className="calendar-appointment__client">
+                  {selectedAppointment.clientName}
+                </strong>
+                <span>
+                  {selectedAppointment.date} |{" "}
+                  {normalizeTimeInput(selectedAppointment.time)}
+                </span>
+              </div>
+              <button
+                className="calendar-modal__close"
+                type="button"
+                onClick={handleCloseAppointmentModal}
+                aria-label="Zatvori"
+              >
+                x
+              </button>
+            </div>
+
+            <div className="calendar-appointment__meta">
+              <div className={`status-pill ${selectedAppointment.status || "pending"}`}>
+                {statusLabels[selectedAppointment.status || "pending"] ||
+                  selectedAppointment.status}
+              </div>
+              <strong>{selectedAppointment.serviceName}</strong>
+              {selectedAppointment.phone && (
+                <span>Telefon: {selectedAppointment.phone}</span>
+              )}
+              {selectedAppointment.email && (
+                <span>Email: {selectedAppointment.email}</span>
+              )}
+              {selectedAppointment.notes && (
+                <span>Napomena: {selectedAppointment.notes}</span>
+              )}
+              {selectedAppointment.source && (
+                <span>
+                  Izvor:{" "}
+                  {sourceLabels[selectedAppointment.source] ||
+                    selectedAppointment.source}
+                </span>
+              )}
+              {selectedAppointment.createdAt && (
+                <span>Kreirano: {selectedAppointment.createdAt}</span>
+              )}
+            </div>
+
+            {appointmentActionStatus.type !== "idle" &&
+              appointmentActionStatus.message && (
+                <div className={`form-status ${appointmentActionStatus.type}`}>
+                  {appointmentActionStatus.message}
+                </div>
+              )}
+
+            <div className="calendar-appointment__actions">
+              <button
+                className="button outline"
+                type="button"
+                onClick={() => handleEditAppointment(selectedAppointment)}
+                disabled={appointmentActionStatus.type === "loading"}
+              >
+                Izmeni
+              </button>
+              <button
+                className="button outline"
+                type="button"
+                onClick={() => handleDeleteAppointment(selectedAppointment)}
+                disabled={appointmentActionStatus.type === "loading"}
+              >
+                Obrisi
+              </button>
+              {statusOptions.map((option) => (
+                <button
+                  key={option.value}
+                  className={`button small outline ${
+                    (selectedAppointment.status || "pending") === option.value
+                      ? "is-active"
+                      : ""
+                  }`}
+                  type="button"
+                  onClick={() =>
+                    handleUpdateAppointmentStatus(selectedAppointment, option.value)
+                  }
+                  disabled={appointmentActionStatus.type === "loading"}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
