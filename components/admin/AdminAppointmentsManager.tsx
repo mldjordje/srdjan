@@ -212,9 +212,14 @@ export default function AdminAppointmentsManager() {
       }
 
       const items = Array.isArray(data.appointments) ? data.appointments : [];
-      items.sort((a: Appointment, b: Appointment) =>
-        `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`)
-      );
+      items.sort((a: Appointment, b: Appointment) => {
+        const aCreated = a.createdAt ?? "";
+        const bCreated = b.createdAt ?? "";
+        if (aCreated || bCreated) {
+          return bCreated.localeCompare(aCreated);
+        }
+        return `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`);
+      });
       setAppointments(items);
       setStatus({ type: "success", message: "Termini su osvezeni." });
     } catch (error) {

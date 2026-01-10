@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 
 import AdminShell from "@/components/admin/AdminShell";
 
@@ -36,6 +36,8 @@ export default function AdminClientsPage() {
     address: "",
     description: "",
   });
+  const editCardRef = useRef<HTMLDivElement | null>(null);
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchClients = async () => {
     if (!apiBaseUrl) {
@@ -104,6 +106,10 @@ export default function AdminClientsPage() {
       description: client.description || "",
     });
     setFormStatus({ type: "idle" });
+    requestAnimationFrame(() => {
+      editCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      nameInputRef.current?.focus();
+    });
   };
 
   const handleChange = (
@@ -215,7 +221,10 @@ export default function AdminClientsPage() {
             </div>
           </div>
         ))}
-        <div className="admin-card">
+        <div
+          className={`admin-card${editingId ? " is-editing" : ""}`}
+          ref={editCardRef}
+        >
           <h3>{editingId ? "Izmeni klijenta" : "Izaberi klijenta za izmenu"}</h3>
           {editingId ? (
             <form className="form-row" onSubmit={handleSubmit}>
@@ -228,6 +237,7 @@ export default function AdminClientsPage() {
                     className="input"
                     value={formState.name}
                     onChange={handleChange}
+                    ref={nameInputRef}
                     required
                   />
                 </div>

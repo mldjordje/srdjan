@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 
 import AdminShell from "@/components/admin/AdminShell";
 import { fetchServices, services as fallbackServices, type Service } from "@/lib/services";
@@ -38,6 +38,8 @@ export default function AdminServicesPage() {
   const [formState, setFormState] = useState<ServiceFormState>(
     buildDefaultFormState()
   );
+  const editCardRef = useRef<HTMLDivElement | null>(null);
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchServiceItems = async () => {
     if (!apiBaseUrl) {
@@ -101,6 +103,10 @@ export default function AdminServicesPage() {
       })
     );
     setFormStatus({ type: "idle" });
+    requestAnimationFrame(() => {
+      editCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      nameInputRef.current?.focus();
+    });
   };
 
   const resetForm = () => {
@@ -272,7 +278,10 @@ export default function AdminServicesPage() {
           </div>
         ))}
 
-        <div className="admin-card">
+        <div
+          className={`admin-card${editingId ? " is-editing" : ""}`}
+          ref={editCardRef}
+        >
           <h3>{editingId ? "Izmeni uslugu" : "Nova usluga"}</h3>
           <form className="form-row" onSubmit={handleSubmit}>
             <div className="form-grid">
@@ -284,6 +293,7 @@ export default function AdminServicesPage() {
                   className="input"
                   value={formState.name}
                   onChange={handleChange}
+                  ref={nameInputRef}
                   required
                 />
               </div>
