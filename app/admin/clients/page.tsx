@@ -27,6 +27,15 @@ type StatusState = {
 export default function AdminClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [status, setStatus] = useState<StatusState>({ type: "idle" });
+  const [formStatus, setFormStatus] = useState<StatusState>({ type: "idle" });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formState, setFormState] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    address: "",
+    description: "",
+  });
 
   const fetchClients = async () => {
     if (!apiBaseUrl) {
@@ -98,7 +107,7 @@ export default function AdminClientsPage() {
   };
 
   const handleChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = event.target;
     setFormState((prev) => ({
@@ -107,7 +116,7 @@ export default function AdminClientsPage() {
     }));
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!apiBaseUrl) {
