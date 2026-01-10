@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 :root {
   --bg: #f6f5f2;
@@ -2922,4 +2922,121 @@ h4 {
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+
+
+@media (max-width: 600px) {
+  .slot-button {
+    min-height: 48px;
+    font-size: 1.05rem;
+  }
+
+  .slot-items--single {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .calendar-week-day {
+    min-height: 74px;
+  }
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+
+.gallery-card {
+  position: relative;
+  min-height: 240px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  box-shadow: var(--shadow-soft);
+}
+
+.gallery-card img {
+  object-fit: cover;
+  filter: grayscale(0.1) contrast(1.05);
+}
+
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: #111111;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.notification-card.unread {
+  border-color: rgba(17, 17, 17, 0.4);
+  box-shadow: 0 14px 24px rgba(17, 17, 17, 0.12);
+}
+
+.confirm-modal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 40;
+}
+
+.confirm-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.confirm-modal__card {
+  position: relative;
+  z-index: 1;
+  width: min(520px, 92vw);
+  background: var(--bg-elevated);
+  border-radius: 20px;
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  box-shadow: var(--shadow);
+}
+
+.confirm-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.confirm-modal__close {
+  border: none;
+  background: rgba(17, 17, 17, 0.08);
+  color: var(--text);
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.confirm-modal__meta {
+  display: flex;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.confirm-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
 }

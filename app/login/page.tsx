@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
@@ -182,8 +182,13 @@ export default function ClientLoginPage() {
           <nav className="nav-links">
             <Link href="/">Pocetna</Link>
             <Link href="/#booking">Zakazi termin</Link>
-            <Link href="/moji-termini">Moji termini</Link>
-            <Link href="/register">Registracija</Link>
+            {client && <Link href="/moji-termini">Moji termini</Link>}
+            {!client && <Link href="/register">Registracija</Link>}
+            {client && (
+              <button className="button small ghost" type="button" onClick={handleLogout}>
+                Odjava
+              </button>
+            )}
           </nav>
         </div>
       </header>
@@ -295,3 +300,4 @@ export default function ClientLoginPage() {
     </div>
   );
 }
+

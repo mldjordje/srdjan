@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent, type TouchEvent } from "react";
 import Link from "next/link";
 import { Button } from "@heroui/react";
 
-import { services } from "@/lib/services";
+import { fetchServices, getActiveServices, services as fallbackServices, type Service } from "@/lib/services";
 import { siteConfig } from "@/lib/site";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -381,6 +381,7 @@ export default function BookingForm() {
   );
 
   const [client, setClient] = useState<ClientProfile | null>(null);
+  const [serviceItems, setServiceItems] = useState<Service[]>(fallbackServices);
   const [clientAppointments, setClientAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [formData, setFormData] = useState({
@@ -465,9 +466,36 @@ export default function BookingForm() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!apiBaseUrl) {
+      return;
+    }
+
+    let active = true;
+    fetchServices(apiBaseUrl)
+      .then((items) => {
+        if (active) {
+          setServiceItems(items);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setServiceItems(fallbackServices);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const selectedService = useMemo(
-    () => services.find((service) => service.id === formData.serviceId),
-    [formData.serviceId]
+    () => serviceItems.find((service) => service.id === formData.serviceId),
+    [formData.serviceId, serviceItems]
+  );
+  const activeServices = useMemo(
+    () => getActiveServices(serviceItems),
+    [serviceItems]
   );
 
   const calendarDays = useMemo(
@@ -766,8 +794,10 @@ export default function BookingForm() {
   }, []);
 
   const selectedDateLabel = formData.date ? formatLongDate(formData.date) : "";
-  const morningSlots = availableSlots.filter((slot) => timeToMinutes(slot) < 12 * 60);
-  const afternoonSlots = availableSlots.filter((slot) => timeToMinutes(slot) >= 12 * 60);
+  const sortedSlots = useMemo(
+    () => [...availableSlots].sort((a, b) => timeToMinutes(a) - timeToMinutes(b)),
+    [availableSlots]
+  );
 
   const upcomingAppointments = useMemo(() => {
     const now = new Date();
@@ -911,7 +941,7 @@ export default function BookingForm() {
             </div>
           </div>
           <div className="service-list">
-            {services.map((service) => {
+            {activeServices.map((service) => {
               const isActive = service.id === formData.serviceId;
               return (
                 <button
@@ -1127,57 +1157,24 @@ export default function BookingForm() {
                 )}
 
                 {availableSlots.length > 0 && (
-                  <div className="slot-groups">
-                    <div className="slot-group">
-                      <span>Jutro</span>
-                      <div className="slot-items">
-                        {morningSlots.length === 0 && (
-                          <div className="slot-empty">Nema jutarnjih termina.</div>
-                        )}
-                        {morningSlots.map((slot) => (
-                          <Button
-                            key={slot}
-                            size="sm"
-                            variant="bordered"
-                            radius="sm"
-                            className={`slot-button ${
-                              slot === formData.time ? "is-active" : ""
-                            }`}
-                            onPress={() => {
-                              setFormData((prev) => ({ ...prev, time: slot }));
-                              window.setTimeout(scrollToSubmit, 0);
-                            }}
-                          >
-                            {formatSlotLabel(slot)}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="slot-group">
-                      <span>Popodne</span>
-                      <div className="slot-items">
-                        {afternoonSlots.length === 0 && (
-                          <div className="slot-empty">Nema popodnevnih termina.</div>
-                        )}
-                        {afternoonSlots.map((slot) => (
-                          <Button
-                            key={slot}
-                            size="sm"
-                            variant="bordered"
-                            radius="sm"
-                            className={`slot-button ${
-                              slot === formData.time ? "is-active" : ""
-                            }`}
-                            onPress={() => {
-                              setFormData((prev) => ({ ...prev, time: slot }));
-                              window.setTimeout(scrollToSubmit, 0);
-                            }}
-                          >
-                            {formatSlotLabel(slot)}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
+                  <div className="slot-items slot-items--single">
+                    {sortedSlots.map((slot) => (
+                      <Button
+                        key={slot}
+                        size="sm"
+                        variant="bordered"
+                        radius="sm"
+                        className={`slot-button ${
+                          slot === formData.time ? "is-active" : ""
+                        }`}
+                        onPress={() => {
+                          setFormData((prev) => ({ ...prev, time: slot }));
+                          window.setTimeout(scrollToSubmit, 0);
+                        }}
+                      >
+                        {formatSlotLabel(slot)}
+                      </Button>
+                    ))}
                   </div>
                 )}
               </div>
@@ -1230,3 +1227,7 @@ export default function BookingForm() {
     </form>
   );
 }
+
+
+
+

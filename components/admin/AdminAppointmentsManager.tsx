@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 
 import AdminShell from "@/components/admin/AdminShell";
-import { services } from "@/lib/services";
+import { fetchServices, services as fallbackServices, type Service } from "@/lib/services";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || "";
@@ -91,8 +91,11 @@ const formatDateInput = (date: Date) => {
 
 const normalizeTimeInput = (value: string) => (value ? value.slice(0, 5) : "");
 
-const buildDefaultFormState = (overrides: Partial<AppointmentFormState> = {}) => {
-  const defaultService = services[0];
+const buildDefaultFormState = (
+  serviceItems: Service[],
+  overrides: Partial<AppointmentFormState> = {}
+) => {
+  const defaultService = serviceItems[0] ?? fallbackServices[0];
   return {
     clientName: "",
     phone: "",
@@ -114,6 +117,7 @@ export default function AdminAppointmentsManager() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [status, setStatus] = useState<StatusState>({ type: "idle" });
   const [formStatus, setFormStatus] = useState<StatusState>({ type: "idle" });
+  const [serviceItems, setServiceItems] = useState<Service[]>(fallbackServices);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     query: "",
@@ -122,7 +126,7 @@ export default function AdminAppointmentsManager() {
     source: "all",
   });
   const [formState, setFormState] = useState<AppointmentFormState>(() =>
-    buildDefaultFormState()
+    buildDefaultFormState(fallbackServices)
   );
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsStatus, setClientsStatus] = useState<StatusState>({ type: "idle" });
@@ -130,7 +134,7 @@ export default function AdminAppointmentsManager() {
 
   const hasUnknownService =
     formState.serviceId !== "" &&
-    !services.some((service) => service.id === formState.serviceId);
+    !serviceItems.some((service) => service.id === formState.serviceId);
 
   const hasFilters =
     filters.query.trim() !== "" ||
@@ -258,15 +262,34 @@ export default function AdminAppointmentsManager() {
       setClientsStatus({ type: "error", message });
     }
   };
+  const fetchServiceItems = async () => {
+    if (!apiBaseUrl || !adminKey) {
+      return;
+    }
+
+    try {
+      const items = await fetchServices(apiBaseUrl, {
+        adminKey,
+        includeInactive: true,
+      });
+      setServiceItems(items);
+      if (!formState.serviceId && items.length > 0) {
+        setFormState((prev) => buildDefaultFormState(items, { date: prev.date }));
+      }
+    } catch (error) {
+      setServiceItems(fallbackServices);
+    }
+  };
 
   useEffect(() => {
     fetchAppointments();
     fetchClients();
+    fetchServiceItems();
   }, []);
 
   const resetForm = (overrides: Partial<AppointmentFormState> = {}) => {
     setEditingId(null);
-    setFormState(buildDefaultFormState(overrides));
+    setFormState(buildDefaultFormState(serviceItems, overrides));
     setFormStatus({ type: "idle" });
     setSelectedClientId("");
   };
@@ -288,7 +311,7 @@ export default function AdminAppointmentsManager() {
 
   const handleServiceChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const nextServiceId = event.target.value;
-    const selected = services.find((service) => service.id === nextServiceId);
+    const selected = serviceItems.find((service) => service.id === nextServiceId);
 
     if (selected) {
       setFormState((prev) => ({
@@ -461,7 +484,7 @@ export default function AdminAppointmentsManager() {
     const resolvedClientId = resolveClientId(appointment);
     setEditingId(appointment.id);
     setFormState(
-      buildDefaultFormState({
+      buildDefaultFormState(serviceItems, {
         clientName: appointment.clientName ?? "",
         phone: appointment.phone ?? "",
         email: appointment.email ?? "",
@@ -713,7 +736,7 @@ export default function AdminAppointmentsManager() {
                       {formState.serviceName || "Nepoznata usluga"}
                     </option>
                   )}
-                  {services.map((service) => (
+                  {serviceItems.map((service) => (
                     <option key={service.id} value={service.id}>
                       {service.name} ({service.duration})
                     </option>
@@ -893,3 +916,23 @@ export default function AdminAppointmentsManager() {
     </AdminShell>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

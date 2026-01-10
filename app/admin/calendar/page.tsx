@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   useEffect,
@@ -11,7 +11,7 @@ import {
 } from "react";
 
 import AdminShell from "@/components/admin/AdminShell";
-import { services } from "@/lib/services";
+import { fetchServices, services as fallbackServices, type Service } from "@/lib/services";
 import { siteConfig } from "@/lib/site";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -342,12 +342,13 @@ export default function AdminCalendarPage() {
   const [appointmentForm, setAppointmentForm] = useState<AppointmentFormState>({
     date: formatDate(firstWorkingDay),
     time: "",
-    serviceId: services[0]?.id ?? "",
+    serviceId: fallbackServices[0]?.id ?? "",
     clientName: "",
     phone: "",
     email: "",
     notes: "",
   });
+  const [serviceItems, setServiceItems] = useState<Service[]>(fallbackServices);
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsStatus, setClientsStatus] = useState<StatusState>({ type: "idle" });
   const [selectedClientId, setSelectedClientId] = useState("");
@@ -428,13 +429,13 @@ export default function AdminCalendarPage() {
   const selectedAppointments = appointmentsByDate[selectedDate] ?? [];
   const selectedBlocks = blocksByDate[selectedDate] ?? [];
   const selectedService = useMemo(
-    () => services.find((service) => service.id === appointmentForm.serviceId),
+    () => serviceItems.find((service) => service.id === appointmentForm.serviceId),
     [appointmentForm.serviceId]
   );
   const isEditingAppointment = Boolean(editingAppointment);
   const hasUnknownService =
     appointmentForm.serviceId !== "" &&
-    !services.some((service) => service.id === appointmentForm.serviceId);
+    !serviceItems.some((service) => service.id === appointmentForm.serviceId);
 
   const canGoPrev = weekStart > firstWorkingDay;
   const canGoNext = addDays(weekStart, 7) <= lastDay;
@@ -634,6 +635,29 @@ export default function AdminCalendarPage() {
       setClientsStatus({ type: "error", message });
     }
   };
+  const fetchServiceItems = async () => {
+    if (!apiBaseUrl || !adminKey) {
+      return;
+    }
+
+    try {
+      const items = await fetchServices(apiBaseUrl, {
+        adminKey,
+        includeInactive: true,
+      });
+      setServiceItems(items);
+      if (items.length > 0) {
+        setAppointmentForm((prev) => {
+          if (items.some((service) => service.id === prev.serviceId)) {
+            return prev;
+          }
+          return { ...prev, serviceId: items[0].id };
+        });
+      }
+    } catch (error) {
+      setServiceItems(fallbackServices);
+    }
+  };
 
   const refreshData = async (dates: string[]) => {
     if (!apiBaseUrl) {
@@ -730,7 +754,7 @@ export default function AdminCalendarPage() {
       return appointment.serviceId;
     }
 
-    const match = services.find((service) => service.name === appointment.serviceName);
+    const match = serviceItems.find((service) => service.name === appointment.serviceName);
     return match?.id ?? "";
   };
 
@@ -961,7 +985,7 @@ export default function AdminCalendarPage() {
     setAppointmentForm({
       date: appointment.date,
       time: normalizedTime,
-      serviceId: resolvedServiceId || services[0]?.id || "",
+      serviceId: resolvedServiceId || serviceItems[0]?.id || fallbackServices[0]?.id || "",
       clientName: appointment.clientName ?? "",
       phone: appointment.phone ?? "",
       email: appointment.email ?? "",
@@ -1588,7 +1612,7 @@ export default function AdminCalendarPage() {
                 onClick={handleCloseModal}
                 aria-label="Zatvori"
               >
-                ✕
+                âœ•
               </button>
             </div>
 
@@ -1659,7 +1683,7 @@ export default function AdminCalendarPage() {
                         {editingAppointment?.serviceName || "Nepoznata usluga"}
                       </option>
                     )}
-                    {services.map((service) => (
+                    {serviceItems.map((service) => (
                       <option key={service.id} value={service.id}>
                         {service.name} ({service.duration})
                       </option>
@@ -1911,3 +1935,9 @@ export default function AdminCalendarPage() {
     </AdminShell>
   );
 }
+
+
+
+
+
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
@@ -22,10 +22,7 @@ type ClientProfile = {
   token: string;
 };
 
-type StatusState = {
-  type: "idle" | "loading" | "error";
-  message?: string;
-};
+type StatusState = {\n  type: "idle" | "loading" | "success" | "error";\n  message?: string;\n};
 
 const statusLabels: Record<string, string> = {
   pending: "Na cekanju",
@@ -66,6 +63,8 @@ export default function MyAppointmentsPage() {
   const [client, setClient] = useState<ClientProfile | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [status, setStatus] = useState<StatusState>({ type: "idle" });
+  const [cancelTarget, setCancelTarget] = useState<Appointment | null>(null);
+  const [cancelStatus, setCancelStatus] = useState<StatusState>({ type: "idle" });
 
   useEffect(() => {
     const token = localStorage.getItem("db_client_token");
@@ -111,6 +110,57 @@ export default function MyAppointmentsPage() {
     }
   };
 
+  const handleCancelRequest = (appointment: Appointment) => {
+    setCancelTarget(appointment);
+    setCancelStatus({ type: "idle" });
+  };
+
+  const handleCancelClose = () => {
+    setCancelTarget(null);
+    setCancelStatus({ type: "idle" });
+  };
+
+  const handleCancelConfirm = async () => {
+    if (!cancelTarget || !client) {
+      return;
+    }
+
+    if (!apiBaseUrl) {
+      setCancelStatus({
+        type: "error",
+        message: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+      });
+      return;
+    }
+
+    setCancelStatus({ type: "loading" });
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/appointments.php`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "cancel",
+          id: cancelTarget.id,
+          clientToken: client.token,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Ne mogu da otkazem termin.");
+      }
+
+      setCancelStatus({ type: "success", message: "Termin je otkazan." });
+      setCancelTarget(null);
+      fetchAppointments(client.token);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      setCancelStatus({ type: "error", message });
+    }
+  };
   const handleLogout = () => {
     localStorage.removeItem("db_client_token");
     localStorage.removeItem("db_client_name");
@@ -213,7 +263,9 @@ export default function MyAppointmentsPage() {
           <nav className="nav-links">
             <Link href="/">Pocetna</Link>
             <Link href="/#booking">Zakazi termin</Link>
-            <Link href="/login">Prijava</Link>
+            <button className="button small ghost" type="button" onClick={handleLogout}>
+              Odjava
+            </button>
           </nav>
         </div>
       </header>
@@ -299,6 +351,16 @@ export default function MyAppointmentsPage() {
                     {statusLabels[appointment.status] || appointment.status}
                   </span>
                 )}
+                {appointment.status !== "cancelled" && (
+                  <button
+                    className="button small outline"
+                    type="button"
+                    disabled={cancelStatus.type === "loading"}
+                    onClick={() => handleCancelRequest(appointment)}
+                  >
+                    Otkazi
+                  </button>
+                )}
               </article>
             ))}
           </div>
@@ -330,7 +392,71 @@ export default function MyAppointmentsPage() {
             ))}
           </div>
         </section>
+      {cancelTarget && (
+        <div className="confirm-modal" role="dialog" aria-modal="true">
+          <div className="confirm-modal__backdrop" onClick={handleCancelClose} />
+          <div className="confirm-modal__card">
+            <div className="confirm-modal__header">
+              <strong>Otkazivanje termina</strong>
+              <button
+                className="confirm-modal__close"
+                type="button"
+                onClick={handleCancelClose}
+                aria-label="Zatvori"
+              >
+                ×
+              </button>
+            </div>
+            <p>
+              Da li ste sigurni da zelite da otkazete termin za {cancelTarget.serviceName}?
+            </p>
+            <div className="confirm-modal__meta">
+              <span>{formatLongDate(cancelTarget.date)}</span>
+              <span>{normalizeTime(cancelTarget.time)}</span>
+            </div>
+            {cancelStatus.type !== "idle" && cancelStatus.message && (
+              <div className={`form-status ${cancelStatus.type}`}>{cancelStatus.message}</div>
+            )}
+            <div className="confirm-modal__actions">
+              <button
+                className="button outline"
+                type="button"
+                onClick={handleCancelClose}
+                disabled={cancelStatus.type === "loading"}
+              >
+                Odustani
+              </button>
+              <button
+                className="button"
+                type="button"
+                onClick={handleCancelConfirm}
+                disabled={cancelStatus.type === "loading"}
+              >
+                {cancelStatus.type === "loading" ? "Otkazivanje..." : "Potvrdi"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </main>
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

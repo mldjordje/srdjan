@@ -1,18 +1,23 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import BookingForm from "@/components/BookingForm";
-import { services } from "@/lib/services";
+import { fetchServices, getActiveServices, services as fallbackServices, type Service } from "@/lib/services";
 import { siteConfig } from "@/lib/site";
 
 export default function HomePage() {
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
   const [showLoader, setShowLoader] = useState(true);
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const [serviceItems, setServiceItems] = useState<Service[]>(fallbackServices);
+  const [isClientLoggedIn, setIsClientLoggedIn] = useState(false);
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const prefersReducedMotion = useReducedMotion();
+  const activeServices = useMemo(() => getActiveServices(serviceItems), [serviceItems]);
   const year = new Date().getFullYear();
   const easeOut: [number, number, number, number] = [0.16, 1, 0.3, 1];
   const easeSmooth: [number, number, number, number] = [0.2, 0.9, 0.3, 1];
@@ -23,14 +28,51 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    const token = localStorage.getItem("db_client_token");
+    setIsClientLoggedIn(Boolean(token));
+    setIsAdminLoggedIn(localStorage.getItem("db_admin_auth") === "true");
+  }, []);
+
+  useEffect(() => {
     document.body.style.overflow = showLoader ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
   }, [showLoader]);
 
+  useEffect(() => {
+    if (!apiBaseUrl) {
+      return;
+    }
+
+    let active = true;
+    fetchServices(apiBaseUrl)
+      .then((items) => {
+        if (active) {
+          setServiceItems(items);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setServiceItems(fallbackServices);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const handleNavToggle = () => setIsNavOpen((prev) => !prev);
   const handleNavClose = () => setIsNavOpen(false);
+  const handleClientLogout = () => {
+    localStorage.removeItem("db_client_token");
+    localStorage.removeItem("db_client_name");
+    localStorage.removeItem("db_client_phone");
+    localStorage.removeItem("db_client_email");
+    setIsClientLoggedIn(false);
+    handleNavClose();
+  };
 
   const sectionVariants = {
     hidden: {
@@ -216,18 +258,35 @@ export default function HomePage() {
             <a href="#studio" onClick={handleNavClose}>
               Studio
             </a>
-            <Link href="/moji-termini" onClick={handleNavClose}>
-              Moji termini
-            </Link>
-            <Link href="/login" onClick={handleNavClose}>
-              Prijava
-            </Link>
-            <Link className="button small outline" href="/register" onClick={handleNavClose}>
-              Registracija
-            </Link>
-            <Link className="button small ghost" href="/admin" onClick={handleNavClose}>
-              CMS
-            </Link>
+            {isClientLoggedIn && (
+              <Link href="/moji-termini" onClick={handleNavClose}>
+                Moji termini
+              </Link>
+            )}
+            {!isClientLoggedIn && (
+              <Link href="/login" onClick={handleNavClose}>
+                Prijava
+              </Link>
+            )}
+            {!isClientLoggedIn && (
+              <Link
+                className="button small outline"
+                href="/register"
+                onClick={handleNavClose}
+              >
+                Registracija
+              </Link>
+            )}
+            {isClientLoggedIn && (
+              <button className="button small ghost" type="button" onClick={handleClientLogout}>
+                Odjava
+              </button>
+            )}
+            {isAdminLoggedIn && (
+              <Link className="button small ghost" href="/admin" onClick={handleNavClose}>
+                CMS
+              </Link>
+            )}
           </nav>
         </div>
       </header>
@@ -241,7 +300,7 @@ export default function HomePage() {
         >
           <motion.div className="hero-minimal__bg" variants={heroBgVariants}>
             <Image
-              src="/image.png"
+              src="/newhero.jpg"
               alt="Doctor Barber studio"
               fill
               priority
@@ -258,15 +317,37 @@ export default function HomePage() {
                 </a>
               </motion.div>
               <motion.div variants={itemVariants}>
-                <Link className="button ghost hero-secondary" href="/login">
-                  Prijava
-                </Link>
+                {!isClientLoggedIn && (
+                  <Link className="button ghost hero-secondary" href="/login">
+                    Prijava
+                  </Link>
+                )}
               </motion.div>
               <motion.div variants={itemVariants}>
-                <Link className="button outline hero-secondary" href="/register">
-                  Registracija
-                </Link>
+                {!isClientLoggedIn && (
+                  <Link className="button outline hero-secondary" href="/register">
+                    Registracija
+                  </Link>
+                )}
               </motion.div>
+              {isClientLoggedIn && (
+                <motion.div variants={itemVariants}>
+                  <Link className="button ghost hero-secondary" href="/moji-termini">
+                    Moji termini
+                  </Link>
+                </motion.div>
+              )}
+              {isClientLoggedIn && (
+                <motion.div variants={itemVariants}>
+                  <button
+                    className="button outline hero-secondary"
+                    type="button"
+                    onClick={handleClientLogout}
+                  >
+                    Odjava
+                  </button>
+                </motion.div>
+              )}
             </motion.div>
           </div>
         </motion.section>
@@ -305,7 +386,7 @@ export default function HomePage() {
               <p>Pregled usluga i trajanja. Cene prikazujemo u zakazivanju.</p>
             </motion.div>
             <motion.div className="services-grid" variants={staggerVariants}>
-              {services.map((service) => (
+              {activeServices.map((service) => (
                 <motion.div
                   key={service.id}
                   className="service-card"
@@ -437,6 +518,48 @@ export default function HomePage() {
             </motion.div>
           </div>
         </motion.section>
+        <motion.section
+          className="section gallery"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+          variants={sectionVariants}
+        >
+          <div className="container">
+            <motion.div className="section-header" variants={itemVariants}>
+              <h2>Galerija / Ambijent</h2>
+              <p>Dve scene iz studija koje najbolje opisuju atmosferu.</p>
+            </motion.div>
+            <motion.div className="gallery-grid" variants={staggerVariants}>
+              <motion.div
+                className="gallery-card"
+                variants={cardVariants}
+                whileHover={cardHover}
+                whileTap={cardTap}
+              >
+                <Image
+                  src="/newhero.jpg"
+                  alt="Ambijent studija"
+                  fill
+                  sizes="(max-width: 900px) 100vw, 50vw"
+                />
+              </motion.div>
+              <motion.div
+                className="gallery-card"
+                variants={cardVariants}
+                whileHover={cardHover}
+                whileTap={cardTap}
+              >
+                <Image
+                  src="/new1.jpg"
+                  alt="Detalji enterijera"
+                  fill
+                  sizes="(max-width: 900px) 100vw, 50vw"
+                />
+              </motion.div>
+            </motion.div>
+          </div>
+        </motion.section>
       </main>
 
       <footer className="footer">
@@ -447,3 +570,24 @@ export default function HomePage() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

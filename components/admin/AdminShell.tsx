@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
@@ -17,7 +17,12 @@ const navItems = [
   { href: "/admin/termini", label: "Termini" },
   { href: "/admin/calendar", label: "Kalendar" },
   { href: "/admin/clients", label: "Klijenti" },
+  { href: "/admin/usluge", label: "Usluge" },
+  { href: "/admin/notifications", label: "Notifikacije", badge: true },
 ];
+
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || "";
 
 export default function AdminShell({
   title,
@@ -29,6 +34,7 @@ export default function AdminShell({
   const router = useRouter();
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
     const stored = localStorage.getItem("db_admin_auth");
@@ -39,6 +45,36 @@ export default function AdminShell({
 
     router.replace("/admin");
   }, [router]);
+
+  useEffect(() => {
+    if (!ready || !apiBaseUrl || !adminKey) {
+      return;
+    }
+
+    let active = true;
+    fetch(`${apiBaseUrl}/notifications.php?unreadOnly=1&includeUnreadCount=1&limit=1`, {
+      headers: {
+        "X-Admin-Key": adminKey,
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (!active) {
+          return;
+        }
+        const count = Number(data?.unreadCount ?? data?.notifications?.length ?? 0);
+        setNotificationCount(Number.isFinite(count) ? count : 0);
+      })
+      .catch(() => {
+        if (active) {
+          setNotificationCount(0);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [ready]);
 
   const handleLogout = () => {
     localStorage.removeItem("db_admin_auth");
@@ -78,6 +114,7 @@ export default function AdminShell({
               const isActive =
                 pathname === item.href ||
                 (item.href === "/admin/termini" && pathname === "/admin/appointments");
+              const showBadge = item.badge && notificationCount > 0;
 
               return (
                 <Link
@@ -85,7 +122,8 @@ export default function AdminShell({
                   href={item.href}
                   className={`admin-link ${isActive ? "is-active" : ""}`}
                 >
-                  {item.label}
+                  <span>{item.label}</span>
+                  {showBadge && <span className="nav-badge">{notificationCount}</span>}
                 </Link>
               );
             })}
