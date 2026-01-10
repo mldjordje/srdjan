@@ -22,7 +22,10 @@ type ClientProfile = {
   token: string;
 };
 
-type StatusState = {\n  type: "idle" | "loading" | "success" | "error";\n  message?: string;\n};
+type StatusState = {
+  type: "idle" | "loading" | "success" | "error";
+  message?: string;
+};
 
 const statusLabels: Record<string, string> = {
   pending: "Na cekanju",
