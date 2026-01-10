@@ -134,7 +134,7 @@ export default function HomePage() {
   const heroBgVariants = {
     hidden: { opacity: 0, scale: prefersReducedMotion ? 1 : 1.06 },
     visible: {
-      opacity: 0.9,
+      opacity: 1,
       scale: 1,
       transition: prefersReducedMotion
         ? { duration: 0 }
@@ -316,20 +316,20 @@ export default function HomePage() {
                   Zakazi termin
                 </a>
               </motion.div>
-              <motion.div variants={itemVariants}>
-                {!isClientLoggedIn && (
+              {!isClientLoggedIn && (
+                <motion.div variants={itemVariants}>
                   <Link className="button ghost hero-secondary" href="/login">
                     Prijava
                   </Link>
-                )}
-              </motion.div>
-              <motion.div variants={itemVariants}>
-                {!isClientLoggedIn && (
+                </motion.div>
+              )}
+              {!isClientLoggedIn && (
+                <motion.div variants={itemVariants}>
                   <Link className="button outline hero-secondary" href="/register">
                     Registracija
                   </Link>
-                )}
-              </motion.div>
+                </motion.div>
+              )}
               {isClientLoggedIn && (
                 <motion.div variants={itemVariants}>
                   <Link className="button ghost hero-secondary" href="/moji-termini">

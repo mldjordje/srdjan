@@ -117,16 +117,17 @@ h4 {
 .brand-mark {
   width: 54px;
   height: 54px;
-  border-radius: 16px;
-  background: radial-gradient(circle at 30% 30%, rgba(0, 0, 0, 0.08), #f1f0ed);
-  border: 1px solid rgba(17, 17, 17, 0.12);
+  padding: 6px;
+  border-radius: 18px;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.96), rgba(232, 224, 210, 0.9));
+  border: 1px solid rgba(17, 17, 17, 0.18);
   display: grid;
   place-items: center;
-  box-shadow: var(--shadow);
+  box-shadow: 0 14px 28px rgba(17, 17, 17, 0.12);
 }
 
 .brand-mark img {
-  filter: grayscale(1) contrast(1.1);
+  filter: grayscale(0.9) contrast(1.05);
 }
 
 .brand-title {
@@ -389,27 +390,29 @@ h4 {
   position: absolute;
   inset: 0;
   z-index: 0;
-  opacity: 0.9;
+  opacity: 1;
 }
 
 .hero-minimal__bg::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(160deg, rgba(10, 10, 10, 0.65), rgba(255, 255, 255, 0.08));
-  mix-blend-mode: multiply;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(255, 225, 182, 0.35), transparent 55%),
+    linear-gradient(160deg, rgba(10, 10, 10, 0.28), rgba(255, 255, 255, 0.35));
+  mix-blend-mode: normal;
 }
 
 .hero-minimal__bg img {
   object-fit: cover;
-  filter: grayscale(1) contrast(1.05) brightness(0.9);
+  filter: grayscale(0.25) contrast(1.02) brightness(0.98) saturate(1.1);
 }
 
 .hero-minimal__glow {
   position: absolute;
   inset: -25% 0;
-  background: radial-gradient(circle at 20% 20%, rgba(0, 0, 0, 0.08), transparent 60%),
-    radial-gradient(circle at 70% 20%, rgba(0, 0, 0, 0.05), transparent 55%);
+  background: radial-gradient(circle at 20% 20%, rgba(255, 229, 193, 0.3), transparent 60%),
+    radial-gradient(circle at 70% 20%, rgba(255, 247, 230, 0.25), transparent 55%);
   opacity: 0.8;
   animation: auroraShift 20s ease-in-out infinite;
   z-index: 1;
@@ -445,7 +448,7 @@ h4 {
   flex-direction: column;
   align-items: stretch;
   width: min(420px, 100%);
-  gap: 14px;
+  gap: 12px;
 }
 
 .hero-primary {
@@ -2705,6 +2708,7 @@ h4 {
 
   .hero-actions--stack {
     width: min(480px, 100%);
+    gap: 10px;
   }
 
   .booking-stage {
@@ -2848,6 +2852,7 @@ h4 {
 
   .hero-actions--stack {
     width: 100%;
+    gap: 10px;
   }
 
   .hero-primary {
