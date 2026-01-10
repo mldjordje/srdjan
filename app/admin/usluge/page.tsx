@@ -78,10 +78,14 @@ export default function AdminServicesPage() {
   const handleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { name, value, type, checked } = event.target;
+    const target = event.currentTarget;
+    const nextValue =
+      target instanceof HTMLInputElement && target.type === "checkbox"
+        ? target.checked
+        : target.value;
     setFormState((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [target.name]: nextValue,
     }));
   };
 
