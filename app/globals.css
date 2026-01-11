@@ -123,11 +123,16 @@ h4 {
   border: 1px solid rgba(17, 17, 17, 0.18);
   display: grid;
   place-items: center;
+  overflow: hidden;
   box-shadow: 0 14px 28px rgba(17, 17, 17, 0.12);
 }
 
 .brand-mark img {
   filter: grayscale(0.9) contrast(1.05);
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .brand-title {
