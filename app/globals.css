@@ -3182,3 +3182,62 @@ h4 {
   gap: 10px;
   justify-content: flex-end;
 }
+
+.install-modal__card {
+  max-width: 560px;
+}
+
+.install-modal__subtitle {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-top: 6px;
+}
+
+.install-modal__body {
+  display: grid;
+  gap: 16px;
+}
+
+.install-steps {
+  display: grid;
+  gap: 12px;
+}
+
+.install-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: var(--bg-soft);
+}
+
+.install-step__index {
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  background: rgba(17, 17, 17, 0.08);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.install-step__content {
+  display: grid;
+  gap: 4px;
+}
+
+.install-step__title {
+  font-weight: 600;
+}
+
+.install-step__desc {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.install-modal__hint {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}

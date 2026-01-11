@@ -20,8 +20,8 @@ export default function HomePage() {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [showInstallHelp, setShowInstallHelp] = useState(false);
-  const [isIos, setIsIos] = useState(false);
+  const [installModalOpen, setInstallModalOpen] = useState(false);
+  const [installPlatform, setInstallPlatform] = useState<"ios" | "android" | "desktop" | "other">("other");
   const prefersReducedMotion = useReducedMotion();
   const year = new Date().getFullYear();
   const easeOut: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -51,9 +51,19 @@ export default function HomePage() {
       window.matchMedia("(display-mode: standalone)").matches ||
       Boolean(navigatorWithStandalone.standalone);
     const ua = navigator.userAgent.toLowerCase();
+    const isIos = /iphone|ipad|ipod/.test(ua);
+    const isAndroid = /android/.test(ua);
 
     setIsInstalled(standalone);
-    setIsIos(/iphone|ipad|ipod/.test(ua));
+    if (isIos) {
+      setInstallPlatform("ios");
+    } else if (isAndroid) {
+      setInstallPlatform("android");
+    } else if (ua.includes("windows") || ua.includes("macintosh") || ua.includes("linux")) {
+      setInstallPlatform("desktop");
+    } else {
+      setInstallPlatform("other");
+    }
   }, []);
 
   useEffect(() => {
@@ -85,7 +95,7 @@ export default function HomePage() {
     const handleAppInstalled = () => {
       setInstallPrompt(null);
       setIsInstalled(true);
-      setShowInstallHelp(false);
+      setInstallModalOpen(false);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -108,9 +118,13 @@ export default function HomePage() {
     handleNavClose();
   };
 
+  const handleInstallModalClose = () => {
+    setInstallModalOpen(false);
+  };
+
   const handleInstallClick = async () => {
     if (!installPrompt) {
-      setShowInstallHelp(true);
+      setInstallModalOpen(true);
       return;
     }
 
@@ -193,9 +207,27 @@ export default function HomePage() {
   const cardHover = prefersReducedMotion ? {} : { y: -8, scale: 1.02 };
   const cardTap = prefersReducedMotion ? {} : { scale: 0.98 };
   const showInstallButton = !isInstalled;
-  const installHelpText = isIos
-    ? "iPhone: Share > Add to Home Screen."
-    : "Instalacija se pojavi kada je sajt otvoren preko HTTPS. Probaj osvezi.";
+  const installSteps = {
+    ios: [
+      { title: "Otvori Share meni", body: "U Safari klikni Share ikonicu." },
+      { title: "Izaberi Add to Home Screen", body: "Skroluj meni i tapni Add to Home Screen." },
+      { title: "Potvrdi instalaciju", body: "Tapni Add i aplikacija ce biti na ekranu." },
+    ],
+    android: [
+      { title: "Otvori browser meni", body: "Klikni na tri tacke u Chrome-u." },
+      { title: "Izaberi Install app", body: "Opcija je Install app ili Add to Home screen." },
+      { title: "Potvrdi instalaciju", body: "Potvrdi i aplikacija je na pocetnom ekranu." },
+    ],
+    desktop: [
+      { title: "Nadji install ikonu", body: "U Chrome/Edge klikni ikonu pored adrese." },
+      { title: "Potvrdi instalaciju", body: "Izaberi Install i aplikacija se otvara kao app." },
+    ],
+    other: [
+      { title: "Proveri browser meni", body: "Potrazi opciju Install app ili Add to Home screen." },
+      { title: "Potvrdi instalaciju", body: "Potvrdi i ikonica se pojavi na ekranu." },
+    ],
+  };
+  const steps = installSteps[installPlatform];
 
   return (
     <div className="page">
@@ -340,6 +372,49 @@ export default function HomePage() {
         </div>
       </header>
 
+      {installModalOpen && (
+        <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="install-title">
+          <div className="confirm-modal__backdrop" onClick={handleInstallModalClose} />
+          <div className="confirm-modal__card install-modal__card">
+            <div className="confirm-modal__header">
+              <div>
+                <h3 id="install-title">Instaliraj Doctor Barber</h3>
+                <p className="install-modal__subtitle">Dodaj aplikaciju na pocetni ekran.</p>
+              </div>
+              <button
+                className="confirm-modal__close"
+                type="button"
+                onClick={handleInstallModalClose}
+                aria-label="Zatvori"
+              >
+                ×
+              </button>
+            </div>
+            <div className="install-modal__body">
+              <div className="install-steps">
+                {steps.map((step, index) => (
+                  <div key={step.title} className="install-step">
+                    <div className="install-step__index">{index + 1}</div>
+                    <div className="install-step__content">
+                      <div className="install-step__title">{step.title}</div>
+                      <div className="install-step__desc">{step.body}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="install-modal__hint">
+                Instalacija se pojavi samo kada je sajt otvoren preko HTTPS.
+              </p>
+            </div>
+            <div className="confirm-modal__actions">
+              <button className="button ghost" type="button" onClick={handleInstallModalClose}>
+                Zatvori
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main>
         <motion.section
           className="hero-minimal"
@@ -374,11 +449,6 @@ export default function HomePage() {
                   >
                     Instaliraj aplikaciju
                   </button>
-                </motion.div>
-              )}
-              {showInstallButton && showInstallHelp && (
-                <motion.div variants={itemVariants}>
-                  <p className="install-note">{installHelpText}</p>
                 </motion.div>
               )}
               {!isClientLoggedIn && (
