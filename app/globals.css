@@ -499,6 +499,13 @@ h4 {
   gap: 12px;
 }
 
+.install-note {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 0 6px;
+}
+
 .hero-primary {
   position: relative;
   overflow: hidden;

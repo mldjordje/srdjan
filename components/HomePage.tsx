@@ -20,6 +20,8 @@ export default function HomePage() {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [showInstallHelp, setShowInstallHelp] = useState(false);
+  const [isIos, setIsIos] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const year = new Date().getFullYear();
   const easeOut: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -48,13 +50,30 @@ export default function HomePage() {
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       Boolean(navigatorWithStandalone.standalone);
-    setIsInstalled(standalone);
+    const ua = navigator.userAgent.toLowerCase();
 
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/sw.js").catch(() => undefined);
-      });
+    setIsInstalled(standalone);
+    setIsIos(/iphone|ipad|ipod/.test(ua));
+  }, []);
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) {
+      return;
     }
+
+    const register = () => {
+      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    };
+
+    if (document.readyState === "complete") {
+      register();
+      return;
+    }
+
+    window.addEventListener("load", register);
+    return () => {
+      window.removeEventListener("load", register);
+    };
   }, []);
 
   useEffect(() => {
@@ -66,6 +85,7 @@ export default function HomePage() {
     const handleAppInstalled = () => {
       setInstallPrompt(null);
       setIsInstalled(true);
+      setShowInstallHelp(false);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -90,6 +110,7 @@ export default function HomePage() {
 
   const handleInstallClick = async () => {
     if (!installPrompt) {
+      setShowInstallHelp(true);
       return;
     }
 
@@ -171,7 +192,10 @@ export default function HomePage() {
 
   const cardHover = prefersReducedMotion ? {} : { y: -8, scale: 1.02 };
   const cardTap = prefersReducedMotion ? {} : { scale: 0.98 };
-  const showInstallButton = Boolean(installPrompt) && !isInstalled;
+  const showInstallButton = !isInstalled;
+  const installHelpText = isIos
+    ? "iPhone: Share > Add to Home Screen."
+    : "Instalacija se pojavi kada je sajt otvoren preko HTTPS. Probaj osvezi.";
 
   return (
     <div className="page">
@@ -350,6 +374,11 @@ export default function HomePage() {
                   >
                     Instaliraj aplikaciju
                   </button>
+                </motion.div>
+              )}
+              {showInstallButton && showInstallHelp && (
+                <motion.div variants={itemVariants}>
+                  <p className="install-note">{installHelpText}</p>
                 </motion.div>
               )}
               {!isClientLoggedIn && (
