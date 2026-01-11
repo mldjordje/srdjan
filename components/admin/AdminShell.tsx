@@ -35,6 +35,7 @@ export default function AdminShell({
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [isNavOpen, setIsNavOpen] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("db_admin_auth");
@@ -45,6 +46,10 @@ export default function AdminShell({
 
     router.replace("/admin");
   }, [router]);
+
+  useEffect(() => {
+    setIsNavOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (!ready || !apiBaseUrl || !adminKey) {
@@ -77,13 +82,18 @@ export default function AdminShell({
   }, [ready]);
 
   const handleLogout = () => {
+    setIsNavOpen(false);
     localStorage.removeItem("db_admin_auth");
     router.replace("/admin");
   };
 
   const handleRefresh = () => {
+    setIsNavOpen(false);
     window.location.reload();
   };
+
+  const handleNavToggle = () => setIsNavOpen((prev) => !prev);
+  const handleNavClose = () => setIsNavOpen(false);
 
   if (!ready) {
     return null;
@@ -91,25 +101,48 @@ export default function AdminShell({
 
   return (
     <div className="page">
-      <header className="nav">
+      <header className={`nav nav--has-toggle nav--dropdown${isNavOpen ? " is-open" : ""}`}>
         <div className="container nav-inner">
-          <Link className="brand" href="/">
-            <div className="brand-mark">
-              <Image
-                src="/logo.png"
-                alt="Doctor Barber"
-                width={36}
-                height={36}
-              />
-            </div>
-            <div className="brand-title">
-              <span>Doctor Barber</span>
-              <span>CMS Panel</span>
-            </div>
-          </Link>
-          <nav className="nav-links">
-            <Link href="/">Pocetna</Link>
-            <Link href="/#booking">Zakazi termin</Link>
+          <div className="nav-top">
+            <Link className="brand" href="/">
+              <div className="brand-mark">
+                <Image
+                  src="/logo.png"
+                  alt="Doctor Barber"
+                  width={36}
+                  height={36}
+                />
+              </div>
+              <div className="brand-title">
+                <span>Doctor Barber</span>
+                <span>CMS Panel</span>
+              </div>
+            </Link>
+            <button
+              className="nav-toggle"
+              type="button"
+              aria-expanded={isNavOpen}
+              aria-controls="admin-navigation"
+              onClick={handleNavToggle}
+            >
+              <span className="nav-toggle__label">Meni</span>
+              <span className="nav-toggle__icon" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
+            </button>
+          </div>
+          <nav
+            id="admin-navigation"
+            className={`nav-links${isNavOpen ? " is-open" : ""}`}
+          >
+            <Link href="/" onClick={handleNavClose}>
+              Pocetna
+            </Link>
+            <Link href="/#booking" onClick={handleNavClose}>
+              Zakazi termin
+            </Link>
             {navItems.map((item) => {
               const isActive =
                 pathname === item.href ||
@@ -120,6 +153,7 @@ export default function AdminShell({
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={handleNavClose}
                   className={`admin-link ${isActive ? "is-active" : ""}`}
                 >
                   <span>{item.label}</span>

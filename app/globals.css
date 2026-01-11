@@ -228,6 +228,54 @@ h4 {
   transform: translateY(-6px) rotate(-45deg);
 }
 
+.nav--dropdown .nav-inner {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.nav--dropdown .nav-top {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.nav--dropdown .nav-toggle {
+  display: inline-flex;
+}
+
+.nav--dropdown .nav-links {
+  display: none;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 0 4px;
+}
+
+.nav--dropdown .nav-links.is-open {
+  display: flex;
+}
+
+.nav--dropdown .nav-links a {
+  width: 100%;
+  text-align: left;
+}
+
+.nav--dropdown .nav-links a:not(.button) {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(17, 17, 17, 0.04);
+  border: 1px solid rgba(17, 17, 17, 0.12);
+}
+
+.nav--dropdown .nav-links a:not(.button):hover {
+  background: rgba(17, 17, 17, 0.08);
+}
+
+.nav--dropdown .nav-links .button {
+  justify-content: center;
+}
+
 .button {
   display: inline-flex;
   align-items: center;

@@ -18,6 +18,12 @@ const bodyFont = Manrope({
 export const metadata: Metadata = {
   title: "Doctor Barber",
   description: "Premium barber studio u Beogradu.",
+  manifest: "/manifest.webmanifest",
+  themeColor: "#111111",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({

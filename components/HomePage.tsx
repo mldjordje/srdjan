@@ -1,23 +1,26 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import BookingForm from "@/components/BookingForm";
-import { fetchServices, getActiveServices, services as fallbackServices, type Service } from "@/lib/services";
 import { siteConfig } from "@/lib/site";
 
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
+
 export default function HomePage() {
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
   const [showLoader, setShowLoader] = useState(true);
   const [isNavOpen, setIsNavOpen] = useState(false);
-  const [serviceItems, setServiceItems] = useState<Service[]>(fallbackServices);
   const [isClientLoggedIn, setIsClientLoggedIn] = useState(false);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
   const prefersReducedMotion = useReducedMotion();
-  const activeServices = useMemo(() => getActiveServices(serviceItems), [serviceItems]);
   const year = new Date().getFullYear();
   const easeOut: [number, number, number, number] = [0.16, 1, 0.3, 1];
   const easeSmooth: [number, number, number, number] = [0.2, 0.9, 0.3, 1];
@@ -41,25 +44,36 @@ export default function HomePage() {
   }, [showLoader]);
 
   useEffect(() => {
-    if (!apiBaseUrl) {
-      return;
-    }
+    const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      Boolean(navigatorWithStandalone.standalone);
+    setIsInstalled(standalone);
 
-    let active = true;
-    fetchServices(apiBaseUrl)
-      .then((items) => {
-        if (active) {
-          setServiceItems(items);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setServiceItems(fallbackServices);
-        }
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch(() => undefined);
       });
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+
+    const handleAppInstalled = () => {
+      setInstallPrompt(null);
+      setIsInstalled(true);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
 
     return () => {
-      active = false;
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
     };
   }, []);
 
@@ -72,6 +86,19 @@ export default function HomePage() {
     localStorage.removeItem("db_client_email");
     setIsClientLoggedIn(false);
     handleNavClose();
+  };
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) {
+      return;
+    }
+
+    try {
+      await installPrompt.prompt();
+      await installPrompt.userChoice;
+    } finally {
+      setInstallPrompt(null);
+    }
   };
 
   const sectionVariants = {
@@ -144,6 +171,7 @@ export default function HomePage() {
 
   const cardHover = prefersReducedMotion ? {} : { y: -8, scale: 1.02 };
   const cardTap = prefersReducedMotion ? {} : { scale: 0.98 };
+  const showInstallButton = Boolean(installPrompt) && !isInstalled;
 
   return (
     <div className="page">
@@ -249,9 +277,6 @@ export default function HomePage() {
             id="primary-navigation"
             className={`nav-links${isNavOpen ? " is-open" : ""}`}
           >
-            <a href="#services" onClick={handleNavClose}>
-              Usluge
-            </a>
             <a href="#booking" onClick={handleNavClose}>
               Zakazivanje
             </a>
@@ -316,6 +341,17 @@ export default function HomePage() {
                   Zakazi termin
                 </a>
               </motion.div>
+              {showInstallButton && (
+                <motion.div variants={itemVariants}>
+                  <button
+                    className="button outline hero-secondary"
+                    type="button"
+                    onClick={handleInstallClick}
+                  >
+                    Instaliraj aplikaciju
+                  </button>
+                </motion.div>
+              )}
               {!isClientLoggedIn && (
                 <motion.div variants={itemVariants}>
                   <Link className="button ghost hero-secondary" href="/login">
@@ -368,38 +404,6 @@ export default function HomePage() {
               whileTap={cardTap}
             >
               <BookingForm />
-            </motion.div>
-          </div>
-        </motion.section>
-
-        <motion.section
-          id="services"
-          className="section"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={sectionVariants}
-        >
-          <div className="container">
-            <motion.div className="section-header" variants={itemVariants}>
-              <h2>Usluge</h2>
-              <p>Pregled usluga i trajanja. Cene prikazujemo u zakazivanju.</p>
-            </motion.div>
-            <motion.div className="services-grid" variants={staggerVariants}>
-              {activeServices.map((service) => (
-                <motion.div
-                  key={service.id}
-                  className="service-card"
-                  variants={cardVariants}
-                  whileHover={cardHover}
-                  whileTap={cardTap}
-                >
-                  <h3>{service.name}</h3>
-                  <div className="service-meta">
-                    <span>{service.duration}</span>
-                  </div>
-                </motion.div>
-              ))}
             </motion.div>
           </div>
         </motion.section>
