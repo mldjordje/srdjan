@@ -405,6 +405,7 @@ export default function BookingForm() {
   const weekSwipeStart = useRef<{ x: number; y: number } | null>(null);
   const swipeAnimationTimeout = useRef<number | null>(null);
   const [weekTransition, setWeekTransition] = useState<"next" | "prev" | null>(null);
+  const slotRef = useRef<HTMLDivElement | null>(null);
   const submitRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -730,6 +731,18 @@ export default function BookingForm() {
     }
     if (submitRef.current) {
       submitRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const scrollToSlots = () => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (!window.matchMedia("(max-width: 900px)").matches) {
+      return;
+    }
+    if (slotRef.current) {
+      slotRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
@@ -1071,6 +1084,7 @@ export default function BookingForm() {
                           ...prev,
                           date: value,
                         }));
+                        window.setTimeout(scrollToSlots, 0);
                       }}
                     >
                       <span className="calendar-week-day__label">
@@ -1123,6 +1137,7 @@ export default function BookingForm() {
                             ...prev,
                             date: value,
                           }));
+                          window.setTimeout(scrollToSlots, 0);
                         }}
                       >
                         <span>{day.label}</span>
@@ -1143,7 +1158,7 @@ export default function BookingForm() {
                 </div>
               </div>
 
-              <div className="slot-section">
+              <div className="slot-section" ref={slotRef}>
                 <div className="slot-header">
                   <h4>Dostupno {selectedDateLabel} (GMT+1)</h4>
                   {availabilityStatus.type === "loading" && <span>Ucitavanje...</span>}
