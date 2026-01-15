@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type CSSProperties,
   type FormEvent,
   type TouchEvent,
 } from "react";
@@ -95,6 +96,7 @@ type ScheduleItem = {
   type: "appointment" | "block";
   status?: string;
   appointment?: Appointment;
+  serviceColor?: string;
 };
 
 const statusLabels: Record<string, string> = {
@@ -432,6 +434,17 @@ export default function AdminCalendarPage() {
     () => serviceItems.find((service) => service.id === appointmentForm.serviceId),
     [appointmentForm.serviceId]
   );
+  const serviceColorLookup = useMemo(() => {
+    const byId: Record<string, string> = {};
+    const byName: Record<string, string> = {};
+    serviceItems.forEach((service) => {
+      if (service.color) {
+        byId[service.id] = service.color;
+        byName[service.name] = service.color;
+      }
+    });
+    return { byId, byName };
+  }, [serviceItems]);
   const isEditingAppointment = Boolean(editingAppointment);
   const hasUnknownService =
     appointmentForm.serviceId !== "" &&
@@ -474,6 +487,10 @@ export default function AdminCalendarPage() {
         const maxSpan = slotCount - startIndex;
         const span = Math.max(1, Math.min(rawSpan, maxSpan));
 
+        const serviceColor =
+          (appointment.serviceId && serviceColorLookup.byId[appointment.serviceId]) ||
+          (appointment.serviceName && serviceColorLookup.byName[appointment.serviceName]);
+
         items.push({
           id: `appointment-${appointment.id}`,
           sourceId: appointment.id,
@@ -488,6 +505,7 @@ export default function AdminCalendarPage() {
           type: "appointment",
           status: appointment.status || "pending",
           appointment,
+          serviceColor,
         });
       });
 
@@ -536,6 +554,7 @@ export default function AdminCalendarPage() {
     slotMinutes,
     slotCount,
     slotIndexByTime,
+    serviceColorLookup,
   ]);
 
   const busySlots = useMemo(() => {
@@ -1321,7 +1340,8 @@ export default function AdminCalendarPage() {
       ["pending", "confirmed", "completed", "cancelled", "no_show"].includes(item.status)
         ? item.status
         : "pending";
-    return `calendar-item calendar-item--${statusClass} is-editable`;
+    const baseClass = `calendar-item calendar-item--${statusClass} is-editable`;
+    return item.serviceColor ? `${baseClass} has-service-color` : baseClass;
   };
 
   return (
@@ -1408,10 +1428,15 @@ export default function AdminCalendarPage() {
                     <div
                       key={item.id}
                       className={getItemClass(item)}
-                      style={{
-                        gridColumn: item.dayIndex + 1,
-                        gridRow: `${item.startRow} / span ${item.span}`,
-                      }}
+                      style={
+                        {
+                          gridColumn: item.dayIndex + 1,
+                          gridRow: `${item.startRow} / span ${item.span}`,
+                          ...(item.serviceColor
+                            ? { ["--service-color"]: item.serviceColor }
+                            : {}),
+                        } as CSSProperties
+                      }
                       onClick={() => {
                         if (item.type === "block" && item.sourceId) {
                           handleEditBlock({

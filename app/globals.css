@@ -1295,12 +1295,19 @@ h4 {
   background: rgba(17, 17, 17, 0.12);
 }
 
-.calendar-indicator.is-available {
-  background: #111111;
+.calendar-indicator.is-high {
+  background: #4fae62;
+  box-shadow: 0 0 8px rgba(79, 174, 98, 0.45);
 }
 
-.calendar-indicator.is-full {
-  background: rgba(17, 17, 17, 0.45);
+.calendar-indicator.is-medium {
+  background: #d6a554;
+  box-shadow: 0 0 8px rgba(214, 165, 84, 0.4);
+}
+
+.calendar-indicator.is-none {
+  background: #c94a4a;
+  box-shadow: 0 0 8px rgba(201, 74, 74, 0.4);
 }
 
 .calendar-indicator.is-loading {
@@ -1443,6 +1450,12 @@ h4 {
   color: var(--text);
 }
 
+.input--color {
+  padding: 6px;
+  width: 78px;
+  height: 42px;
+}
+
 .input:focus,
 .select:focus,
 .textarea:focus {
@@ -1454,6 +1467,21 @@ h4 {
 .textarea {
   min-height: 120px;
   resize: vertical;
+}
+
+.service-color {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.service-color__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(17, 17, 17, 0.2);
 }
 
 .form-status {
@@ -2374,33 +2402,38 @@ h4 {
   white-space: nowrap;
 }
 
+.calendar-item.has-service-color {
+  background-image: linear-gradient(90deg, var(--service-color) 0 6px, transparent 6px);
+  padding-left: 10px;
+}
+
 .calendar-item--pending {
-  background: #b13a46;
+  background-color: #b13a46;
   color: #ffffff;
 }
 
 .calendar-item--confirmed {
-  background: #4fae62;
+  background-color: #4fae62;
   color: #ffffff;
 }
 
 .calendar-item--completed {
-  background: #111111;
+  background-color: #111111;
   color: #ffffff;
 }
 
 .calendar-item--cancelled {
-  background: #c7c7c7;
+  background-color: #c7c7c7;
   color: #111111;
 }
 
 .calendar-item--no_show {
-  background: #d64545;
+  background-color: #d64545;
   color: #ffffff;
 }
 
 .calendar-item--block {
-  background: #d6a554;
+  background-color: #d6a554;
   color: #111111;
 }
 
@@ -2669,6 +2702,21 @@ h4 {
   }
 }
 
+@keyframes bookingConfirmPulse {
+  0% {
+    transform: scale(0.98);
+    box-shadow: 0 0 0 rgba(46, 148, 84, 0);
+  }
+  60% {
+    transform: scale(1.01);
+    box-shadow: 0 14px 28px rgba(46, 148, 84, 0.25);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(46, 148, 84, 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal-on-scroll,
   .reveal-on-scroll .reveal-item,
@@ -2697,6 +2745,10 @@ h4 {
   .hero-primary::after {
     animation: none !important;
     opacity: 0;
+  }
+
+  .booking-form .form-status.success.booking-confirm {
+    animation: none !important;
   }
 }
 
@@ -3012,14 +3064,22 @@ h4 {
   }
 
   .booking-submit .button {
-    padding: 10px 16px;
-    font-size: 0.9rem;
-    border-radius: 18px;
-    box-shadow: 0 10px 20px rgba(17, 17, 17, 0.14);
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    border-radius: 14px;
+    box-shadow: 0 8px 16px rgba(17, 17, 17, 0.12);
   }
 
   .booking-submit .button.outline {
     box-shadow: none;
+  }
+
+  .booking-form .form-status.success.booking-confirm {
+    background: rgba(62, 184, 92, 0.16);
+    border-color: rgba(62, 184, 92, 0.85);
+    color: #0f5a2c;
+    box-shadow: 0 12px 24px rgba(62, 184, 92, 0.22);
+    animation: bookingConfirmPulse 0.6s ease;
   }
 
   .date-grid {

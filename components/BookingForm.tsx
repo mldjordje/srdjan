@@ -503,6 +503,18 @@ export default function BookingForm() {
     () => buildCalendarDays(calendarMonth, firstWorkingDay, lastDay),
     [calendarMonth, firstWorkingDay, lastDay]
   );
+  const maxSlotsByDate = useMemo(() => {
+    if (!selectedService) {
+      return {};
+    }
+
+    const durationMinutes = parseDurationMinutes(selectedService.duration);
+    const map: Record<string, number> = {};
+    dateList.forEach((date) => {
+      map[date] = buildSlots(date, durationMinutes, [], []).length;
+    });
+    return map;
+  }, [dateList, selectedService?.duration]);
 
   const selectedDateObj = useMemo(
     () => new Date(`${formData.date}T00:00:00`),
@@ -811,6 +823,19 @@ export default function BookingForm() {
     () => [...availableSlots].sort((a, b) => timeToMinutes(a) - timeToMinutes(b)),
     [availableSlots]
   );
+  const getAvailabilityClass = (date: string, slots?: string[]) => {
+    if (slots === undefined) {
+      return "is-loading";
+    }
+
+    if (slots.length === 0) {
+      return "is-none";
+    }
+
+    const maxSlots = maxSlotsByDate[date] ?? slots.length;
+    const ratio = maxSlots > 0 ? slots.length / maxSlots : 0;
+    return ratio >= 0.6 ? "is-high" : "is-medium";
+  };
 
   const upcomingAppointments = useMemo(() => {
     const now = new Date();
@@ -1095,13 +1120,10 @@ export default function BookingForm() {
                       </span>
                       {inRange && (
                         <span
-                          className={`calendar-indicator ${
-                            slots === undefined
-                              ? "is-loading"
-                              : hasSlots
-                              ? "is-available"
-                              : "is-full"
-                          }`}
+                          className={`calendar-indicator ${getAvailabilityClass(
+                            value,
+                            slots
+                          )}`}
                         />
                       )}
                     </Button>
@@ -1143,13 +1165,10 @@ export default function BookingForm() {
                         <span>{day.label}</span>
                         {day.inRange && (
                           <span
-                            className={`calendar-indicator ${
-                              slots === undefined
-                                ? "is-loading"
-                                : hasSlots
-                                ? "is-available"
-                                : "is-full"
-                            }`}
+                            className={`calendar-indicator ${getAvailabilityClass(
+                              day.value || "",
+                              slots
+                            )}`}
                           />
                         )}
                       </Button>
@@ -1210,7 +1229,13 @@ export default function BookingForm() {
           )}
 
           {status.type !== "idle" && status.message && (
-            <div className={`form-status ${status.type}`}>{status.message}</div>
+            <div
+              className={`form-status ${status.type} ${
+                status.type === "success" ? "booking-confirm" : ""
+              }`}
+            >
+              {status.message}
+            </div>
           )}
 
           {status.type === "success" && lastBooked && (

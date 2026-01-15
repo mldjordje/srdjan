@@ -18,6 +18,7 @@ type ServiceFormState = {
   duration: string;
   price: string;
   description: string;
+  color: string;
   isActive: boolean;
 };
 
@@ -26,6 +27,7 @@ const buildDefaultFormState = (overrides: Partial<ServiceFormState> = {}): Servi
   duration: "",
   price: "",
   description: "",
+  color: "#111111",
   isActive: true,
   ...overrides,
 });
@@ -99,6 +101,7 @@ export default function AdminServicesPage() {
         duration: service.duration || "",
         price: service.price ? String(service.price) : "",
         description: service.description || "",
+        color: service.color || "#111111",
         isActive: service.isActive !== false,
       })
     );
@@ -158,6 +161,7 @@ export default function AdminServicesPage() {
           duration: formState.duration.trim(),
           price: Number(formState.price) || 0,
           description: formState.description.trim(),
+          color: formState.color.trim(),
           isActive: formState.isActive ? 1 : 0,
         }),
       });
@@ -263,6 +267,15 @@ export default function AdminServicesPage() {
             <span>Trajanje: {service.duration}</span>
             <span>Cena: RSD {service.price?.toLocaleString("sr-RS")}</span>
             {service.description && <span>Opis: {service.description}</span>}
+            {service.color && (
+              <span className="service-color">
+                <span
+                  className="service-color__dot"
+                  style={{ backgroundColor: service.color }}
+                />
+                {service.color}
+              </span>
+            )}
             <span>Status: {service.isActive === false ? "Neaktivna" : "Aktivna"}</span>
             <div className="admin-actions">
               <button className="button outline" type="button" onClick={() => handleEdit(service)}>
@@ -317,6 +330,17 @@ export default function AdminServicesPage() {
                   type="number"
                   min="0"
                   value={formState.price}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="form-row">
+                <label htmlFor="service-color">Boja termina</label>
+                <input
+                  id="service-color"
+                  name="color"
+                  className="input input--color"
+                  type="color"
+                  value={formState.color}
                   onChange={handleChange}
                 />
               </div>
