@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Cinzel, Manrope } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import Providers from "./providers";
 
@@ -35,6 +36,7 @@ export default function RootLayout({
     <html lang="sr" data-theme="luxury">
       <body className={`${displayFont.variable} ${bodyFont.variable}`}>
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );
