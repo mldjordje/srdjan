@@ -8,7 +8,7 @@ import { fetchServices, getActiveServices, services as fallbackServices, type Se
 import { siteConfig } from "@/lib/site";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-const MONTHS_AHEAD = 3;
+const BOOKING_DAYS_AHEAD = siteConfig.schedule.bookingDaysAhead ?? 14;
 const WORKING_DAYS = siteConfig.schedule.workingDays ?? [1, 2, 3, 4, 5];
 const WORKING_DAY_ORDER = [...WORKING_DAYS].sort((a, b) => a - b);
 const getWorkdayColumn = (day: number) => WORKING_DAY_ORDER.indexOf(day);
@@ -98,9 +98,10 @@ const statusLabels: Record<string, string> = {
 const formatSlotLabel = (time: string) => {
   const [hours, minutes] = time.split(":").map((part) => Number(part));
   const date = new Date(2024, 0, 1, hours, minutes);
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
+  return new Intl.DateTimeFormat("sr-RS", {
+    hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
   }).format(date);
 };
 
@@ -242,14 +243,6 @@ const getNextWorkingDay = (date: Date) => {
   return cursor;
 };
 
-const addMonthsClamped = (date: Date, months: number) => {
-  const year = date.getFullYear();
-  const month = date.getMonth() + months;
-  const day = date.getDate();
-  const lastDay = new Date(year, month + 1, 0).getDate();
-  return new Date(year, month, Math.min(day, lastDay));
-};
-
 const addMonths = (date: Date, months: number) =>
   new Date(date.getFullYear(), date.getMonth() + months, 1);
 
@@ -371,7 +364,7 @@ export default function BookingForm() {
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }, []);
   const firstWorkingDay = useMemo(() => getNextWorkingDay(today), [today]);
-  const lastDay = useMemo(() => addMonthsClamped(today, MONTHS_AHEAD), [today]);
+  const lastDay = useMemo(() => addDays(today, BOOKING_DAYS_AHEAD), [today]);
   const dateList = useMemo(
     () =>
       buildDateRange(firstWorkingDay, lastDay).filter((value) =>
