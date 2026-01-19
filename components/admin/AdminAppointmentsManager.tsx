@@ -131,6 +131,7 @@ export default function AdminAppointmentsManager() {
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsStatus, setClientsStatus] = useState<StatusState>({ type: "idle" });
   const [selectedClientId, setSelectedClientId] = useState("");
+  const [clientSearch, setClientSearch] = useState("");
 
   const hasUnknownService =
     formState.serviceId !== "" &&
@@ -141,6 +142,38 @@ export default function AdminAppointmentsManager() {
     filters.date !== "" ||
     filters.status !== "all" ||
     filters.source !== "all";
+
+  const filteredClients = useMemo(() => {
+    const term = clientSearch.trim().toLowerCase().replace(/\s+/g, " ");
+    if (!term) {
+      if (!selectedClientId) {
+        return [];
+      }
+      const selected = clients.find((client) => client.id === selectedClientId);
+      return selected ? [selected] : [];
+    }
+
+    const normalizedPhone = normalizePhoneValue(term);
+    return clients.filter((client) => {
+      const name = (client.name || "").toLowerCase().replace(/\s+/g, " ").trim();
+      const email = (client.email || "").toLowerCase();
+      const phone = normalizePhoneValue(client.phone || "");
+
+      const nameMatches =
+        name.startsWith(term) || name.split(" ").some((part) => part.startsWith(term));
+      const emailMatches = email.startsWith(term);
+
+      if (nameMatches || emailMatches) {
+        return true;
+      }
+
+      if (normalizedPhone && phone.startsWith(normalizedPhone)) {
+        return true;
+      }
+
+      return false;
+    });
+  }, [clientSearch, clients, selectedClientId]);
 
   const filteredAppointments = useMemo(() => {
     const query = filters.query.trim().toLowerCase();
@@ -297,6 +330,7 @@ export default function AdminAppointmentsManager() {
     setFormState(buildDefaultFormState(serviceItems, overrides));
     setFormStatus({ type: "idle" });
     setSelectedClientId("");
+    setClientSearch("");
   };
 
   const handleFilterChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -366,11 +400,13 @@ export default function AdminAppointmentsManager() {
     setSelectedClientId(nextId);
 
     if (!nextId) {
+      setClientSearch("");
       return;
     }
 
     const selected = clients.find((client) => client.id === nextId);
     if (selected) {
+      setClientSearch(selected.name || "");
       setFormState((prev) => ({
         ...prev,
         clientName: selected.name || "",
@@ -508,6 +544,7 @@ export default function AdminAppointmentsManager() {
       })
     );
     setSelectedClientId(resolvedClientId);
+    setClientSearch(appointment.clientName ?? "");
     setFormStatus({ type: "idle" });
   };
 
@@ -807,6 +844,21 @@ export default function AdminAppointmentsManager() {
                 />
               </div>
               <div className="form-row">
+                <label htmlFor="client-search">Pretrazi klijente</label>
+                <input
+                  id="client-search"
+                  className="input"
+                  type="search"
+                  value={clientSearch}
+                  onChange={(event) => {
+                    setClientSearch(event.target.value);
+                    setSelectedClientId("");
+                  }}
+                  placeholder="Upisi ime ili telefon"
+                  autoComplete="off"
+                />
+              </div>
+              <div className="form-row">
                 <label htmlFor="client-select">Izaberi klijenta</label>
                 <select
                   id="client-select"
@@ -816,7 +868,7 @@ export default function AdminAppointmentsManager() {
                   disabled={clientsStatus.type === "loading"}
                 >
                   <option value="">Novi klijent</option>
-                  {clients.map((client) => (
+                  {filteredClients.map((client) => (
                     <option key={client.id} value={client.id}>
                       {client.name} {client.phone ? `(${client.phone})` : ""}
                     </option>

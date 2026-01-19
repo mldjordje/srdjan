@@ -354,6 +354,7 @@ export default function AdminCalendarPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsStatus, setClientsStatus] = useState<StatusState>({ type: "idle" });
   const [selectedClientId, setSelectedClientId] = useState("");
+  const [clientSearch, setClientSearch] = useState("");
   const weekSwipeStart = useRef<{ x: number; y: number } | null>(null);
   const swipeAnimationTimeout = useRef<number | null>(null);
   const [weekTransition, setWeekTransition] = useState<"next" | "prev" | null>(null);
@@ -434,6 +435,37 @@ export default function AdminCalendarPage() {
     () => serviceItems.find((service) => service.id === appointmentForm.serviceId),
     [appointmentForm.serviceId]
   );
+  const filteredClients = useMemo(() => {
+    const term = clientSearch.trim().toLowerCase().replace(/\s+/g, " ");
+    if (!term) {
+      if (!selectedClientId) {
+        return [];
+      }
+      const selected = clients.find((client) => client.id === selectedClientId);
+      return selected ? [selected] : [];
+    }
+
+    const normalizedPhone = normalizePhoneValue(term);
+    return clients.filter((client) => {
+      const name = (client.name || "").toLowerCase().replace(/\s+/g, " ").trim();
+      const email = (client.email || "").toLowerCase();
+      const phone = normalizePhoneValue(client.phone || "");
+
+      const nameMatches =
+        name.startsWith(term) || name.split(" ").some((part) => part.startsWith(term));
+      const emailMatches = email.startsWith(term);
+
+      if (nameMatches || emailMatches) {
+        return true;
+      }
+
+      if (normalizedPhone && phone.startsWith(normalizedPhone)) {
+        return true;
+      }
+
+      return false;
+    });
+  }, [clientSearch, clients, selectedClientId]);
   const serviceColorLookup = useMemo(() => {
     const byId: Record<string, string> = {};
     const byName: Record<string, string> = {};
@@ -808,11 +840,13 @@ export default function AdminCalendarPage() {
     setSelectedClientId(nextId);
 
     if (!nextId) {
+      setClientSearch("");
       return;
     }
 
     const selected = clients.find((client) => client.id === nextId);
     if (selected) {
+      setClientSearch(selected.name || "");
       setAppointmentForm((prev) => ({
         ...prev,
         clientName: selected.name || "",
@@ -943,6 +977,7 @@ export default function AdminCalendarPage() {
     setEditingBlockId(null);
     setEditingAppointment(null);
     setSelectedClientId("");
+    setClientSearch("");
     setSlotAction("appointment");
     setAppointmentStatus({ type: "idle" });
     setIsSlotModalOpen(true);
@@ -999,6 +1034,7 @@ export default function AdminCalendarPage() {
     setAppointmentStatus({ type: "idle" });
     setIsSlotModalOpen(true);
     setSelectedClientId(resolvedClientId);
+    setClientSearch(appointment.clientName ?? "");
     setSelectedSlot({ date: appointment.date, time: normalizedTime });
     setSelectedDate(appointment.date);
     setAppointmentForm({
@@ -1716,6 +1752,21 @@ export default function AdminCalendarPage() {
                   </select>
                 </div>
                 <div className="form-row">
+                  <label htmlFor="appointment-client-search">Pretrazi klijente</label>
+                  <input
+                    id="appointment-client-search"
+                    className="input"
+                    type="search"
+                    value={clientSearch}
+                    onChange={(event) => {
+                      setClientSearch(event.target.value);
+                      setSelectedClientId("");
+                    }}
+                    placeholder="Upisi ime ili telefon"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="form-row">
                   <label htmlFor="appointment-client-select">Izaberi klijenta</label>
                   <select
                     id="appointment-client-select"
@@ -1725,7 +1776,7 @@ export default function AdminCalendarPage() {
                     disabled={clientsStatus.type === "loading"}
                   >
                     <option value="">Novi klijent</option>
-                    {clients.map((client) => (
+                    {filteredClients.map((client) => (
                       <option key={client.id} value={client.id}>
                         {client.name} {client.phone ? `(${client.phone})` : ""}
                       </option>
