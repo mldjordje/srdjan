@@ -1429,6 +1429,46 @@ h4 {
   gap: 12px;
 }
 
+.client-search {
+  display: grid;
+  gap: 8px;
+}
+
+.client-suggestions {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: var(--bg-elevated);
+  max-height: 220px;
+  overflow: auto;
+}
+
+.client-suggestion {
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 8px 10px;
+  border-radius: 10px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.client-suggestion:hover {
+  background: rgba(17, 17, 17, 0.06);
+}
+
+.client-suggestion.is-active {
+  border-color: rgba(17, 17, 17, 0.3);
+  background: rgba(17, 17, 17, 0.08);
+}
+
+.client-suggestion--empty {
+  color: var(--text-muted);
+  cursor: default;
+}
+
 .form-grid {
   display: grid;
   gap: 16px;

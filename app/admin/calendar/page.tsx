@@ -835,25 +835,20 @@ export default function AdminCalendarPage() {
     return match?.id ?? "";
   };
 
-  const handleClientSelect = (event: ChangeEvent<HTMLSelectElement>) => {
-    const nextId = event.target.value;
-    setSelectedClientId(nextId);
-
-    if (!nextId) {
-      setClientSearch("");
+  const handleClientPick = (client: Client | null) => {
+    if (!client) {
+      setSelectedClientId("");
       return;
     }
 
-    const selected = clients.find((client) => client.id === nextId);
-    if (selected) {
-      setClientSearch(selected.name || "");
-      setAppointmentForm((prev) => ({
-        ...prev,
-        clientName: selected.name || "",
-        phone: selected.phone || "",
-        email: selected.email || "",
-      }));
-    }
+    setSelectedClientId(client.id);
+    setClientSearch(client.name || "");
+    setAppointmentForm((prev) => ({
+      ...prev,
+      clientName: client.name || "",
+      phone: client.phone || "",
+      email: client.email || "",
+    }));
   };
 
   const handleOpenAppointmentModal = (appointment: Appointment) => {
@@ -1753,35 +1748,46 @@ export default function AdminCalendarPage() {
                 </div>
                 <div className="form-row">
                   <label htmlFor="appointment-client-search">Pretrazi klijente</label>
-                  <input
-                    id="appointment-client-search"
-                    className="input"
-                    type="search"
-                    value={clientSearch}
-                    onChange={(event) => {
-                      setClientSearch(event.target.value);
-                      setSelectedClientId("");
-                    }}
-                    placeholder="Upisi ime ili telefon"
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="form-row">
-                  <label htmlFor="appointment-client-select">Izaberi klijenta</label>
-                  <select
-                    id="appointment-client-select"
-                    className="select"
-                    value={selectedClientId}
-                    onChange={handleClientSelect}
-                    disabled={clientsStatus.type === "loading"}
-                  >
-                    <option value="">Novi klijent</option>
-                    {filteredClients.map((client) => (
-                      <option key={client.id} value={client.id}>
-                        {client.name} {client.phone ? `(${client.phone})` : ""}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="client-search">
+                    <input
+                      id="appointment-client-search"
+                      className="input"
+                      type="search"
+                      value={clientSearch}
+                      onChange={(event) => {
+                        setClientSearch(event.target.value);
+                        setSelectedClientId("");
+                      }}
+                      placeholder="Upisi ime ili telefon"
+                      autoComplete="off"
+                    />
+                    {clientSearch.trim() !== "" && (
+                      <div className="client-suggestions" role="listbox">
+                        {clientsStatus.type === "loading" && (
+                          <div className="client-suggestion client-suggestion--empty">
+                            Ucitavanje...
+                          </div>
+                        )}
+                        {clientsStatus.type !== "loading" && filteredClients.length === 0 && (
+                          <div className="client-suggestion client-suggestion--empty">
+                            Nema rezultata
+                          </div>
+                        )}
+                        {filteredClients.map((client) => (
+                          <button
+                            key={client.id}
+                            type="button"
+                            className={`client-suggestion ${
+                              client.id === selectedClientId ? "is-active" : ""
+                            }`}
+                            onClick={() => handleClientPick(client)}
+                          >
+                            {client.name} {client.phone ? `(${client.phone})` : ""}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="form-row">
                   <label htmlFor="appointment-client">Ime klijenta</label>
