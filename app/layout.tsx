@@ -17,8 +17,32 @@ const bodyFont = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Doctor Barber",
-  description: "Premium barber studio u Beogradu.",
+  metadataBase: new URL("https://www.doctorbarber.rs"),
+  title: "Doctor Barber Niš | Barber Studio",
+  description:
+    "Barber studio u Nišu za klasično šišanje, fade i bradu. Online zakazivanje termina bez čekanja.",
+  keywords: [
+    "frizer Niš",
+    "barber Niš",
+    "šišanje Niš",
+    "fade Niš",
+    "fade šišanje",
+    "brada",
+    "muški frizer Niš",
+    "Doctor Barber",
+  ],
+  alternates: {
+    canonical: "https://www.doctorbarber.rs/",
+  },
+  openGraph: {
+    title: "Doctor Barber Niš | Barber Studio",
+    description:
+      "Barber studio u Nišu za klasično šišanje, fade i bradu. Online zakazivanje termina bez čekanja.",
+    url: "https://www.doctorbarber.rs/",
+    siteName: "Doctor Barber",
+    locale: "sr_RS",
+    type: "website",
+  },
   manifest: "/manifest.webmanifest",
   themeColor: "#111111",
   icons: {

@@ -663,6 +663,45 @@ export default function HomePage() {
             </motion.div>
           </div>
         </motion.section>
+
+        <motion.section
+          className="section review-section"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+          variants={sectionVariants}
+        >
+          <div className="container">
+            <motion.div className="section-header" variants={itemVariants}>
+              <h2>Oceni nas na Google</h2>
+              <p>
+                Ako si zadovoljan uslugom, ostavi kratku ocenu. Hvala na podršci
+                lokalnom barber studiju u Nišu.
+              </p>
+            </motion.div>
+            <motion.div className="banner review-banner" variants={cardVariants}>
+              <div className="review-copy">
+                <strong>Doctor Barber Niš</strong>
+                <p>
+                  Klasično šišanje, fade i brada — tvoja preporuka nam puno znači.
+                </p>
+                <p className="seo-note">
+                  Frizer u Nišu za fade šišanje, klasično šišanje i uređivanje brade.
+                </p>
+              </div>
+              <div className="review-actions">
+                <a
+                  className="button outline"
+                  href="https://share.google/hF9NR9UUlcHPwfLcM"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Oceni na Google
+                </a>
+              </div>
+            </motion.div>
+          </div>
+        </motion.section>
       </main>
 
       <footer className="footer">

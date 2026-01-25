@@ -800,6 +800,37 @@ h4 {
   border: 1px solid rgba(17, 17, 17, 0.18);
 }
 
+.review-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.review-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.review-copy strong {
+  font-size: 1.2rem;
+}
+
+.review-copy p {
+  color: var(--text-muted);
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+.review-copy .seo-note {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.review-actions {
+  flex-shrink: 0;
+}
+
 .banner span {
   text-transform: uppercase;
   letter-spacing: 0.2em;
@@ -2905,6 +2936,20 @@ h4 {
   .booking-grid {
     grid-template-columns: 1fr;
     gap: 24px;
+  }
+
+  .review-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .review-actions {
+    width: 100%;
+  }
+
+  .review-actions .button {
+    width: 100%;
+    justify-content: center;
   }
 
   .booking-form {
