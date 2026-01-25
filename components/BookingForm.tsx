@@ -481,9 +481,10 @@ export default function BookingForm() {
     let active = true;
     fetchServices(apiBaseUrl)
       .then((items) => {
-        if (active) {
-          setServiceItems(items);
+        if (!active) {
+          return;
         }
+        setServiceItems(items.length > 0 ? items : fallbackServices);
       })
       .catch(() => {
         if (active) {
