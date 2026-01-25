@@ -157,6 +157,36 @@ type BreakWindow = {
   end: string;
 };
 
+const normalizeServiceLabel = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+const getServicePriority = (service: Service) => {
+  const id = service.id.toLowerCase();
+  const name = normalizeServiceLabel(service.name || "");
+
+  if (id === "sisanje" || name.startsWith("sisanje")) {
+    return 0;
+  }
+
+  if (id === "fade" || name.startsWith("fade")) {
+    return 1;
+  }
+
+  return 2;
+};
+
+const orderServices = (items: Service[]) =>
+  [...items].sort((a, b) => {
+    const priorityDiff = getServicePriority(a) - getServicePriority(b);
+    if (priorityDiff !== 0) {
+      return priorityDiff;
+    }
+    return a.name.localeCompare(b.name, "sr");
+  });
+
 const buildBreakWindows = (breaks: BreakWindow[] = []) =>
   breaks
     .map((window) => ({
@@ -540,6 +570,7 @@ export default function BookingForm() {
     () => getActiveServices(serviceItems),
     [serviceItems]
   );
+  const orderedServices = useMemo(() => orderServices(activeServices), [activeServices]);
 
   const calendarDays = useMemo(
     () => buildCalendarDays(calendarMonth, firstWorkingDay, lastDay),
@@ -1101,7 +1132,7 @@ export default function BookingForm() {
             </div>
           </div>
           <div className="service-list">
-            {activeServices.map((service) => {
+            {orderedServices.map((service) => {
               const isActive = service.id === formData.serviceId;
               return (
                 <button
