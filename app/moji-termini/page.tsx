@@ -27,6 +27,11 @@ type StatusState = {
   message?: string;
 };
 
+type BookingSettings = {
+  minBookingLeadMinutes: number;
+  minCancelLeadMinutes: number;
+};
+
 const statusLabels: Record<string, string> = {
   pending: "Na cekanju",
   confirmed: "Potvrdjen",
@@ -68,6 +73,10 @@ export default function MyAppointmentsPage() {
   const [status, setStatus] = useState<StatusState>({ type: "idle" });
   const [cancelTarget, setCancelTarget] = useState<Appointment | null>(null);
   const [cancelStatus, setCancelStatus] = useState<StatusState>({ type: "idle" });
+  const [bookingSettings, setBookingSettings] = useState<BookingSettings>({
+    minBookingLeadMinutes: 60,
+    minCancelLeadMinutes: 60,
+  });
 
   useEffect(() => {
     const token = localStorage.getItem("db_client_token");
@@ -82,6 +91,41 @@ export default function MyAppointmentsPage() {
     const profile = { name, phone, email, token };
     setClient(profile);
     fetchAppointments(profile.token);
+  }, []);
+
+  useEffect(() => {
+    if (!apiBaseUrl) {
+      return;
+    }
+
+    let active = true;
+    fetch(`${apiBaseUrl}/settings.php`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (!active) {
+          return;
+        }
+        const settings = data?.settings ?? data ?? {};
+        const minBookingLeadMinutes = Number(settings.minBookingLeadMinutes ?? 60);
+        const minCancelLeadMinutes = Number(settings.minCancelLeadMinutes ?? 60);
+        setBookingSettings({
+          minBookingLeadMinutes: Number.isFinite(minBookingLeadMinutes)
+            ? minBookingLeadMinutes
+            : 60,
+          minCancelLeadMinutes: Number.isFinite(minCancelLeadMinutes)
+            ? minCancelLeadMinutes
+            : 60,
+        });
+      })
+      .catch(() => {
+        if (active) {
+          setBookingSettings((prev) => prev);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const fetchAppointments = async (token: string) => {
@@ -114,6 +158,20 @@ export default function MyAppointmentsPage() {
   };
 
   const handleCancelRequest = (appointment: Appointment) => {
+    const minCancelLeadMinutes = Math.max(0, bookingSettings.minCancelLeadMinutes);
+    if (minCancelLeadMinutes > 0) {
+      const appointmentDateTime = buildDateTime(appointment);
+      const cancelDeadline = new Date(
+        appointmentDateTime.getTime() - minCancelLeadMinutes * 60000
+      );
+      if (new Date() > cancelDeadline) {
+        setCancelStatus({
+          type: "error",
+          message: `Otkazivanje je moguce najkasnije ${minCancelLeadMinutes} minuta pre termina.`,
+        });
+        return;
+      }
+    }
     setCancelTarget(appointment);
     setCancelStatus({ type: "idle" });
   };
@@ -126,6 +184,21 @@ export default function MyAppointmentsPage() {
   const handleCancelConfirm = async () => {
     if (!cancelTarget || !client) {
       return;
+    }
+
+    const minCancelLeadMinutes = Math.max(0, bookingSettings.minCancelLeadMinutes);
+    if (minCancelLeadMinutes > 0) {
+      const appointmentDateTime = buildDateTime(cancelTarget);
+      const cancelDeadline = new Date(
+        appointmentDateTime.getTime() - minCancelLeadMinutes * 60000
+      );
+      if (new Date() > cancelDeadline) {
+        setCancelStatus({
+          type: "error",
+          message: `Otkazivanje je moguce najkasnije ${minCancelLeadMinutes} minuta pre termina.`,
+        });
+        return;
+      }
     }
 
     if (!apiBaseUrl) {
@@ -197,6 +270,18 @@ export default function MyAppointmentsPage() {
 
     return { upcoming: upcomingList, past: pastList };
   }, [appointments]);
+
+  const canCancelAppointment = (appointment: Appointment) => {
+    const minCancelLeadMinutes = Math.max(0, bookingSettings.minCancelLeadMinutes);
+    if (minCancelLeadMinutes <= 0) {
+      return true;
+    }
+    const appointmentDateTime = buildDateTime(appointment);
+    const cancelDeadline = new Date(
+      appointmentDateTime.getTime() - minCancelLeadMinutes * 60000
+    );
+    return new Date() <= cancelDeadline;
+  };
 
   if (!client) {
     return (
@@ -341,31 +426,39 @@ export default function MyAppointmentsPage() {
             </div>
           )}
           <div className="appointments-list">
-            {upcoming.map((appointment) => (
-              <article key={appointment.id} className="appointment-item">
-                <div>
-                  <strong>{appointment.serviceName}</strong>
-                  <span>
-                    {formatLongDate(appointment.date)} | {normalizeTime(appointment.time)}
-                  </span>
-                </div>
-                {appointment.status && (
-                  <span className={`status-pill ${appointment.status}`}>
-                    {statusLabels[appointment.status] || appointment.status}
-                  </span>
-                )}
-                {appointment.status !== "cancelled" && (
-                  <button
-                    className="button small outline"
-                    type="button"
-                    disabled={cancelStatus.type === "loading"}
-                    onClick={() => handleCancelRequest(appointment)}
-                  >
-                    Otkazi
-                  </button>
-                )}
-              </article>
-            ))}
+            {upcoming.map((appointment) => {
+              const canCancel = canCancelAppointment(appointment);
+              return (
+                <article key={appointment.id} className="appointment-item">
+                  <div>
+                    <strong>{appointment.serviceName}</strong>
+                    <span>
+                      {formatLongDate(appointment.date)} | {normalizeTime(appointment.time)}
+                    </span>
+                  </div>
+                  {appointment.status && (
+                    <span className={`status-pill ${appointment.status}`}>
+                      {statusLabels[appointment.status] || appointment.status}
+                    </span>
+                  )}
+                  {appointment.status !== "cancelled" && (
+                    <button
+                      className="button small outline"
+                      type="button"
+                      disabled={!canCancel || cancelStatus.type === "loading"}
+                      onClick={() => handleCancelRequest(appointment)}
+                      title={
+                        canCancel
+                          ? ""
+                          : `Otkazivanje moguce najkasnije ${bookingSettings.minCancelLeadMinutes} min pre termina.`
+                      }
+                    >
+                      {canCancel ? "Otkazi" : "Otkazivanje zatvoreno"}
+                    </button>
+                  )}
+                </article>
+              );
+            })}
           </div>
         </section>
 
@@ -417,6 +510,12 @@ export default function MyAppointmentsPage() {
               <span>{formatLongDate(cancelTarget.date)}</span>
               <span>{normalizeTime(cancelTarget.time)}</span>
             </div>
+            {!canCancelAppointment(cancelTarget) && (
+              <div className="form-status error">
+                Otkazivanje je moguce najkasnije {bookingSettings.minCancelLeadMinutes} minuta
+                pre termina.
+              </div>
+            )}
             {cancelStatus.type !== "idle" && cancelStatus.message && (
               <div className={`form-status ${cancelStatus.type}`}>{cancelStatus.message}</div>
             )}
@@ -433,7 +532,7 @@ export default function MyAppointmentsPage() {
                 className="button"
                 type="button"
                 onClick={handleCancelConfirm}
-                disabled={cancelStatus.type === "loading"}
+                disabled={cancelStatus.type === "loading" || !canCancelAppointment(cancelTarget)}
               >
                 {cancelStatus.type === "loading" ? "Otkazivanje..." : "Potvrdi"}
               </button>

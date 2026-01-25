@@ -19,6 +19,7 @@ const navItems = [
   { href: "/admin/clients", label: "Klijenti" },
   { href: "/admin/usluge", label: "Usluge" },
   { href: "/admin/notifications", label: "Notifikacije", badge: true },
+  { href: "/admin/settings", label: "Podesavanja" },
 ];
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";

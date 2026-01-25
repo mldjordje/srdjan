@@ -429,8 +429,6 @@ export default function AdminCalendarPage() {
   const canGoPrevMonth = calendarMonth > minMonth;
   const canGoNextMonth = calendarMonth < maxMonth;
 
-  const selectedAppointments = appointmentsByDate[selectedDate] ?? [];
-  const selectedBlocks = blocksByDate[selectedDate] ?? [];
   const selectedService = useMemo(
     () => serviceItems.find((service) => service.id === appointmentForm.serviceId),
     [appointmentForm.serviceId]
@@ -1366,12 +1364,7 @@ export default function AdminCalendarPage() {
       return "calendar-item calendar-item--block is-editable";
     }
 
-    const statusClass =
-      item.status &&
-      ["pending", "confirmed", "completed", "cancelled", "no_show"].includes(item.status)
-        ? item.status
-        : "pending";
-    const baseClass = `calendar-item calendar-item--${statusClass} is-editable`;
+    const baseClass = "calendar-item calendar-item--appointment is-editable";
     return item.serviceColor ? `${baseClass} has-service-color` : baseClass;
   };
 
@@ -1389,8 +1382,8 @@ export default function AdminCalendarPage() {
                 <div
                   className="calendar-schedule__scroll"
                   onTouchStart={handleWeekSwipeStart}
-                onTouchEnd={handleWeekSwipeEnd}
-              >
+                  onTouchEnd={handleWeekSwipeEnd}
+                >
                 <div className="calendar-schedule__times" style={timeStyles}>
                   <div className="calendar-time-header" />
                   {timeSlots.map((time) => (
@@ -1485,6 +1478,11 @@ export default function AdminCalendarPage() {
                         }
                       }}
                     >
+                      {item.type === "appointment" && item.status === "confirmed" && (
+                        <span className="calendar-item__badge" aria-label="Potvrdjen">
+                          ✓
+                        </span>
+                      )}
                       <strong>{item.title}</strong>
                       {item.subtitle && <span>{item.subtitle}</span>}
                     </div>
@@ -1496,56 +1494,6 @@ export default function AdminCalendarPage() {
               {status.type === "error" && status.message && (
                 <div className="form-status error">{status.message}</div>
               )}
-
-              <div className="calendar-detail-grid">
-                <div className="calendar-list">
-                  <h3>Termini {selectedDateLabel}</h3>
-                {selectedAppointments.length === 0 && (
-                  <div className="admin-card">Nema termina.</div>
-                )}
-                {selectedAppointments.map((appointment) => (
-                  <div key={appointment.id} className="admin-card">
-                    <div className={`status-pill ${appointment.status || "pending"}`}>
-                      {statusLabels[appointment.status || "pending"] || appointment.status}
-                    </div>
-                    <strong>{appointment.serviceName}</strong>
-                    <span>
-                      {normalizeTimeInput(appointment.time)} |{" "}
-                      <span className="calendar-client-name">{appointment.clientName}</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="calendar-list">
-                <h3>Blokade {selectedDateLabel}</h3>
-                {selectedBlocks.length === 0 && <div className="admin-card">Nema blokada.</div>}
-                {selectedBlocks.map((block) => (
-                  <div key={block.id} className="admin-card">
-                    <strong>
-                      {block.time} ({block.duration} min)
-                    </strong>
-                    {block.note && <span>{block.note}</span>}
-                    <div className="admin-actions">
-                      <button
-                        className="button outline"
-                        type="button"
-                        onClick={() => handleEditBlock(block)}
-                      >
-                        Izmeni
-                      </button>
-                      <button
-                        className="button outline"
-                        type="button"
-                        onClick={() => handleDeleteBlock(block.id)}
-                      >
-                        Obrisi
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
           <aside className="calendar-sidebar">
             <div className="calendar-selected">

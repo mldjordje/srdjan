@@ -1,0 +1,88 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 1193 >>
+stream
+BT
+/F1 12 Tf
+72 720 Td
+(Doctor Barber - Paket funkcionalnosti i cenovnik) Tj
+0 -16 Td
+() Tj
+0 -16 Td
+(Funkcionalnosti:) Tj
+0 -16 Td
+(- Landing stranica sa formom za zakazivanje) Tj
+0 -16 Td
+(- Registracija i prijava klijenata) Tj
+0 -16 Td
+(- Pregled i otkazivanje termina \(Moji termini\)) Tj
+0 -16 Td
+(- Admin/CMS panel: termini, kalendar, klijenti, usluge, notifikacije) Tj
+0 -16 Td
+(- Notifikacije i statusi termina) Tj
+0 -16 Td
+(- PWA instalacija \(aplikacija kao app\)) Tj
+0 -16 Td
+(- Izvoz termina u kalendar \(.ics\)) Tj
+0 -16 Td
+() Tj
+0 -16 Td
+(Radno vreme i pravila:) Tj
+0 -16 Td
+(- Pon-Pet: 11:00-19:00) Tj
+0 -16 Td
+(- Pauza: 15:00-16:00) Tj
+0 -16 Td
+(- Slotovi: 20 min) Tj
+0 -16 Td
+(- Rezervacije do 14 dana unapred) Tj
+0 -16 Td
+() Tj
+0 -16 Td
+(Cenovnik usluga:) Tj
+0 -16 Td
+(- Sisanje \(20 min\): 700) Tj
+0 -16 Td
+(- Fade \(40 min\): 1000) Tj
+0 -16 Td
+(- Sisanje i pranje \(40 min\): 1000) Tj
+0 -16 Td
+(- Fade i pranje \(40 min\): 1200) Tj
+0 -16 Td
+(- Fade i brada \(40 min\): 1200) Tj
+0 -16 Td
+(- Sisanje i brada \(40 min\): 1000) Tj
+0 -16 Td
+(- Fade brada pranje \(1 h\): 1500) Tj
+0 -16 Td
+() Tj
+0 -16 Td
+(Napomena: cene i usluge su pocetne i mogu se menjati u CMS panelu.) Tj
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1556
+%%EOF

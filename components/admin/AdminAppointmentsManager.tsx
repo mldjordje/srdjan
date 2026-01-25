@@ -25,6 +25,14 @@ type Appointment = {
   createdAt?: string;
 };
 
+type Block = {
+  id: string;
+  date: string;
+  time: string;
+  duration: number;
+  note?: string;
+};
+
 type Client = {
   id: string;
   name: string;
@@ -132,6 +140,9 @@ export default function AdminAppointmentsManager() {
   const [clientsStatus, setClientsStatus] = useState<StatusState>({ type: "idle" });
   const [selectedClientId, setSelectedClientId] = useState("");
   const [clientSearch, setClientSearch] = useState("");
+  const [blocks, setBlocks] = useState<Block[]>([]);
+  const [blockDate, setBlockDate] = useState(formatDateInput(new Date()));
+  const [blockStatus, setBlockStatus] = useState<StatusState>({ type: "idle" });
 
   const hasUnknownService =
     formState.serviceId !== "" &&
@@ -300,6 +311,55 @@ export default function AdminAppointmentsManager() {
       setClientsStatus({ type: "error", message });
     }
   };
+
+  const fetchBlocks = async (dateValue = blockDate) => {
+    if (!apiBaseUrl) {
+      setBlockStatus({
+        type: "error",
+        message: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+      });
+      return;
+    }
+
+    if (!adminKey) {
+      setBlockStatus({
+        type: "error",
+        message: "Dodaj NEXT_PUBLIC_ADMIN_KEY u .env da bi CMS radio.",
+      });
+      return;
+    }
+
+    if (!dateValue) {
+      setBlockStatus({ type: "error", message: "Izaberi datum za blokade." });
+      return;
+    }
+
+    setBlockStatus({ type: "loading" });
+
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/blocks.php?date=${encodeURIComponent(dateValue)}`,
+        {
+          headers: {
+            "X-Admin-Key": adminKey,
+          },
+        }
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Ne mogu da preuzmem blokade.");
+      }
+
+      const items = Array.isArray(data.blocks) ? data.blocks : [];
+      items.sort((a: Block, b: Block) => a.time.localeCompare(b.time));
+      setBlocks(items);
+      setBlockStatus({ type: "success", message: "Blokade su osvezene." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      setBlockStatus({ type: "error", message });
+    }
+  };
   const fetchServiceItems = async () => {
     if (!apiBaseUrl || !adminKey) {
       return;
@@ -324,6 +384,12 @@ export default function AdminAppointmentsManager() {
     fetchClients();
     fetchServiceItems();
   }, []);
+
+  useEffect(() => {
+    if (blockDate) {
+      fetchBlocks(blockDate);
+    }
+  }, [blockDate]);
 
   const resetForm = (overrides: Partial<AppointmentFormState> = {}) => {
     setEditingId(null);
@@ -581,6 +647,38 @@ export default function AdminAppointmentsManager() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Doslo je do greske.";
       setStatus({ type: "error", message });
+    }
+  };
+
+  const handleDeleteBlock = async (id: string) => {
+    if (!apiBaseUrl || !adminKey) {
+      return;
+    }
+
+    const confirmed = window.confirm("Da li sigurno zelis da obrises blokadu?");
+    if (!confirmed) {
+      return;
+    }
+
+    setBlockStatus({ type: "loading" });
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/blocks.php?id=${id}`, {
+        method: "DELETE",
+        headers: {
+          "X-Admin-Key": adminKey,
+        },
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Ne mogu da obrisem blokadu.");
+      }
+
+      await fetchBlocks();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      setBlockStatus({ type: "error", message });
     }
   };
 
@@ -974,6 +1072,50 @@ export default function AdminAppointmentsManager() {
               </button>
             </div>
           </form>
+        </div>
+
+        <div className="admin-card">
+          <h3>Blokade</h3>
+          <div className="form-grid">
+            <div className="form-row">
+              <label htmlFor="block-date">Datum</label>
+              <input
+                id="block-date"
+                className="input"
+                type="date"
+                value={blockDate}
+                onChange={(event) => setBlockDate(event.target.value)}
+              />
+            </div>
+            <div className="form-row">
+              <button className="button outline" type="button" onClick={() => fetchBlocks()}>
+                Osvezi blokade
+              </button>
+            </div>
+          </div>
+          {blockStatus.type !== "idle" && blockStatus.message && (
+            <div className={`form-status ${blockStatus.type}`}>{blockStatus.message}</div>
+          )}
+          {blocks.length === 0 && blockStatus.type !== "loading" && (
+            <div className="admin-card">Nema blokada za izabrani datum.</div>
+          )}
+          {blocks.map((block) => (
+            <div key={block.id} className="admin-card">
+              <strong>
+                {block.time} ({block.duration} min)
+              </strong>
+              {block.note && <span>{block.note}</span>}
+              <div className="admin-actions">
+                <button
+                  className="button outline"
+                  type="button"
+                  onClick={() => handleDeleteBlock(block.id)}
+                >
+                  Obrisi
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </AdminShell>

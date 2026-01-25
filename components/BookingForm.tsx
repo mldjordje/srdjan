@@ -23,6 +23,11 @@ type AvailabilityState = {
   message?: string;
 };
 
+type BookingSettings = {
+  minBookingLeadMinutes: number;
+  minCancelLeadMinutes: number;
+};
+
 type ClientProfile = {
   name: string;
   phone: string;
@@ -313,7 +318,8 @@ const buildSlots = (
   date: string,
   durationMinutes: number,
   appointments: AvailabilityItem[],
-  blocks: AvailabilityItem[]
+  blocks: AvailabilityItem[],
+  minBookingLeadMinutes = 0
 ) => {
   const dateObj = new Date(`${date}T00:00:00`);
   if (!isWorkingDay(dateObj)) {
@@ -324,8 +330,8 @@ const buildSlots = (
   const openMinutes = timeToMinutes(open);
   const closeMinutes = timeToMinutes(close);
   const now = new Date();
-  const isToday = date === formatDate(now);
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const minLeadMinutes = Math.max(0, minBookingLeadMinutes);
+  const minAllowedTime = minLeadMinutes > 0 ? now.getTime() + minLeadMinutes * 60000 : now.getTime();
   const required = durationMinutes || slotMinutes;
   const breakWindows = buildBreakWindows(breaks);
 
@@ -340,7 +346,8 @@ const buildSlots = (
   const stepMinutes = slotMinutes;
 
   for (let start = openMinutes; start + required <= closeMinutes; start += stepMinutes) {
-    if (isToday && start < nowMinutes) {
+    const slotDateTime = new Date(`${date}T${minutesToTime(start)}:00`).getTime();
+    if (slotDateTime < minAllowedTime) {
       continue;
     }
 
@@ -375,6 +382,10 @@ export default function BookingForm() {
 
   const [client, setClient] = useState<ClientProfile | null>(null);
   const [serviceItems, setServiceItems] = useState<Service[]>(fallbackServices);
+  const [bookingSettings, setBookingSettings] = useState<BookingSettings>({
+    minBookingLeadMinutes: 60,
+    minCancelLeadMinutes: 60,
+  });
   const [clientAppointments, setClientAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [formData, setFormData] = useState({
@@ -400,6 +411,8 @@ export default function BookingForm() {
   const [weekTransition, setWeekTransition] = useState<"next" | "prev" | null>(null);
   const slotRef = useRef<HTMLDivElement | null>(null);
   const submitRef = useRef<HTMLDivElement | null>(null);
+  const calendarRef = useRef<HTMLDivElement | null>(null);
+  const [autoSelectPending, setAutoSelectPending] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("db_client_token");
@@ -483,6 +496,41 @@ export default function BookingForm() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!apiBaseUrl) {
+      return;
+    }
+
+    let active = true;
+    fetch(`${apiBaseUrl}/settings.php`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (!active) {
+          return;
+        }
+        const settings = data?.settings ?? data ?? {};
+        const minBookingLeadMinutes = Number(settings.minBookingLeadMinutes ?? 60);
+        const minCancelLeadMinutes = Number(settings.minCancelLeadMinutes ?? 60);
+        setBookingSettings({
+          minBookingLeadMinutes: Number.isFinite(minBookingLeadMinutes)
+            ? minBookingLeadMinutes
+            : 60,
+          minCancelLeadMinutes: Number.isFinite(minCancelLeadMinutes)
+            ? minCancelLeadMinutes
+            : 60,
+        });
+      })
+      .catch(() => {
+        if (active) {
+          setBookingSettings((prev) => prev);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const selectedService = useMemo(
     () => serviceItems.find((service) => service.id === formData.serviceId),
     [formData.serviceId, serviceItems]
@@ -504,10 +552,16 @@ export default function BookingForm() {
     const durationMinutes = parseDurationMinutes(selectedService.duration);
     const map: Record<string, number> = {};
     dateList.forEach((date) => {
-      map[date] = buildSlots(date, durationMinutes, [], []).length;
+      map[date] = buildSlots(
+        date,
+        durationMinutes,
+        [],
+        [],
+        bookingSettings.minBookingLeadMinutes
+      ).length;
     });
     return map;
-  }, [dateList, selectedService?.duration]);
+  }, [dateList, selectedService?.duration, bookingSettings.minBookingLeadMinutes]);
 
   const selectedDateObj = useMemo(
     () => new Date(`${formData.date}T00:00:00`),
@@ -529,6 +583,7 @@ export default function BookingForm() {
 
     let active = true;
     setAvailabilityStatus({ type: "loading" });
+    setAvailabilityByDate({});
 
     const durationMinutes = parseDurationMinutes(selectedService.duration);
 
@@ -544,7 +599,13 @@ export default function BookingForm() {
 
       const appointments = Array.isArray(data.appointments) ? data.appointments : [];
       const blocks = Array.isArray(data.blocks) ? data.blocks : [];
-      const slots = buildSlots(date, durationMinutes, appointments, blocks);
+      const slots = buildSlots(
+        date,
+        durationMinutes,
+        appointments,
+        blocks,
+        bookingSettings.minBookingLeadMinutes
+      );
 
       return [date, slots] as const;
     };
@@ -576,7 +637,13 @@ export default function BookingForm() {
     return () => {
       active = false;
     };
-  }, [apiBaseUrl, dateList, selectedService?.duration, selectedService?.id]);
+  }, [
+    apiBaseUrl,
+    dateList,
+    selectedService?.duration,
+    selectedService?.id,
+    bookingSettings.minBookingLeadMinutes,
+  ]);
 
   useEffect(() => {
     if (!selectedService) {
@@ -600,6 +667,38 @@ export default function BookingForm() {
 
     setCalendarMonth(new Date(year, month - 1, 1));
   }, [formData.date]);
+
+  useEffect(() => {
+    if (!selectedService || !autoSelectPending) {
+      return;
+    }
+
+    if (availabilityStatus.type === "loading") {
+      return;
+    }
+
+    const nextDate = dateList.find((date) => (availabilityByDate[date] ?? []).length > 0);
+    if (nextDate) {
+      setFormData((prev) => ({
+        ...prev,
+        date: nextDate,
+        time: "",
+      }));
+      window.setTimeout(() => {
+        if (calendarRef.current) {
+          calendarRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 0);
+    }
+
+    setAutoSelectPending(false);
+  }, [
+    autoSelectPending,
+    availabilityByDate,
+    availabilityStatus.type,
+    dateList,
+    selectedService?.id,
+  ]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -643,6 +742,26 @@ export default function BookingForm() {
         message: "Vikendom ne radimo. Izaberi radni dan.",
       });
       return;
+    }
+
+    const minLeadMinutes = Math.max(0, bookingSettings.minBookingLeadMinutes);
+    if (minLeadMinutes > 0) {
+      const bookingDateTime = new Date(`${formData.date}T${formData.time}:00`);
+      const minAllowed = new Date(Date.now() + minLeadMinutes * 60000);
+      if (Number.isNaN(bookingDateTime.getTime())) {
+        setStatus({
+          type: "error",
+          message: "Neispravan datum ili vreme.",
+        });
+        return;
+      }
+      if (bookingDateTime < minAllowed) {
+        setStatus({
+          type: "error",
+          message: `Termin mora biti zakazan najmanje ${minLeadMinutes} minuta unapred.`,
+        });
+        return;
+      }
     }
 
     setStatus({ type: "sending" });
@@ -748,6 +867,15 @@ export default function BookingForm() {
     }
     if (slotRef.current) {
       slotRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const scrollToCalendar = () => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (calendarRef.current) {
+      calendarRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
@@ -985,7 +1113,9 @@ export default function BookingForm() {
                       serviceId: service.id,
                       time: "",
                     }));
+                    setAutoSelectPending(true);
                     setActiveStep(2);
+                    window.setTimeout(scrollToCalendar, 0);
                   }}
                 >
                   <div className="service-info">
@@ -1044,7 +1174,7 @@ export default function BookingForm() {
                 </div>
               </div>
 
-              <div className="calendar">
+              <div className="calendar" ref={calendarRef}>
                 <div className="calendar-header">
                   <Button
                     size="sm"
@@ -1098,6 +1228,7 @@ export default function BookingForm() {
                       className={`calendar-week-day ${isActive ? "is-active" : ""}`}
                       isDisabled={isDisabled}
                       onPress={() => {
+                        setAutoSelectPending(false);
                         setFormData((prev) => ({
                           ...prev,
                           date: value,
@@ -1148,6 +1279,7 @@ export default function BookingForm() {
                           if (!value) {
                             return;
                           }
+                          setAutoSelectPending(false);
                           setFormData((prev) => ({
                             ...prev,
                             date: value,
