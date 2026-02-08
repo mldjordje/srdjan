@@ -2287,7 +2287,7 @@ h4 {
 .calendar-schedule__times {
   position: sticky;
   left: 0;
-  z-index: 3;
+  z-index: 40;
   display: grid;
   min-width: 78px;
   background: #ffffff;
@@ -2297,7 +2297,7 @@ h4 {
 .calendar-time-header {
   position: sticky;
   top: 0;
-  z-index: 11;
+  z-index: 45;
   background: #ffffff;
   border-bottom: 1px solid rgba(17, 17, 17, 0.06);
 }
@@ -2325,6 +2325,7 @@ h4 {
   width: 100%;
   z-index: 0;
   isolation: isolate;
+  overflow: clip;
 }
 
 .calendar-schedule__grid.is-swipe-next {
@@ -2360,7 +2361,7 @@ h4 {
 .calendar-day-header {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 30;
   background: #ffffff;
   border-bottom: 1px solid rgba(17, 17, 17, 0.06);
   border-right: 1px solid rgba(17, 17, 17, 0.05);
@@ -2457,7 +2458,7 @@ h4 {
   align-self: stretch;
   justify-self: stretch;
   box-shadow: 0 10px 20px rgba(15, 15, 15, 0.12);
-  z-index: 0;
+  z-index: 2;
   position: relative;
   background-color: var(--service-color, #1b1b1b);
   color: #ffffff;
