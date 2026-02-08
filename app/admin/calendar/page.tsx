@@ -160,6 +160,13 @@ const formatRangeLabel = (start: Date, end: Date, locale: string) => {
 const normalizeTimeInput = (value: string) => (value ? value.slice(0, 5) : "");
 
 const normalizePhoneValue = (value: string) => value.replace(/\D+/g, "");
+const normalizeServiceKey = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 
 const timeToMinutes = (time: string) => {
   const [hours, minutes] = time.split(":").map((part) => Number(part));
@@ -539,11 +546,29 @@ export default function AdminCalendarPage() {
     serviceItems.forEach((service) => {
       if (service.color) {
         byId[service.id] = service.color;
-        byName[service.name] = service.color;
+        byName[normalizeServiceKey(service.name)] = service.color;
       }
     });
     return { byId, byName };
   }, [serviceItems]);
+  const breakBoundaryRows = useMemo(() => {
+    if (!breaks?.length || !timeSlots.length) {
+      return new Set<number>();
+    }
+
+    const boundaries = new Set<number>();
+    breaks.forEach((window) => {
+      const endMinutes = timeToMinutes(window.end);
+      const firstSlotAfterBreak = timeSlots.findIndex(
+        (slot) => timeToMinutes(slot) >= endMinutes
+      );
+      if (firstSlotAfterBreak > 0) {
+        boundaries.add(firstSlotAfterBreak);
+      }
+    });
+
+    return boundaries;
+  }, [breaks, timeSlots]);
   const isEditingAppointment = Boolean(editingAppointment);
   const hasUnknownService =
     appointmentForm.serviceId !== "" &&
@@ -588,7 +613,8 @@ export default function AdminCalendarPage() {
 
         const serviceColor =
           (appointment.serviceId && serviceColorLookup.byId[appointment.serviceId]) ||
-          (appointment.serviceName && serviceColorLookup.byName[appointment.serviceName]);
+          (appointment.serviceName &&
+            serviceColorLookup.byName[normalizeServiceKey(appointment.serviceName)]);
 
         items.push({
           id: `appointment-${appointment.id}`,
@@ -1455,8 +1481,11 @@ export default function AdminCalendarPage() {
                 >
                 <div className="calendar-schedule__times" style={timeStyles}>
                   <div className="calendar-time-header" />
-                  {timeSlots.map((time) => (
-                    <div key={time} className="calendar-time">
+                  {timeSlots.map((time, rowIndex) => (
+                    <div
+                      key={time}
+                      className={`calendar-time ${breakBoundaryRows.has(rowIndex) ? "has-break-before" : ""}`}
+                    >
                       {time}
                     </div>
                   ))}
@@ -1508,7 +1537,9 @@ export default function AdminCalendarPage() {
                           type="button"
                           className={`calendar-slot ${isWorkday ? "" : "is-closed"} ${
                             isBusy ? "is-busy" : ""
-                          } ${isSelected ? "is-selected" : ""}`}
+                          } ${isSelected ? "is-selected" : ""} ${
+                            breakBoundaryRows.has(rowIndex) ? "has-break-before" : ""
+                          }`}
                           style={{ gridColumn: colIndex + 1, gridRow: rowIndex + 2 }}
                           disabled={!isWorkday || isBusy}
                           onClick={() => handleSlotSelect(dateKey, slot)}
