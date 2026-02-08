@@ -1498,6 +1498,7 @@ export default function AdminCalendarPage() {
                   }`}
                   style={gridStyles}
                 >
+                  <div className="calendar-header-shield" aria-hidden="true" />
                   {weekDays.map((day, index) => {
                     const dateKey = formatDate(day);
                     const isActive = dateKey === selectedDate;

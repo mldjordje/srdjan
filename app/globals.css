@@ -2333,6 +2333,17 @@ h4 {
   isolation: isolate;
 }
 
+.calendar-header-shield {
+  position: sticky;
+  top: 0;
+  z-index: 35;
+  grid-column: 1 / -1;
+  grid-row: 1 / span 2;
+  background: #ffffff;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.08);
+  pointer-events: none;
+}
+
 .calendar-schedule__grid.is-swipe-next {
   animation: calendarSwipeNext 0.24s ease;
 }
