@@ -2303,6 +2303,11 @@ h4 {
   border-bottom: 1px solid rgba(17, 17, 17, 0.06);
 }
 
+.calendar-time-gap {
+  background: #ffffff;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.08);
+}
+
 .calendar-time {
   padding: 6px 10px;
   font-size: 0.78rem;
@@ -2393,6 +2398,12 @@ h4 {
 .calendar-day-header:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.calendar-header-gap {
+  background: #ffffff;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.08);
+  border-right: 1px solid rgba(17, 17, 17, 0.05);
 }
 
 .calendar-day-number {

@@ -477,14 +477,14 @@ export default function AdminCalendarPage() {
   const gridStyles = useMemo(
     () => ({
       gridTemplateColumns: `repeat(${weekDays.length}, minmax(0, 1fr))`,
-      gridTemplateRows: `var(--calendar-header-height) repeat(${slotCount}, var(--calendar-slot-height))`,
+      gridTemplateRows: `var(--calendar-header-height) 6px repeat(${slotCount}, var(--calendar-slot-height))`,
     }),
     [weekDays.length, slotCount]
   );
 
   const timeStyles = useMemo(
     () => ({
-      gridTemplateRows: `var(--calendar-header-height) repeat(${slotCount}, var(--calendar-slot-height))`,
+      gridTemplateRows: `var(--calendar-header-height) 6px repeat(${slotCount}, var(--calendar-slot-height))`,
     }),
     [slotCount]
   );
@@ -606,7 +606,7 @@ export default function AdminCalendarPage() {
         if (startIndex === undefined) {
           return;
         }
-        const rowStart = startIndex + 2;
+        const rowStart = startIndex + 3;
         const rawSpan = Math.ceil(durationMinutes / slotMinutes);
         const maxSpan = slotCount - startIndex;
         const span = Math.max(1, Math.min(rawSpan, maxSpan));
@@ -647,7 +647,7 @@ export default function AdminCalendarPage() {
         if (startIndex === undefined) {
           return;
         }
-        const rowStart = startIndex + 2;
+        const rowStart = startIndex + 3;
         const rawSpan = Math.ceil(durationMinutes / slotMinutes);
         const maxSpan = slotCount - startIndex;
         const span = Math.max(1, Math.min(rawSpan, maxSpan));
@@ -1481,6 +1481,7 @@ export default function AdminCalendarPage() {
                 >
                 <div className="calendar-schedule__times" style={timeStyles}>
                   <div className="calendar-time-header" />
+                  <div className="calendar-time-gap" />
                   {timeSlots.map((time, rowIndex) => (
                     <div
                       key={time}
@@ -1521,11 +1522,18 @@ export default function AdminCalendarPage() {
                       </button>
                     );
                   })}
+                  {weekDays.map((day, index) => (
+                    <div
+                      key={`gap-${formatDate(day)}`}
+                      className="calendar-header-gap"
+                      style={{ gridColumn: index + 1, gridRow: 2 }}
+                    />
+                  ))}
 
                   {timeSlots.map((slot, rowIndex) =>
                     weekDays.map((day, colIndex) => {
                       const dateKey = formatDate(day);
-                      const rowKey = rowIndex + 2;
+                      const rowKey = rowIndex + 3;
                       const isWorkday = isWorkingDay(day);
                       const isBusy = busySlots.has(`${colIndex}-${rowKey}`);
                       const isSelected =
@@ -1540,7 +1548,7 @@ export default function AdminCalendarPage() {
                           } ${isSelected ? "is-selected" : ""} ${
                             breakBoundaryRows.has(rowIndex) ? "has-break-before" : ""
                           }`}
-                          style={{ gridColumn: colIndex + 1, gridRow: rowIndex + 2 }}
+                          style={{ gridColumn: colIndex + 1, gridRow: rowIndex + 3 }}
                           disabled={!isWorkday || isBusy}
                           onClick={() => handleSlotSelect(dateKey, slot)}
                         />
