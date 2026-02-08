@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 
 import AdminShell from "@/components/admin/AdminShell";
+import { useLanguage, type Language } from "@/lib/useLanguage";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || "";
@@ -25,6 +26,85 @@ type StatusState = {
 };
 
 export default function AdminClientsPage() {
+  const { language } = useLanguage();
+  const text: Record<
+    Language,
+    Record<string, string>
+  > = {
+    sr: {
+      apiMissing: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+      adminMissing: "Dodaj NEXT_PUBLIC_ADMIN_KEY u .env da bi CMS radio.",
+      cannotLoad: "Ne mogu da preuzmem klijente.",
+      listRefreshed: "Lista klijenata je osvezena.",
+      genericError: "Doslo je do greske.",
+      fillClient: "Unesi ime klijenta i telefon.",
+      cannotSave: "Ne mogu da sacuvam klijenta.",
+      saved: "Klijent je sacuvan.",
+      title: "Klijenti",
+      subtitlePrefix: "Ukupno klijenata:",
+      refreshList: "Osvezi listu",
+      noClients: "Nema registrovanih klijenata.",
+      editClient: "Izmeni klijenta",
+      selectClient: "Izaberi klijenta za izmenu",
+      fullName: "Ime i prezime",
+      phone: "Telefon",
+      emailOptional: "Email (opciono)",
+      address: "Adresa",
+      clientDesc: "Opis klijenta",
+      cancel: "Otkazi",
+      saveChanges: "Sacuvaj izmene",
+      pickClientInfo: "Izaberi klijenta iz liste da bi izmenio podatke.",
+    },
+    en: {
+      apiMissing: "API is not configured. Add NEXT_PUBLIC_API_BASE_URL to .env.",
+      adminMissing: "Add NEXT_PUBLIC_ADMIN_KEY to .env so CMS can work.",
+      cannotLoad: "Unable to load clients.",
+      listRefreshed: "Client list refreshed.",
+      genericError: "Something went wrong.",
+      fillClient: "Enter client name and phone.",
+      cannotSave: "Unable to save client.",
+      saved: "Client saved.",
+      title: "Clients",
+      subtitlePrefix: "Total clients:",
+      refreshList: "Refresh list",
+      noClients: "No registered clients.",
+      editClient: "Edit client",
+      selectClient: "Select client to edit",
+      fullName: "Full name",
+      phone: "Phone",
+      emailOptional: "Email (optional)",
+      address: "Address",
+      clientDesc: "Client notes",
+      cancel: "Cancel",
+      saveChanges: "Save changes",
+      pickClientInfo: "Select a client from the list to edit details.",
+    },
+    it: {
+      apiMissing: "API non configurata. Aggiungi NEXT_PUBLIC_API_BASE_URL in .env.",
+      adminMissing: "Aggiungi NEXT_PUBLIC_ADMIN_KEY in .env per usare il CMS.",
+      cannotLoad: "Impossibile caricare i clienti.",
+      listRefreshed: "Elenco clienti aggiornato.",
+      genericError: "Si e verificato un errore.",
+      fillClient: "Inserisci nome cliente e telefono.",
+      cannotSave: "Impossibile salvare il cliente.",
+      saved: "Cliente salvato.",
+      title: "Clienti",
+      subtitlePrefix: "Clienti totali:",
+      refreshList: "Aggiorna elenco",
+      noClients: "Nessun cliente registrato.",
+      editClient: "Modifica cliente",
+      selectClient: "Seleziona cliente da modificare",
+      fullName: "Nome e cognome",
+      phone: "Telefono",
+      emailOptional: "Email (opzionale)",
+      address: "Indirizzo",
+      clientDesc: "Note cliente",
+      cancel: "Annulla",
+      saveChanges: "Salva modifiche",
+      pickClientInfo: "Seleziona un cliente dall'elenco per modificare i dati.",
+    },
+  };
+  const t = text[language];
   const [clients, setClients] = useState<Client[]>([]);
   const [status, setStatus] = useState<StatusState>({ type: "idle" });
   const [formStatus, setFormStatus] = useState<StatusState>({ type: "idle" });
@@ -43,7 +123,7 @@ export default function AdminClientsPage() {
     if (!apiBaseUrl) {
       setStatus({
         type: "error",
-        message: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+        message: t.apiMissing,
       });
       return;
     }
@@ -51,7 +131,7 @@ export default function AdminClientsPage() {
     if (!adminKey) {
       setStatus({
         type: "error",
-        message: "Dodaj NEXT_PUBLIC_ADMIN_KEY u .env da bi CMS radio.",
+        message: t.adminMissing,
       });
       return;
     }
@@ -67,15 +147,15 @@ export default function AdminClientsPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || "Ne mogu da preuzmem klijente.");
+        throw new Error(data?.message || t.cannotLoad);
       }
 
       const items = Array.isArray(data.clients) ? data.clients : [];
       setClients(items);
-      setStatus({ type: "success", message: "Lista klijenata je osvezena." });
+      setStatus({ type: "success", message: t.listRefreshed });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Doslo je do greske.";
+        error instanceof Error ? error.message : t.genericError;
       setStatus({ type: "error", message });
     }
   };
@@ -128,7 +208,7 @@ export default function AdminClientsPage() {
     if (!apiBaseUrl) {
       setFormStatus({
         type: "error",
-        message: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+        message: t.apiMissing,
       });
       return;
     }
@@ -136,7 +216,7 @@ export default function AdminClientsPage() {
     if (!adminKey) {
       setFormStatus({
         type: "error",
-        message: "Dodaj NEXT_PUBLIC_ADMIN_KEY u .env da bi CMS radio.",
+        message: t.adminMissing,
       });
       return;
     }
@@ -144,7 +224,7 @@ export default function AdminClientsPage() {
     if (!editingId || !formState.name.trim() || !formState.phone.trim()) {
       setFormStatus({
         type: "error",
-        message: "Unesi ime klijenta i telefon.",
+        message: t.fillClient,
       });
       return;
     }
@@ -171,27 +251,27 @@ export default function AdminClientsPage() {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data?.message || "Ne mogu da sacuvam klijenta.");
+        throw new Error(data?.message || t.cannotSave);
       }
 
-      setFormStatus({ type: "success", message: "Klijent je sacuvan." });
+      setFormStatus({ type: "success", message: t.saved });
       resetForm();
       fetchClients();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : t.genericError;
       setFormStatus({ type: "error", message });
     }
   };
 
   return (
     <AdminShell
-      title="Klijenti"
-      subtitle={`Ukupno klijenata: ${clients.length}`}
+      title={t.title}
+      subtitle={`${t.subtitlePrefix} ${clients.length}`}
     >
       <div className="admin-grid">
         <div className="admin-toolbar">
           <button className="button" type="button" onClick={fetchClients}>
-            Osvezi listu
+            {t.refreshList}
           </button>
           {status.type !== "idle" && status.message && (
             <div className={`form-status ${status.type}`}>{status.message}</div>
@@ -199,7 +279,7 @@ export default function AdminClientsPage() {
         </div>
 
         {clients.length === 0 && status.type !== "loading" && (
-          <div className="admin-card">Nema registrovanih klijenata.</div>
+          <div className="admin-card">{t.noClients}</div>
         )}
 
         {clients.map((client) => (
@@ -225,12 +305,12 @@ export default function AdminClientsPage() {
           className={`admin-card${editingId ? " is-editing" : ""}`}
           ref={editCardRef}
         >
-          <h3>{editingId ? "Izmeni klijenta" : "Izaberi klijenta za izmenu"}</h3>
+          <h3>{editingId ? t.editClient : t.selectClient}</h3>
           {editingId ? (
             <form className="form-row" onSubmit={handleSubmit}>
               <div className="form-grid">
                 <div className="form-row">
-                  <label htmlFor="name">Ime i prezime</label>
+                  <label htmlFor="name">{t.fullName}</label>
                   <input
                     id="name"
                     name="name"
@@ -242,7 +322,7 @@ export default function AdminClientsPage() {
                   />
                 </div>
                 <div className="form-row">
-                  <label htmlFor="phone">Telefon</label>
+                  <label htmlFor="phone">{t.phone}</label>
                   <input
                     id="phone"
                     name="phone"
@@ -253,7 +333,7 @@ export default function AdminClientsPage() {
                   />
                 </div>
                 <div className="form-row">
-                  <label htmlFor="email">Email (opciono)</label>
+                  <label htmlFor="email">{t.emailOptional}</label>
                   <input
                     id="email"
                     name="email"
@@ -264,7 +344,7 @@ export default function AdminClientsPage() {
                   />
                 </div>
                 <div className="form-row">
-                  <label htmlFor="address">Adresa</label>
+                  <label htmlFor="address">{t.address}</label>
                   <input
                     id="address"
                     name="address"
@@ -274,7 +354,7 @@ export default function AdminClientsPage() {
                   />
                 </div>
                 <div className="form-row form-row--full">
-                  <label htmlFor="description">Opis klijenta</label>
+                  <label htmlFor="description">{t.clientDesc}</label>
                   <textarea
                     id="description"
                     name="description"
@@ -289,15 +369,15 @@ export default function AdminClientsPage() {
               )}
               <div className="admin-actions">
                 <button className="button outline" type="button" onClick={resetForm}>
-                  Otkazi
+                  {t.cancel}
                 </button>
                 <button className="button" type="submit">
-                  Sacuvaj izmene
+                  {t.saveChanges}
                 </button>
               </div>
             </form>
           ) : (
-            <p>Izaberi klijenta iz liste da bi izmenio podatke.</p>
+            <p>{t.pickClientInfo}</p>
           )}
         </div>
       </div>

@@ -6,6 +6,7 @@ import { Button } from "@heroui/react";
 
 import { fetchServices, getActiveServices, services as fallbackServices, type Service } from "@/lib/services";
 import { siteConfig } from "@/lib/site";
+import type { Language } from "@/lib/useLanguage";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const BOOKING_DAYS_AHEAD = siteConfig.schedule.bookingDaysAhead ?? 14;
@@ -71,9 +72,15 @@ const formatDate = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const formatLongDate = (value: string) => {
+const languageToLocale: Record<Language, string> = {
+  sr: "sr-RS",
+  en: "en-US",
+  it: "it-IT",
+};
+
+const formatLongDate = (value: string, locale: string) => {
   const date = new Date(`${value}T00:00:00`);
-  return new Intl.DateTimeFormat("sr-RS", {
+  return new Intl.DateTimeFormat(locale, {
     weekday: "long",
     day: "2-digit",
     month: "long",
@@ -81,29 +88,21 @@ const formatLongDate = (value: string) => {
   }).format(date);
 };
 
-const formatMonthLabel = (date: Date) =>
-  new Intl.DateTimeFormat("sr-RS", {
+const formatMonthLabel = (date: Date, locale: string) =>
+  new Intl.DateTimeFormat(locale, {
     month: "long",
     year: "numeric",
   }).format(date);
 
-const formatWeekday = (date: Date) =>
-  new Intl.DateTimeFormat("sr-RS", {
+const formatWeekday = (date: Date, locale: string) =>
+  new Intl.DateTimeFormat(locale, {
     weekday: "short",
   }).format(date);
 
-const statusLabels: Record<string, string> = {
-  pending: "Na cekanju",
-  confirmed: "Potvrdjen",
-  completed: "Zavrsen",
-  cancelled: "Otkazan",
-  no_show: "Nije dosao",
-};
-
-const formatSlotLabel = (time: string) => {
+const formatSlotLabel = (time: string, locale: string) => {
   const [hours, minutes] = time.split(":").map((part) => Number(part));
   const date = new Date(2024, 0, 1, hours, minutes);
-  return new Intl.DateTimeFormat("sr-RS", {
+  return new Intl.DateTimeFormat(locale, {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -394,7 +393,186 @@ const buildSlots = (
   return slots;
 };
 
-export default function BookingForm() {
+type BookingFormProps = {
+  language?: Language;
+};
+
+export default function BookingForm({ language = "sr" }: BookingFormProps) {
+  const locale = languageToLocale[language];
+  const text = {
+    sr: {
+      loginRequired: "Prijava je obavezna",
+      loginRequiredDesc: "Za zakazivanje je potrebna prijava.",
+      login: "Prijava",
+      register: "Registracija",
+      title: "Zakazi termin",
+      subtitle: "Izaberi uslugu, datum i vreme.",
+      loggedIn: "Ulogovani ste",
+      warning: "Upozorenje: imate",
+      unpaidAppointments: "neplacenih termina.",
+      totalForPayment: "Ukupno za naplatu:",
+      serviceStep: "1. Usluga",
+      slotStep: "2. Termin",
+      nextAppointment: "Vas sledeci termin",
+      refresh: "Osvezi",
+      loading: "Ucitavanje...",
+      noAppointments: "Nema zakazanih termina.",
+      chooseService: "Izaberi uslugu",
+      serviceHint: "Termini se prilagodjavaju trajanju usluge.",
+      selected: "Izabrano",
+      choose: "Izaberi",
+      continue: "Nastavi",
+      chooseDateAndTime: "Izaberi datum i vreme",
+      chooseDateHint: "Izaberi datum i vreme koje ti odgovara.",
+      pickServiceFirst: "Prvo izaberi uslugu da bi video kalendar.",
+      selectedService: "Izabrana usluga",
+      duration: "Trajanje",
+      price: "Cena",
+      previous: "Prethodni",
+      next: "Sledeci",
+      availableOn: "Dostupno",
+      noSlots: "Nema dostupnih termina za ovaj dan.",
+      note: "Napomena",
+      notePlaceholder: "Specijalne zelje, stil, dodatne informacije.",
+      addToCalendar: "Ubaci u kalendar",
+      back: "Nazad",
+      submit: "Potvrdi termin",
+      sending: "Slanje...",
+      mustLoginToBook: "Morate biti ulogovani da biste zakazali termin.",
+      selectServiceBeforeBooking: "Izaberite uslugu pre zakazivanja.",
+      apiMissing: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+      cannotLoadAppointments: "Ne mogu da preuzmem termine.",
+      cannotCheckAvailability: "Ne mogu da proverim dostupnost.",
+      submitError: "Greska pri slanju termina.",
+      bookingConfirmed: "Vas termin je potvrdjen.",
+      genericError: "Doslo je do greske.",
+      statusLabels: {
+        pending: "Na cekanju",
+        confirmed: "Potvrdjen",
+        completed: "Zavrsen",
+        cancelled: "Otkazan",
+        no_show: "Nije dosao",
+      },
+    },
+    en: {
+      loginRequired: "Login required",
+      loginRequiredDesc: "You need to log in before booking.",
+      login: "Login",
+      register: "Register",
+      title: "Book appointment",
+      subtitle: "Choose service, date and time.",
+      loggedIn: "Logged in as",
+      warning: "Warning: you have",
+      unpaidAppointments: "unpaid appointments.",
+      totalForPayment: "Total due:",
+      serviceStep: "1. Service",
+      slotStep: "2. Slot",
+      nextAppointment: "Your next appointment",
+      refresh: "Refresh",
+      loading: "Loading...",
+      noAppointments: "No appointments booked.",
+      chooseService: "Choose service",
+      serviceHint: "Available slots adapt to service duration.",
+      selected: "Selected",
+      choose: "Choose",
+      continue: "Continue",
+      chooseDateAndTime: "Choose date and time",
+      chooseDateHint: "Pick the date and time that suits you.",
+      pickServiceFirst: "Select a service first to view the calendar.",
+      selectedService: "Selected service",
+      duration: "Duration",
+      price: "Price",
+      previous: "Previous",
+      next: "Next",
+      availableOn: "Available",
+      noSlots: "No available slots for this day.",
+      note: "Note",
+      notePlaceholder: "Special requests, style, additional details.",
+      addToCalendar: "Add to calendar",
+      back: "Back",
+      submit: "Confirm appointment",
+      sending: "Sending...",
+      mustLoginToBook: "You must be logged in to book an appointment.",
+      selectServiceBeforeBooking: "Please choose a service before booking.",
+      apiMissing: "API is not configured. Add NEXT_PUBLIC_API_BASE_URL to .env.",
+      cannotLoadAppointments: "Unable to load appointments.",
+      cannotCheckAvailability: "Unable to check availability.",
+      submitError: "Booking request failed.",
+      bookingConfirmed: "Your appointment has been confirmed.",
+      genericError: "Something went wrong.",
+      statusLabels: {
+        pending: "Pending",
+        confirmed: "Confirmed",
+        completed: "Completed",
+        cancelled: "Cancelled",
+        no_show: "No show",
+      },
+    },
+    it: {
+      loginRequired: "Accesso obbligatorio",
+      loginRequiredDesc: "Devi accedere prima di prenotare.",
+      login: "Accedi",
+      register: "Registrati",
+      title: "Prenota appuntamento",
+      subtitle: "Scegli servizio, data e orario.",
+      loggedIn: "Accesso effettuato",
+      warning: "Attenzione: hai",
+      unpaidAppointments: "appuntamenti non pagati.",
+      totalForPayment: "Totale da pagare:",
+      serviceStep: "1. Servizio",
+      slotStep: "2. Orario",
+      nextAppointment: "Il tuo prossimo appuntamento",
+      refresh: "Aggiorna",
+      loading: "Caricamento...",
+      noAppointments: "Nessun appuntamento prenotato.",
+      chooseService: "Scegli servizio",
+      serviceHint: "Gli orari si adattano alla durata del servizio.",
+      selected: "Selezionato",
+      choose: "Scegli",
+      continue: "Continua",
+      chooseDateAndTime: "Scegli data e orario",
+      chooseDateHint: "Scegli la data e l'orario piu adatti a te.",
+      pickServiceFirst: "Seleziona prima un servizio per vedere il calendario.",
+      selectedService: "Servizio selezionato",
+      duration: "Durata",
+      price: "Prezzo",
+      previous: "Precedente",
+      next: "Successivo",
+      availableOn: "Disponibile",
+      noSlots: "Nessun orario disponibile per questo giorno.",
+      note: "Nota",
+      notePlaceholder: "Richieste speciali, stile, dettagli aggiuntivi.",
+      addToCalendar: "Aggiungi al calendario",
+      back: "Indietro",
+      submit: "Conferma appuntamento",
+      sending: "Invio...",
+      mustLoginToBook: "Devi essere autenticato per prenotare.",
+      selectServiceBeforeBooking: "Seleziona un servizio prima della prenotazione.",
+      apiMissing: "API non configurata. Aggiungi NEXT_PUBLIC_API_BASE_URL in .env.",
+      cannotLoadAppointments: "Impossibile caricare gli appuntamenti.",
+      cannotCheckAvailability: "Impossibile verificare la disponibilita.",
+      submitError: "Errore durante l'invio della prenotazione.",
+      bookingConfirmed: "Il tuo appuntamento e stato confermato.",
+      genericError: "Si e verificato un errore.",
+      statusLabels: {
+        pending: "In attesa",
+        confirmed: "Confermato",
+        completed: "Completato",
+        cancelled: "Annullato",
+        no_show: "Assente",
+      },
+    },
+  }[language];
+
+  const minLeadMessage = (minutes: number) => {
+    if (language === "en") {
+      return `Appointment must be booked at least ${minutes} minutes in advance.`;
+    }
+    if (language === "it") {
+      return `L'appuntamento deve essere prenotato almeno ${minutes} minuti prima.`;
+    }
+    return `Termin mora biti zakazan najmanje ${minutes} minuta unapred.`;
+  };
   const [activeStep, setActiveStep] = useState<1 | 2>(1);
   const today = useMemo(() => {
     const now = new Date();
@@ -470,7 +648,7 @@ export default function BookingForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || "Ne mogu da preuzmem termine.");
+        throw new Error(data?.message || text.cannotLoadAppointments);
       }
 
       const items = Array.isArray(data.appointments) ? data.appointments : [];
@@ -480,7 +658,7 @@ export default function BookingForm() {
       setClientAppointments(items);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Doslo je do greske.";
+        error instanceof Error ? error.message : text.genericError;
       setStatus({ type: "error", message });
     } finally {
       setLoadingAppointments(false);
@@ -626,7 +804,7 @@ export default function BookingForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || "Ne mogu da proverim dostupnost.");
+        throw new Error(data?.message || text.cannotCheckAvailability);
       }
 
       const appointments = Array.isArray(data.appointments) ? data.appointments : [];
@@ -661,7 +839,7 @@ export default function BookingForm() {
         }
 
         const message =
-          error instanceof Error ? error.message : "Doslo je do greske.";
+          error instanceof Error ? error.message : text.genericError;
         setAvailabilityStatus({ type: "error", message });
         setAvailabilityByDate({});
       });
@@ -738,7 +916,7 @@ export default function BookingForm() {
     if (!client) {
       setStatus({
         type: "error",
-        message: "Morate biti ulogovani da biste zakazali termin.",
+        message: text.mustLoginToBook,
       });
       return;
     }
@@ -746,7 +924,7 @@ export default function BookingForm() {
     if (!selectedService) {
       setStatus({
         type: "error",
-        message: "Izaberite uslugu pre zakazivanja.",
+        message: text.selectServiceBeforeBooking,
       });
       return;
     }
@@ -754,7 +932,7 @@ export default function BookingForm() {
     if (!apiBaseUrl) {
       setStatus({
         type: "error",
-        message: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+        message: text.apiMissing,
       });
       return;
     }
@@ -790,7 +968,7 @@ export default function BookingForm() {
       if (bookingDateTime < minAllowed) {
         setStatus({
           type: "error",
-          message: `Termin mora biti zakazan najmanje ${minLeadMinutes} minuta unapred.`,
+          message: minLeadMessage(minLeadMinutes),
         });
         return;
       }
@@ -827,12 +1005,12 @@ export default function BookingForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || "Greska pri slanju termina.");
+        throw new Error(data?.message || text.submitError);
       }
 
       setStatus({
         type: "success",
-        message: "Vas termin je potvrdjen.",
+        message: text.bookingConfirmed,
       });
       setLastBooked({
         serviceName: selectedService.name,
@@ -852,7 +1030,7 @@ export default function BookingForm() {
       }));
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Doslo je do greske.";
+        error instanceof Error ? error.message : text.genericError;
       setStatus({ type: "error", message });
     }
   };
@@ -953,7 +1131,7 @@ export default function BookingForm() {
   };
 
   const servicePrice = selectedService?.price
-    ? `RSD ${selectedService.price.toLocaleString("sr-RS")}`
+    ? `RSD ${selectedService.price.toLocaleString(locale)}`
     : "-";
 
   const canGoPrev =
@@ -967,11 +1145,11 @@ export default function BookingForm() {
     const base = new Date(2024, 0, 1);
     return WORKING_DAY_ORDER.map((dayIndex) => {
       const offset = dayIndex === 0 ? -1 : dayIndex - 1;
-      return formatWeekday(addDays(base, offset));
+      return formatWeekday(addDays(base, offset), locale);
     });
-  }, []);
+  }, [locale]);
 
-  const selectedDateLabel = formData.date ? formatLongDate(formData.date) : "";
+  const selectedDateLabel = formData.date ? formatLongDate(formData.date, locale) : "";
   const sortedSlots = useMemo(
     () => [...availableSlots].sort((a, b) => timeToMinutes(a) - timeToMinutes(b)),
     [availableSlots]
@@ -1025,15 +1203,15 @@ export default function BookingForm() {
     return (
       <div className="booking-locked">
         <div>
-          <h3>Prijava je obavezna</h3>
-          <p>Za zakazivanje je potrebna prijava.</p>
+          <h3>{text.loginRequired}</h3>
+          <p>{text.loginRequiredDesc}</p>
         </div>
         <div className="hero-actions">
           <Link className="button" href="/login">
-            Prijava
+            {text.login}
           </Link>
           <Link className="button outline" href="/register">
-            Registracija
+            {text.register}
           </Link>
         </div>
       </div>
@@ -1044,11 +1222,11 @@ export default function BookingForm() {
     <form className="booking-form" data-step={activeStep} onSubmit={handleSubmit}>
       <div className="booking-header">
         <div>
-          <h3>Zakazi termin</h3>
-          <p>Izaberi uslugu, datum i vreme.</p>
+          <h3>{text.title}</h3>
+          <p>{text.subtitle}</p>
         </div>
         <div className="booking-user">
-          <span>Ulogovani ste</span>
+          <span>{text.loggedIn}</span>
           <strong>{client.name}</strong>
         </div>
       </div>
@@ -1056,17 +1234,17 @@ export default function BookingForm() {
       {unpaidAppointments.length > 0 && (
         <div className="booking-debt">
           <strong>
-            Upozorenje: imate {unpaidAppointments.length} neplacenih termina.
+            {text.warning} {unpaidAppointments.length} {text.unpaidAppointments}
           </strong>
           <span>
-            Ukupno za naplatu: RSD {unpaidTotal.toLocaleString("sr-RS")}
+            {text.totalForPayment} RSD {unpaidTotal.toLocaleString(locale)}
           </span>
           <div className="booking-debt__items">
             {unpaidAppointments.map((appointment) => (
               <div key={appointment.id} className="booking-debt__item">
-                <span>{formatLongDate(appointment.date)}</span>
+                <span>{formatLongDate(appointment.date, locale)}</span>
                 <span>
-                  RSD {(appointment.price ?? 0).toLocaleString("sr-RS")}
+                  RSD {(appointment.price ?? 0).toLocaleString(locale)}
                 </span>
               </div>
             ))}
@@ -1080,7 +1258,7 @@ export default function BookingForm() {
           type="button"
           onClick={() => setActiveStep(1)}
         >
-          1. Usluga
+          {text.serviceStep}
         </button>
         <button
           className={`booking-step ${activeStep === 2 ? "is-active" : ""}`}
@@ -1088,34 +1266,34 @@ export default function BookingForm() {
           disabled={!selectedService}
           onClick={() => setActiveStep(2)}
         >
-          2. Termin
+          {text.slotStep}
         </button>
       </div>
 
       {client && (
         <div className="booking-upcoming">
           <div className="booking-upcoming__header">
-            <span>Vas sledeci termin</span>
+            <span>{text.nextAppointment}</span>
             <button
               className="button small ghost"
               type="button"
               disabled={loadingAppointments}
               onClick={() => fetchClientAppointments(client.token)}
             >
-              {loadingAppointments ? "Ucitavanje..." : "Osvezi"}
+              {loadingAppointments ? text.loading : text.refresh}
             </button>
           </div>
           {upcomingAppointments.length === 0 && !loadingAppointments && (
-            <div className="booking-upcoming__empty">Nema zakazanih termina.</div>
+            <div className="booking-upcoming__empty">{text.noAppointments}</div>
           )}
           {upcomingAppointments.map((appointment) => (
             <div key={appointment.id} className="booking-upcoming__item">
               <strong>{appointment.serviceName}</strong>
               <span>
-                {formatLongDate(appointment.date)} | {appointment.displayTime}
+                {formatLongDate(appointment.date, locale)} | {appointment.displayTime}
               </span>
               {appointment.status && (
-                <em>{statusLabels[appointment.status] || appointment.status}</em>
+                <em>{text.statusLabels[appointment.status as keyof typeof text.statusLabels] || appointment.status}</em>
               )}
             </div>
           ))}
@@ -1127,8 +1305,8 @@ export default function BookingForm() {
           <div className="booking-panel__header">
             <span className="step-pill">01</span>
             <div>
-              <h4>Izaberi uslugu</h4>
-              <p>Termini se prilagodjavaju trajanju usluge.</p>
+              <h4>{text.chooseService}</h4>
+              <p>{text.serviceHint}</p>
             </div>
           </div>
           <div className="service-list">
@@ -1153,11 +1331,11 @@ export default function BookingForm() {
                   <div className="service-info">
                     <strong>{service.name}</strong>
                     <span>
-                      {service.duration} | RSD {service.price.toLocaleString("sr-RS")}
+                      {service.duration} | RSD {service.price.toLocaleString(locale)}
                     </span>
                   </div>
                   <span className="service-action">
-                    {isActive ? "Izabrano" : "Izaberi"}
+                    {isActive ? text.selected : text.choose}
                   </span>
                 </button>
               );
@@ -1171,7 +1349,7 @@ export default function BookingForm() {
               disabled={!selectedService}
               onClick={() => setActiveStep(2)}
             >
-              Nastavi
+              {text.continue}
             </button>
           </div>
         </section>
@@ -1180,28 +1358,28 @@ export default function BookingForm() {
           <div className="booking-panel__header">
             <span className="step-pill">02</span>
             <div>
-              <h4>Izaberi datum i vreme</h4>
-              <p>Izaberi datum i vreme koje ti odgovara.</p>
+              <h4>{text.chooseDateAndTime}</h4>
+              <p>{text.chooseDateHint}</p>
             </div>
           </div>
 
           {!selectedService && (
-            <div className="booking-empty">Prvo izaberi uslugu da bi video kalendar.</div>
+            <div className="booking-empty">{text.pickServiceFirst}</div>
           )}
 
           {selectedService && (
             <>
               <div className="booking-meta">
                 <div>
-                  <span>Izabrana usluga</span>
+                  <span>{text.selectedService}</span>
                   <strong>{selectedService.name}</strong>
                 </div>
                 <div>
-                  <span>Trajanje</span>
+                  <span>{text.duration}</span>
                   <strong>{selectedService.duration}</strong>
                 </div>
                 <div>
-                  <span>Cena</span>
+                  <span>{text.price}</span>
                   <strong>{servicePrice}</strong>
                 </div>
               </div>
@@ -1215,9 +1393,9 @@ export default function BookingForm() {
                     isDisabled={!canGoPrev}
                     onPress={() => setCalendarMonth(addMonths(calendarMonth, -1))}
                   >
-                    Prethodni
+                    {text.previous}
                   </Button>
-                  <div className="calendar-title">{formatMonthLabel(calendarMonth)}</div>
+                  <div className="calendar-title">{formatMonthLabel(calendarMonth, locale)}</div>
                   <Button
                     size="sm"
                     variant="bordered"
@@ -1225,7 +1403,7 @@ export default function BookingForm() {
                     isDisabled={!canGoNext}
                     onPress={() => setCalendarMonth(addMonths(calendarMonth, 1))}
                   >
-                    Sledeci
+                    {text.next}
                   </Button>
                 </div>
 
@@ -1269,7 +1447,7 @@ export default function BookingForm() {
                       }}
                     >
                       <span className="calendar-week-day__label">
-                        {formatWeekday(day)}
+                        {formatWeekday(day, locale)}
                       </span>
                       <span className="calendar-week-day__date">
                         {day.getDate()}
@@ -1336,15 +1514,15 @@ export default function BookingForm() {
 
               <div className="slot-section" ref={slotRef}>
                 <div className="slot-header">
-                  <h4>Dostupno {selectedDateLabel} (GMT+1)</h4>
-                  {availabilityStatus.type === "loading" && <span>Ucitavanje...</span>}
+                  <h4>{text.availableOn} {selectedDateLabel} (GMT+1)</h4>
+                  {availabilityStatus.type === "loading" && <span>{text.loading}</span>}
                   {availabilityStatus.type === "error" && (
                     <span>{availabilityStatus.message}</span>
                   )}
                 </div>
 
                 {availableSlots.length === 0 && availabilityStatus.type !== "loading" && (
-                  <div className="slot-empty">Nema dostupnih termina za ovaj dan.</div>
+                  <div className="slot-empty">{text.noSlots}</div>
                 )}
 
                 {availableSlots.length > 0 && (
@@ -1363,14 +1541,14 @@ export default function BookingForm() {
                           window.setTimeout(scrollToSubmit, 0);
                         }}
                       >
-                        {formatSlotLabel(slot)}
+                        {formatSlotLabel(slot, locale)}
                       </Button>
                     ))}
                   </div>
                 )}
               </div>
               <div className="booking-note">
-                <label htmlFor="note">Napomena</label>
+                <label htmlFor="note">{text.note}</label>
                 <textarea
                   id="note"
                   name="note"
@@ -1379,7 +1557,7 @@ export default function BookingForm() {
                   onChange={(event) =>
                     setFormData((prev) => ({ ...prev, note: event.target.value }))
                   }
-                  placeholder="Specijalne zelje, stil, dodatne informacije."
+                  placeholder={text.notePlaceholder}
                 />
               </div>
             </>
@@ -1398,7 +1576,7 @@ export default function BookingForm() {
           {status.type === "success" && lastBooked && (
             <div className="booking-calendar">
               <button className="button outline" type="button" onClick={handleAddToCalendar}>
-                Ubaci u kalendar
+                {text.addToCalendar}
               </button>
             </div>
           )}
@@ -1409,14 +1587,14 @@ export default function BookingForm() {
               type="button"
               onClick={() => setActiveStep(1)}
             >
-              Nazad
+              {text.back}
             </button>
             <button
               className="button"
               type="submit"
               disabled={status.type === "sending" || !formData.time || !selectedService}
             >
-              {status.type === "sending" ? "Slanje..." : "Potvrdi termin"}
+              {status.type === "sending" ? text.sending : text.submit}
             </button>
           </div>
         </section>

@@ -6,6 +6,8 @@ import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import BookingForm from "@/components/BookingForm";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useLanguage, type Language } from "@/lib/useLanguage";
 import { siteConfig } from "@/lib/site";
 
 type BeforeInstallPromptEvent = Event & {
@@ -13,11 +15,162 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 };
 
+const content: Record<
+  Language,
+  {
+    menu: string;
+    navBooking: string;
+    navStudio: string;
+    navMyAppointments: string;
+    login: string;
+    register: string;
+    logout: string;
+    installTitle: string;
+    installSubtitle: string;
+    close: string;
+    installHttpsHint: string;
+    bookNow: string;
+    installApp: string;
+    howTitle: string;
+    howSubtitle: string;
+    prepTitle: string;
+    prepText: string;
+    cancelTitle: string;
+    cancelText: string;
+    studioTitle: string;
+    studioSubtitle: string;
+    hours: string;
+    location: string;
+    locationText: string;
+    contact: string;
+    contactFallback: string;
+    openMaps: string;
+    galleryTitle: string;
+    galleryText: string;
+    reviewTitle: string;
+    reviewText: string;
+    reviewBody: string;
+    reviewSeo: string;
+    reviewButton: string;
+  }
+> = {
+  sr: {
+    menu: "Meni",
+    navBooking: "Zakazivanje",
+    navStudio: "Studio",
+    navMyAppointments: "Moji termini",
+    login: "Prijava",
+    register: "Registracija",
+    logout: "Odjava",
+    installTitle: "Instaliraj Doctor Barber",
+    installSubtitle: "Dodaj aplikaciju na pocetni ekran.",
+    close: "Zatvori",
+    installHttpsHint: "Instalacija se pojavi samo kada je sajt otvoren preko HTTPS.",
+    bookNow: "Zakazi termin",
+    installApp: "Instaliraj aplikaciju",
+    howTitle: "Kako funkcionise",
+    howSubtitle: "Brzo, jasno i bez cekanja. Zakazi, potvrdi, dodji na vreme.",
+    prepTitle: "Priprema",
+    prepText: "Dodji 5 minuta ranije. Raspored je precizan.",
+    cancelTitle: "Politika otkazivanja",
+    cancelText: "Otkazivanje obavezno minimum 2 sata ranije. U suprotnom se termin smatra naplatnim.",
+    studioTitle: "Studio",
+    studioSubtitle: "Mirna atmosfera i ogranicen broj termina.",
+    hours: "Radno vreme",
+    location: "Lokacija",
+    locationText: "Lokacija se salje uz potvrdu.",
+    contact: "Kontakt",
+    contactFallback: "Kontakt podaci se dodaju nakon aktivacije domena.",
+    openMaps: "Otvori u Google Maps",
+    galleryTitle: "Galerija / Ambijent",
+    galleryText: "Dve scene iz studija koje najbolje opisuju atmosferu.",
+    reviewTitle: "Oceni nas na Google",
+    reviewText:
+      "Ako si zadovoljan uslugom, ostavi kratku ocenu. Hvala na podrsci lokalnom barber studiju u Nisu.",
+    reviewBody: "Klasicno sisanje, fade i brada. Tvoja preporuka nam puno znaci.",
+    reviewSeo: "Frizer u Nisu za fade sisanje, klasicno sisanje i uredjivanje brade.",
+    reviewButton: "Oceni na Google",
+  },
+  en: {
+    menu: "Menu",
+    navBooking: "Booking",
+    navStudio: "Studio",
+    navMyAppointments: "My appointments",
+    login: "Login",
+    register: "Register",
+    logout: "Logout",
+    installTitle: "Install Doctor Barber",
+    installSubtitle: "Add the app to your home screen.",
+    close: "Close",
+    installHttpsHint: "Install prompt appears only when the site is opened via HTTPS.",
+    bookNow: "Book now",
+    installApp: "Install app",
+    howTitle: "How it works",
+    howSubtitle: "Fast, clear, and no waiting. Book, confirm, arrive on time.",
+    prepTitle: "Preparation",
+    prepText: "Arrive 5 minutes earlier. The schedule is precise.",
+    cancelTitle: "Cancellation policy",
+    cancelText: "Cancellation is required at least 2 hours in advance.",
+    studioTitle: "Studio",
+    studioSubtitle: "Calm atmosphere and limited appointment slots.",
+    hours: "Working hours",
+    location: "Location",
+    locationText: "Location is shared with the confirmation message.",
+    contact: "Contact",
+    contactFallback: "Contact details will be added after domain activation.",
+    openMaps: "Open in Google Maps",
+    galleryTitle: "Gallery / Atmosphere",
+    galleryText: "Two scenes from the studio that best describe the vibe.",
+    reviewTitle: "Rate us on Google",
+    reviewText: "If you liked the service, leave a short review. Thank you for supporting local business.",
+    reviewBody: "Classic haircut, fade, and beard service. Your recommendation means a lot.",
+    reviewSeo: "Barber in Nis for fade cuts, classic cuts, and beard grooming.",
+    reviewButton: "Rate on Google",
+  },
+  it: {
+    menu: "Menu",
+    navBooking: "Prenotazione",
+    navStudio: "Studio",
+    navMyAppointments: "I miei appuntamenti",
+    login: "Accedi",
+    register: "Registrati",
+    logout: "Esci",
+    installTitle: "Installa Doctor Barber",
+    installSubtitle: "Aggiungi l'app alla schermata principale.",
+    close: "Chiudi",
+    installHttpsHint: "L'installazione appare solo quando il sito e aperto in HTTPS.",
+    bookNow: "Prenota ora",
+    installApp: "Installa app",
+    howTitle: "Come funziona",
+    howSubtitle: "Veloce, chiaro, senza attese. Prenota, conferma, arriva puntuale.",
+    prepTitle: "Preparazione",
+    prepText: "Arriva 5 minuti prima. Il programma e preciso.",
+    cancelTitle: "Politica di cancellazione",
+    cancelText: "La cancellazione e richiesta almeno 2 ore prima.",
+    studioTitle: "Studio",
+    studioSubtitle: "Atmosfera calma e numero limitato di appuntamenti.",
+    hours: "Orari",
+    location: "Posizione",
+    locationText: "La posizione viene inviata con la conferma.",
+    contact: "Contatto",
+    contactFallback: "I contatti saranno aggiunti dopo l'attivazione del dominio.",
+    openMaps: "Apri in Google Maps",
+    galleryTitle: "Galleria / Atmosfera",
+    galleryText: "Due scene dello studio che descrivono al meglio l'atmosfera.",
+    reviewTitle: "Lascia una recensione su Google",
+    reviewText: "Se sei soddisfatto, lascia una recensione breve. Grazie per il supporto.",
+    reviewBody: "Taglio classico, fade e barba. Il tuo consiglio e molto importante.",
+    reviewSeo: "Barbiere a Nis per fade, taglio classico e cura della barba.",
+    reviewButton: "Recensisci su Google",
+  },
+};
+
 export default function HomePage() {
+  const { language } = useLanguage();
+  const copy = content[language];
   const [showLoader, setShowLoader] = useState(true);
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isClientLoggedIn, setIsClientLoggedIn] = useState(false);
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [installModalOpen, setInstallModalOpen] = useState(false);
@@ -35,7 +188,6 @@ export default function HomePage() {
   useEffect(() => {
     const token = localStorage.getItem("db_client_token");
     setIsClientLoggedIn(Boolean(token));
-    setIsAdminLoggedIn(localStorage.getItem("db_admin_auth") === "true");
   }, []);
 
   useEffect(() => {
@@ -209,22 +361,62 @@ export default function HomePage() {
   const showInstallButton = !isInstalled;
   const installSteps = {
     ios: [
-      { title: "Otvori Share meni", body: "U Safari klikni Share ikonicu." },
-      { title: "Izaberi Add to Home Screen", body: "Skroluj meni i tapni Add to Home Screen." },
-      { title: "Potvrdi instalaciju", body: "Tapni Add i aplikacija ce biti na ekranu." },
+      language === "sr"
+        ? { title: "Otvori Share meni", body: "U Safari klikni Share ikonicu." }
+        : language === "en"
+          ? { title: "Open Share menu", body: "In Safari, tap the Share icon." }
+          : { title: "Apri menu Share", body: "In Safari tocca l'icona Share." },
+      language === "sr"
+        ? { title: "Izaberi Add to Home Screen", body: "Skroluj meni i tapni Add to Home Screen." }
+        : language === "en"
+          ? { title: "Choose Add to Home Screen", body: "Scroll and tap Add to Home Screen." }
+          : { title: "Scegli Add to Home Screen", body: "Scorri il menu e tocca Add to Home Screen." },
+      language === "sr"
+        ? { title: "Potvrdi instalaciju", body: "Tapni Add i aplikacija ce biti na ekranu." }
+        : language === "en"
+          ? { title: "Confirm install", body: "Tap Add and the app will appear on your screen." }
+          : { title: "Conferma installazione", body: "Tocca Add e l'app apparira sullo schermo." },
     ],
     android: [
-      { title: "Otvori browser meni", body: "Klikni na tri tacke u Chrome-u." },
-      { title: "Izaberi Install app", body: "Opcija je Install app ili Add to Home screen." },
-      { title: "Potvrdi instalaciju", body: "Potvrdi i aplikacija je na pocetnom ekranu." },
+      language === "sr"
+        ? { title: "Otvori browser meni", body: "Klikni na tri tacke u Chrome-u." }
+        : language === "en"
+          ? { title: "Open browser menu", body: "Tap the three dots in Chrome." }
+          : { title: "Apri menu browser", body: "Tocca i tre puntini in Chrome." },
+      language === "sr"
+        ? { title: "Izaberi Install app", body: "Opcija je Install app ili Add to Home screen." }
+        : language === "en"
+          ? { title: "Choose Install app", body: "Option is Install app or Add to Home screen." }
+          : { title: "Scegli Install app", body: "L'opzione e Install app o Add to Home screen." },
+      language === "sr"
+        ? { title: "Potvrdi instalaciju", body: "Potvrdi i aplikacija je na pocetnom ekranu." }
+        : language === "en"
+          ? { title: "Confirm install", body: "Confirm and the app is added to home screen." }
+          : { title: "Conferma installazione", body: "Conferma e l'app sara nella schermata iniziale." },
     ],
     desktop: [
-      { title: "Nadji install ikonu", body: "U Chrome/Edge klikni ikonu pored adrese." },
-      { title: "Potvrdi instalaciju", body: "Izaberi Install i aplikacija se otvara kao app." },
+      language === "sr"
+        ? { title: "Nadji install ikonu", body: "U Chrome/Edge klikni ikonu pored adrese." }
+        : language === "en"
+          ? { title: "Find install icon", body: "In Chrome/Edge click the icon near address bar." }
+          : { title: "Trova icona installazione", body: "In Chrome/Edge clicca l'icona vicino alla barra indirizzi." },
+      language === "sr"
+        ? { title: "Potvrdi instalaciju", body: "Izaberi Install i aplikacija se otvara kao app." }
+        : language === "en"
+          ? { title: "Confirm install", body: "Click Install and app opens like a desktop app." }
+          : { title: "Conferma installazione", body: "Scegli Install e l'app si apre come app desktop." },
     ],
     other: [
-      { title: "Proveri browser meni", body: "Potrazi opciju Install app ili Add to Home screen." },
-      { title: "Potvrdi instalaciju", body: "Potvrdi i ikonica se pojavi na ekranu." },
+      language === "sr"
+        ? { title: "Proveri browser meni", body: "Potrazi opciju Install app ili Add to Home screen." }
+        : language === "en"
+          ? { title: "Check browser menu", body: "Find Install app or Add to Home screen option." }
+          : { title: "Controlla menu browser", body: "Cerca Install app o Add to Home screen." },
+      language === "sr"
+        ? { title: "Potvrdi instalaciju", body: "Potvrdi i ikonica se pojavi na ekranu." }
+        : language === "en"
+          ? { title: "Confirm install", body: "Confirm and icon will show on your screen." }
+          : { title: "Conferma installazione", body: "Conferma e l'icona apparira sullo schermo." },
     ],
   };
   const steps = installSteps[installPlatform];
@@ -321,7 +513,7 @@ export default function HomePage() {
               aria-controls="primary-navigation"
               onClick={handleNavToggle}
             >
-              <span className="nav-toggle__label">Meni</span>
+              <span className="nav-toggle__label">{copy.menu}</span>
               <span className="nav-toggle__icon" aria-hidden="true">
                 <span />
                 <span />
@@ -333,20 +525,21 @@ export default function HomePage() {
             id="primary-navigation"
             className={`nav-links${isNavOpen ? " is-open" : ""}`}
           >
+            <LanguageSwitcher compact />
             <a href="#booking" onClick={handleNavClose}>
-              Zakazivanje
+              {copy.navBooking}
             </a>
             <a href="#studio" onClick={handleNavClose}>
-              Studio
+              {copy.navStudio}
             </a>
             {isClientLoggedIn && (
               <Link href="/moji-termini" onClick={handleNavClose}>
-                Moji termini
+                {copy.navMyAppointments}
               </Link>
             )}
             {!isClientLoggedIn && (
               <Link href="/login" onClick={handleNavClose}>
-                Prijava
+                {copy.login}
               </Link>
             )}
             {!isClientLoggedIn && (
@@ -355,18 +548,13 @@ export default function HomePage() {
                 href="/register"
                 onClick={handleNavClose}
               >
-                Registracija
+                {copy.register}
               </Link>
             )}
             {isClientLoggedIn && (
               <button className="button small ghost" type="button" onClick={handleClientLogout}>
-                Odjava
+                {copy.logout}
               </button>
-            )}
-            {isAdminLoggedIn && (
-              <Link className="button small ghost" href="/admin" onClick={handleNavClose}>
-                CMS
-              </Link>
             )}
           </nav>
         </div>
@@ -378,14 +566,14 @@ export default function HomePage() {
           <div className="confirm-modal__card install-modal__card">
             <div className="confirm-modal__header">
               <div>
-                <h3 id="install-title">Instaliraj Doctor Barber</h3>
-                <p className="install-modal__subtitle">Dodaj aplikaciju na pocetni ekran.</p>
+                <h3 id="install-title">{copy.installTitle}</h3>
+                <p className="install-modal__subtitle">{copy.installSubtitle}</p>
               </div>
               <button
                 className="confirm-modal__close"
                 type="button"
                 onClick={handleInstallModalClose}
-                aria-label="Zatvori"
+                aria-label={copy.close}
               >
                 ×
               </button>
@@ -403,12 +591,12 @@ export default function HomePage() {
                 ))}
               </div>
               <p className="install-modal__hint">
-                Instalacija se pojavi samo kada je sajt otvoren preko HTTPS.
+                {copy.installHttpsHint}
               </p>
             </div>
             <div className="confirm-modal__actions">
               <button className="button ghost" type="button" onClick={handleInstallModalClose}>
-                Zatvori
+                {copy.close}
               </button>
             </div>
           </div>
@@ -437,7 +625,7 @@ export default function HomePage() {
             <motion.div className="hero-actions hero-actions--stack" variants={staggerVariants}>
               <motion.div variants={itemVariants}>
                 <a className="button hero-primary" href="#booking">
-                  Zakazi termin
+                  {copy.bookNow}
                 </a>
               </motion.div>
               {showInstallButton && (
@@ -447,28 +635,28 @@ export default function HomePage() {
                     type="button"
                     onClick={handleInstallClick}
                   >
-                    Instaliraj aplikaciju
+                    {copy.installApp}
                   </button>
                 </motion.div>
               )}
               {!isClientLoggedIn && (
                 <motion.div variants={itemVariants}>
                   <Link className="button ghost hero-secondary" href="/login">
-                    Prijava
+                    {copy.login}
                   </Link>
                 </motion.div>
               )}
               {!isClientLoggedIn && (
                 <motion.div variants={itemVariants}>
                   <Link className="button outline hero-secondary" href="/register">
-                    Registracija
+                    {copy.register}
                   </Link>
                 </motion.div>
               )}
               {isClientLoggedIn && (
                 <motion.div variants={itemVariants}>
                   <Link className="button ghost hero-secondary" href="/moji-termini">
-                    Moji termini
+                    {copy.navMyAppointments}
                   </Link>
                 </motion.div>
               )}
@@ -479,7 +667,7 @@ export default function HomePage() {
                     type="button"
                     onClick={handleClientLogout}
                   >
-                    Odjava
+                    {copy.logout}
                   </button>
                 </motion.div>
               )}
@@ -502,7 +690,7 @@ export default function HomePage() {
               whileHover={cardHover}
               whileTap={cardTap}
             >
-              <BookingForm />
+              <BookingForm language={language} />
             </motion.div>
           </div>
         </motion.section>
@@ -516,8 +704,8 @@ export default function HomePage() {
         >
           <div className="container">
             <motion.div className="section-header" variants={itemVariants}>
-              <h2>Kako funkcionise</h2>
-              <p>Brzo, jasno i bez cekanja. Zakazi, potvrdi, dodji na vreme.</p>
+              <h2>{copy.howTitle}</h2>
+              <p>{copy.howSubtitle}</p>
             </motion.div>
             <motion.div className="info-grid" variants={staggerVariants}>
               <motion.div
@@ -526,8 +714,8 @@ export default function HomePage() {
                 whileHover={cardHover}
                 whileTap={cardTap}
               >
-                <h4>Priprema</h4>
-                <p>Dodji 5 minuta ranije. Raspored je precizan.</p>
+                <h4>{copy.prepTitle}</h4>
+                <p>{copy.prepText}</p>
               </motion.div>
               <motion.div
                 className="info-card"
@@ -535,8 +723,8 @@ export default function HomePage() {
                 whileHover={cardHover}
                 whileTap={cardTap}
               >
-                <h4>Politika otkazivanja</h4>
-                <p>Otkazivanje obavezno minimum 2 sata ranije. U suprotnom se termin smatra naplatnim.</p>
+                <h4>{copy.cancelTitle}</h4>
+                <p>{copy.cancelText}</p>
               </motion.div>
             </motion.div>
           </div>
@@ -552,8 +740,8 @@ export default function HomePage() {
         >
           <div className="container">
             <motion.div className="section-header" variants={itemVariants}>
-              <h2>Studio</h2>
-              <p>Mirna atmosfera i ogranicen broj termina.</p>
+              <h2>{copy.studioTitle}</h2>
+              <p>{copy.studioSubtitle}</p>
             </motion.div>
             <motion.div className="info-grid" variants={staggerVariants}>
               <motion.div
@@ -562,7 +750,7 @@ export default function HomePage() {
                 whileHover={cardHover}
                 whileTap={cardTap}
               >
-                <h4>Radno vreme</h4>
+                <h4>{copy.hours}</h4>
                 <p>{siteConfig.hours}</p>
               </motion.div>
               <motion.div
@@ -571,8 +759,8 @@ export default function HomePage() {
                 whileHover={cardHover}
                 whileTap={cardTap}
               >
-                <h4>Lokacija</h4>
-                <p>Lokacija se salje uz potvrdu.</p>
+                <h4>{copy.location}</h4>
+                <p>{copy.locationText}</p>
               </motion.div>
               <motion.div
                 className="info-card"
@@ -580,7 +768,7 @@ export default function HomePage() {
                 whileHover={cardHover}
                 whileTap={cardTap}
               >
-                <h4>Kontakt</h4>
+                <h4>{copy.contact}</h4>
                 <p>
                   {siteConfig.phone && <span>{siteConfig.phone}</span>}
                   {siteConfig.email && (
@@ -590,7 +778,7 @@ export default function HomePage() {
                     </span>
                   )}
                   {!siteConfig.phone && !siteConfig.email && (
-                    <span>Kontakt podaci se dodaju nakon aktivacije domena.</span>
+                    <span>{copy.contactFallback}</span>
                   )}
                 </p>
               </motion.div>
@@ -615,7 +803,7 @@ export default function HomePage() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Otvori u Google Maps
+                  {copy.openMaps}
                 </a>
               </div>
             </motion.div>
@@ -630,8 +818,8 @@ export default function HomePage() {
         >
           <div className="container">
             <motion.div className="section-header" variants={itemVariants}>
-              <h2>Galerija / Ambijent</h2>
-              <p>Dve scene iz studija koje najbolje opisuju atmosferu.</p>
+              <h2>{copy.galleryTitle}</h2>
+              <p>{copy.galleryText}</p>
             </motion.div>
             <motion.div className="gallery-grid" variants={staggerVariants}>
               <motion.div
@@ -673,21 +861,14 @@ export default function HomePage() {
         >
           <div className="container">
             <motion.div className="section-header" variants={itemVariants}>
-              <h2>Oceni nas na Google</h2>
-              <p>
-                Ako si zadovoljan uslugom, ostavi kratku ocenu. Hvala na podršci
-                lokalnom barber studiju u Nišu.
-              </p>
+              <h2>{copy.reviewTitle}</h2>
+              <p>{copy.reviewText}</p>
             </motion.div>
             <motion.div className="banner review-banner" variants={cardVariants}>
               <div className="review-copy">
-                <strong>Doctor Barber Niš</strong>
-                <p>
-                  Klasično šišanje, fade i brada — tvoja preporuka nam puno znači.
-                </p>
-                <p className="seo-note">
-                  Frizer u Nišu za fade šišanje, klasično šišanje i uređivanje brade.
-                </p>
+                <strong>Doctor Barber Nis</strong>
+                <p>{copy.reviewBody}</p>
+                <p className="seo-note">{copy.reviewSeo}</p>
               </div>
               <div className="review-actions">
                 <a
@@ -696,7 +877,7 @@ export default function HomePage() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Oceni na Google
+                  {copy.reviewButton}
                 </a>
               </div>
             </motion.div>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "
 
 import AdminShell from "@/components/admin/AdminShell";
 import { fetchServices, services as fallbackServices, type Service } from "@/lib/services";
+import { useLanguage, type Language } from "@/lib/useLanguage";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || "";
@@ -122,6 +123,73 @@ const buildDefaultFormState = (
 };
 
 export default function AdminAppointmentsManager() {
+  const { language } = useLanguage();
+  const text: Record<Language, Record<string, string>> = {
+    sr: {
+      total: "Ukupno termina",
+      shown: "Prikazano",
+      apiMissing: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+      adminMissing: "Dodaj NEXT_PUBLIC_ADMIN_KEY u .env da bi CMS radio.",
+      cannotLoadAppointments: "Ne mogu da preuzmem termine.",
+      refreshed: "Termini su osvezeni.",
+      genericError: "Doslo je do greske.",
+      selectDateForBlocks: "Izaberi datum za blokade.",
+      cannotLoadBlocks: "Ne mogu da preuzmem blokade.",
+      selectStatus: "Izaberi status.",
+      cannotSaveAppointment: "Ne mogu da sacuvam termin.",
+      appointmentUpdated: "Termin je izmenjen.",
+      appointmentSaved: "Termin je sacuvan.",
+      confirmDeleteAppointment: "Da li sigurno zelis da obrises termin?",
+      cannotDeleteAppointment: "Ne mogu da obrisem termin.",
+      confirmDeleteBlock: "Da li sigurno zelis da obrises blokadu?",
+      cannotDeleteBlock: "Ne mogu da obrisem blokadu.",
+      cannotSaveStatus: "Ne mogu da sacuvam status.",
+      statusSaved: "Status je sacuvan.",
+    },
+    en: {
+      total: "Total appointments",
+      shown: "Shown",
+      apiMissing: "API is not configured. Add NEXT_PUBLIC_API_BASE_URL to .env.",
+      adminMissing: "Add NEXT_PUBLIC_ADMIN_KEY to .env so CMS can work.",
+      cannotLoadAppointments: "Unable to load appointments.",
+      refreshed: "Appointments refreshed.",
+      genericError: "Something went wrong.",
+      selectDateForBlocks: "Choose a date for blocks.",
+      cannotLoadBlocks: "Unable to load blocks.",
+      selectStatus: "Choose a status.",
+      cannotSaveAppointment: "Unable to save appointment.",
+      appointmentUpdated: "Appointment updated.",
+      appointmentSaved: "Appointment saved.",
+      confirmDeleteAppointment: "Are you sure you want to delete this appointment?",
+      cannotDeleteAppointment: "Unable to delete appointment.",
+      confirmDeleteBlock: "Are you sure you want to delete this block?",
+      cannotDeleteBlock: "Unable to delete block.",
+      cannotSaveStatus: "Unable to save status.",
+      statusSaved: "Status saved.",
+    },
+    it: {
+      total: "Appuntamenti totali",
+      shown: "Visualizzati",
+      apiMissing: "API non configurata. Aggiungi NEXT_PUBLIC_API_BASE_URL in .env.",
+      adminMissing: "Aggiungi NEXT_PUBLIC_ADMIN_KEY in .env per usare il CMS.",
+      cannotLoadAppointments: "Impossibile caricare gli appuntamenti.",
+      refreshed: "Appuntamenti aggiornati.",
+      genericError: "Si e verificato un errore.",
+      selectDateForBlocks: "Seleziona una data per i blocchi.",
+      cannotLoadBlocks: "Impossibile caricare i blocchi.",
+      selectStatus: "Seleziona uno stato.",
+      cannotSaveAppointment: "Impossibile salvare l'appuntamento.",
+      appointmentUpdated: "Appuntamento aggiornato.",
+      appointmentSaved: "Appuntamento salvato.",
+      confirmDeleteAppointment: "Sei sicuro di voler eliminare questo appuntamento?",
+      cannotDeleteAppointment: "Impossibile eliminare l'appuntamento.",
+      confirmDeleteBlock: "Sei sicuro di voler eliminare questo blocco?",
+      cannotDeleteBlock: "Impossibile eliminare il blocco.",
+      cannotSaveStatus: "Impossibile salvare lo stato.",
+      statusSaved: "Stato salvato.",
+    },
+  };
+  const t = text[language];
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [status, setStatus] = useState<StatusState>({ type: "idle" });
   const [formStatus, setFormStatus] = useState<StatusState>({ type: "idle" });
@@ -221,14 +289,14 @@ export default function AdminAppointmentsManager() {
   }, [appointments, filters]);
 
   const subtitle = hasFilters
-    ? `Ukupno termina: ${appointments.length} | Prikazano: ${filteredAppointments.length}`
-    : `Ukupno termina: ${appointments.length}`;
+    ? `${t.total}: ${appointments.length} | ${t.shown}: ${filteredAppointments.length}`
+    : `${t.total}: ${appointments.length}`;
 
   const fetchAppointments = async () => {
     if (!apiBaseUrl) {
       setStatus({
         type: "error",
-        message: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+        message: t.apiMissing,
       });
       return;
     }
@@ -236,7 +304,7 @@ export default function AdminAppointmentsManager() {
     if (!adminKey) {
       setStatus({
         type: "error",
-        message: "Dodaj NEXT_PUBLIC_ADMIN_KEY u .env da bi CMS radio.",
+        message: t.adminMissing,
       });
       return;
     }
@@ -252,7 +320,7 @@ export default function AdminAppointmentsManager() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || "Ne mogu da preuzmem termine.");
+        throw new Error(data?.message || t.cannotLoadAppointments);
       }
 
       const items = Array.isArray(data.appointments) ? data.appointments : [];
@@ -265,9 +333,9 @@ export default function AdminAppointmentsManager() {
         return `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`);
       });
       setAppointments(items);
-      setStatus({ type: "success", message: "Termini su osvezeni." });
+      setStatus({ type: "success", message: t.refreshed });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : t.genericError;
       setStatus({ type: "error", message });
     }
   };
@@ -276,7 +344,7 @@ export default function AdminAppointmentsManager() {
     if (!apiBaseUrl) {
       setClientsStatus({
         type: "error",
-        message: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+        message: t.apiMissing,
       });
       return;
     }
@@ -284,7 +352,7 @@ export default function AdminAppointmentsManager() {
     if (!adminKey) {
       setClientsStatus({
         type: "error",
-        message: "Dodaj NEXT_PUBLIC_ADMIN_KEY u .env da bi CMS radio.",
+        message: t.adminMissing,
       });
       return;
     }
@@ -307,7 +375,7 @@ export default function AdminAppointmentsManager() {
       setClients(items);
       setClientsStatus({ type: "success" });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : t.genericError;
       setClientsStatus({ type: "error", message });
     }
   };
@@ -316,7 +384,7 @@ export default function AdminAppointmentsManager() {
     if (!apiBaseUrl) {
       setBlockStatus({
         type: "error",
-        message: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+        message: t.apiMissing,
       });
       return;
     }
@@ -324,13 +392,13 @@ export default function AdminAppointmentsManager() {
     if (!adminKey) {
       setBlockStatus({
         type: "error",
-        message: "Dodaj NEXT_PUBLIC_ADMIN_KEY u .env da bi CMS radio.",
+        message: t.adminMissing,
       });
       return;
     }
 
     if (!dateValue) {
-      setBlockStatus({ type: "error", message: "Izaberi datum za blokade." });
+      setBlockStatus({ type: "error", message: t.selectDateForBlocks });
       return;
     }
 
@@ -348,7 +416,7 @@ export default function AdminAppointmentsManager() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || "Ne mogu da preuzmem blokade.");
+        throw new Error(data?.message || t.cannotLoadBlocks);
       }
 
       const items = Array.isArray(data.blocks) ? data.blocks : [];
@@ -356,7 +424,7 @@ export default function AdminAppointmentsManager() {
       setBlocks(items);
       setBlockStatus({ type: "success", message: "Blokade su osvezene." });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : t.genericError;
       setBlockStatus({ type: "error", message });
     }
   };
@@ -479,11 +547,11 @@ export default function AdminAppointmentsManager() {
 
   const validateForm = () => {
     if (!apiBaseUrl) {
-      return "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.";
+      return t.apiMissing;
     }
 
     if (!adminKey) {
-      return "Dodaj NEXT_PUBLIC_ADMIN_KEY u .env da bi CMS radio.";
+      return t.adminMissing;
     }
 
     if (!formState.clientName.trim() || !formState.phone.trim()) {
@@ -503,7 +571,7 @@ export default function AdminAppointmentsManager() {
     }
 
     if (!formState.status) {
-      return "Izaberi status.";
+      return t.selectStatus;
     }
 
     return null;
@@ -555,12 +623,12 @@ export default function AdminAppointmentsManager() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || "Ne mogu da sacuvam termin.");
+        throw new Error(data?.message || t.cannotSaveAppointment);
       }
 
       setFormStatus({
         type: "success",
-        message: editingId ? "Termin je izmenjen." : "Termin je sacuvan.",
+        message: editingId ? t.appointmentUpdated : t.appointmentSaved,
       });
 
       if (editingId) {
@@ -577,7 +645,7 @@ export default function AdminAppointmentsManager() {
 
       await fetchAppointments();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : t.genericError;
       setFormStatus({ type: "error", message });
     }
   };
@@ -614,7 +682,7 @@ export default function AdminAppointmentsManager() {
       return;
     }
 
-    const confirmed = window.confirm("Da li sigurno zelis da obrises termin?");
+    const confirmed = window.confirm(t.confirmDeleteAppointment);
     if (!confirmed) {
       return;
     }
@@ -636,7 +704,7 @@ export default function AdminAppointmentsManager() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || "Ne mogu da obrisem termin.");
+        throw new Error(data?.message || t.cannotDeleteAppointment);
       }
 
       if (editingId === id) {
@@ -645,7 +713,7 @@ export default function AdminAppointmentsManager() {
 
       await fetchAppointments();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : t.genericError;
       setStatus({ type: "error", message });
     }
   };
@@ -655,7 +723,7 @@ export default function AdminAppointmentsManager() {
       return;
     }
 
-    const confirmed = window.confirm("Da li sigurno zelis da obrises blokadu?");
+    const confirmed = window.confirm(t.confirmDeleteBlock);
     if (!confirmed) {
       return;
     }
@@ -672,12 +740,12 @@ export default function AdminAppointmentsManager() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || "Ne mogu da obrisem blokadu.");
+        throw new Error(data?.message || t.cannotDeleteBlock);
       }
 
       await fetchBlocks();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : t.genericError;
       setBlockStatus({ type: "error", message });
     }
   };
@@ -705,15 +773,15 @@ export default function AdminAppointmentsManager() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || "Ne mogu da sacuvam status.");
+        throw new Error(data?.message || t.cannotSaveStatus);
       }
 
       setAppointments((prev) =>
         prev.map((item) => (item.id === id ? { ...item, status: nextStatus } : item))
       );
-      setStatus({ type: "success", message: "Status je sacuvan." });
+      setStatus({ type: "success", message: t.statusSaved });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : t.genericError;
       setStatus({ type: "error", message });
     }
   };

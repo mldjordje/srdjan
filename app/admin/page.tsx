@@ -4,6 +4,8 @@ import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useLanguage, type Language } from "@/lib/useLanguage";
 
 const adminUser = process.env.NEXT_PUBLIC_ADMIN_USER || "admin";
 const adminPass = process.env.NEXT_PUBLIC_ADMIN_PASS || "admin123";
@@ -15,6 +17,60 @@ type StatusState = {
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const { language } = useLanguage();
+  const copy: Record<
+    Language,
+    {
+      cmsPanel: string;
+      home: string;
+      book: string;
+      title: string;
+      subtitle: string;
+      username: string;
+      password: string;
+      login: string;
+      loginSuccess: string;
+      loginError: string;
+    }
+  > = {
+    sr: {
+      cmsPanel: "CMS Panel",
+      home: "Pocetna",
+      book: "Zakazi termin",
+      title: "CMS prijava",
+      subtitle: "Pristup za pregled termina, kalendara i klijenata.",
+      username: "Korisnicko ime",
+      password: "Lozinka",
+      login: "Prijavi se",
+      loginSuccess: "Ulogovani ste u CMS.",
+      loginError: "Pogresno korisnicko ime ili lozinka.",
+    },
+    en: {
+      cmsPanel: "CMS Panel",
+      home: "Home",
+      book: "Book appointment",
+      title: "CMS login",
+      subtitle: "Access appointments, calendar, and clients.",
+      username: "Username",
+      password: "Password",
+      login: "Sign in",
+      loginSuccess: "You are logged in to CMS.",
+      loginError: "Invalid username or password.",
+    },
+    it: {
+      cmsPanel: "Pannello CMS",
+      home: "Home",
+      book: "Prenota",
+      title: "Accesso CMS",
+      subtitle: "Accesso a appuntamenti, calendario e clienti.",
+      username: "Nome utente",
+      password: "Password",
+      login: "Accedi",
+      loginSuccess: "Accesso al CMS effettuato.",
+      loginError: "Nome utente o password non validi.",
+    },
+  };
+  const t = copy[language];
   const [credentials, setCredentials] = useState({ user: "", pass: "" });
   const [status, setStatus] = useState<StatusState>({ type: "idle" });
 
@@ -37,14 +93,14 @@ export default function AdminLoginPage() {
 
     if (credentials.user === adminUser && credentials.pass === adminPass) {
       localStorage.setItem("db_admin_auth", "true");
-      setStatus({ type: "success", message: "Ulogovani ste u CMS." });
+      setStatus({ type: "success", message: t.loginSuccess });
       router.push("/admin/calendar");
       return;
     }
 
     setStatus({
       type: "error",
-      message: "Pogresno korisnicko ime ili lozinka.",
+      message: t.loginError,
     });
   };
 
@@ -63,12 +119,13 @@ export default function AdminLoginPage() {
             </div>
             <div className="brand-title">
               <span>Doctor Barber</span>
-              <span>CMS Panel</span>
+              <span>{t.cmsPanel}</span>
             </div>
           </Link>
           <nav className="nav-links">
-            <Link href="/">Pocetna</Link>
-            <Link href="/#booking">Zakazi termin</Link>
+            <LanguageSwitcher compact />
+            <Link href="/">{t.home}</Link>
+            <Link href="/#booking">{t.book}</Link>
           </nav>
         </div>
       </header>
@@ -76,12 +133,12 @@ export default function AdminLoginPage() {
       <main className="admin-layout container">
         <div className="login-card">
           <div>
-            <h1>CMS prijava</h1>
-            <p>Pristup za pregled termina, kalendara i klijenata.</p>
+            <h1>{t.title}</h1>
+            <p>{t.subtitle}</p>
           </div>
           <form className="form-row" onSubmit={handleLogin}>
             <div className="form-row">
-              <label htmlFor="user">Korisnicko ime</label>
+              <label htmlFor="user">{t.username}</label>
               <input
                 id="user"
                 name="user"
@@ -92,7 +149,7 @@ export default function AdminLoginPage() {
               />
             </div>
             <div className="form-row">
-              <label htmlFor="pass">Lozinka</label>
+              <label htmlFor="pass">{t.password}</label>
               <input
                 id="pass"
                 name="pass"
@@ -107,7 +164,7 @@ export default function AdminLoginPage() {
               <div className={`form-status ${status.type}`}>{status.message}</div>
             )}
             <button className="button" type="submit">
-              Prijavi se
+              {t.login}
             </button>
           </form>
         </div>

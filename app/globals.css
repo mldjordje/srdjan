@@ -3430,3 +3430,62 @@ h4 {
 
 
 
+.language-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(17, 17, 17, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 22px rgba(15, 15, 15, 0.08);
+}
+
+.language-switcher__button {
+  border: 0;
+  background: transparent;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.language-switcher__button:hover {
+  color: var(--text);
+  background: rgba(17, 17, 17, 0.06);
+}
+
+.language-switcher__button.is-active {
+  background: #111111;
+  color: #ffffff;
+}
+
+.language-switcher.is-compact .language-switcher__button {
+  padding: 5px 9px;
+}
+
+.nav {
+  backdrop-filter: blur(14px);
+  background: rgba(251, 250, 248, 0.84);
+  border-bottom: 1px solid rgba(17, 17, 17, 0.1);
+}
+
+.button {
+  border-radius: 999px;
+  box-shadow: 0 10px 28px rgba(17, 17, 17, 0.12);
+}
+
+.booking-stage__frame,
+.info-card,
+.gallery-card,
+.map-card,
+.admin-card,
+.login-card {
+  border: 1px solid rgba(17, 17, 17, 0.09);
+  box-shadow: 0 16px 36px rgba(12, 12, 12, 0.08);
+}

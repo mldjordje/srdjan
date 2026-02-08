@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { HeroUIProvider } from "@heroui/react";
+import { LanguageProvider } from "@/lib/useLanguage";
 
 export default function Providers({
   children,
@@ -48,5 +49,9 @@ export default function Providers({
     return () => observer.disconnect();
   }, []);
 
-  return <HeroUIProvider>{children}</HeroUIProvider>;
+  return (
+    <LanguageProvider>
+      <HeroUIProvider>{children}</HeroUIProvider>
+    </LanguageProvider>
+  );
 }

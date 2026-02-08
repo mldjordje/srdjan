@@ -3,6 +3,7 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 
 import AdminShell from "@/components/admin/AdminShell";
+import { useLanguage, type Language } from "@/lib/useLanguage";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || "";
@@ -18,6 +19,58 @@ type StatusState = {
 };
 
 export default function AdminSettingsPage() {
+  const { language } = useLanguage();
+  const text: Record<Language, Record<string, string>> = {
+    sr: {
+      apiMissing: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+      adminMissing: "Dodaj NEXT_PUBLIC_ADMIN_KEY u .env da bi CMS radio.",
+      bookingMinutesInvalid: "Unesi ispravan broj minuta za zakazivanje.",
+      cancelMinutesInvalid: "Unesi ispravan broj minuta za otkazivanje.",
+      cannotSave: "Ne mogu da sacuvam podesavanja.",
+      saved: "Podesavanja su sacuvana.",
+      genericError: "Doslo je do greske.",
+      title: "Podesavanja",
+      subtitle: "Upravljanje pravilima zakazivanja i otkazivanja",
+      rulesTitle: "Pravila za termine",
+      minBooking: "Minimalno minuta pre zakazivanja",
+      minCancel: "Minimalno minuta pre otkazivanja",
+      saving: "Cuvanje...",
+      save: "Sacuvaj podesavanja",
+    },
+    en: {
+      apiMissing: "API is not configured. Add NEXT_PUBLIC_API_BASE_URL to .env.",
+      adminMissing: "Add NEXT_PUBLIC_ADMIN_KEY to .env so CMS can work.",
+      bookingMinutesInvalid: "Enter valid booking lead time in minutes.",
+      cancelMinutesInvalid: "Enter valid cancellation lead time in minutes.",
+      cannotSave: "Unable to save settings.",
+      saved: "Settings saved.",
+      genericError: "Something went wrong.",
+      title: "Settings",
+      subtitle: "Manage booking and cancellation rules",
+      rulesTitle: "Appointment rules",
+      minBooking: "Minimum minutes before booking",
+      minCancel: "Minimum minutes before cancellation",
+      saving: "Saving...",
+      save: "Save settings",
+    },
+    it: {
+      apiMissing: "API non configurata. Aggiungi NEXT_PUBLIC_API_BASE_URL in .env.",
+      adminMissing: "Aggiungi NEXT_PUBLIC_ADMIN_KEY in .env per usare il CMS.",
+      bookingMinutesInvalid: "Inserisci un numero valido di minuti per la prenotazione.",
+      cancelMinutesInvalid: "Inserisci un numero valido di minuti per la cancellazione.",
+      cannotSave: "Impossibile salvare le impostazioni.",
+      saved: "Impostazioni salvate.",
+      genericError: "Si e verificato un errore.",
+      title: "Impostazioni",
+      subtitle: "Gestione regole di prenotazione e cancellazione",
+      rulesTitle: "Regole appuntamenti",
+      minBooking: "Minuti minimi prima della prenotazione",
+      minCancel: "Minuti minimi prima della cancellazione",
+      saving: "Salvataggio...",
+      save: "Salva impostazioni",
+    },
+  };
+  const t = text[language];
   const [formState, setFormState] = useState<SettingsState>({
     minBookingLeadMinutes: "60",
     minCancelLeadMinutes: "60",
@@ -66,7 +119,7 @@ export default function AdminSettingsPage() {
     if (!apiBaseUrl) {
       setStatus({
         type: "error",
-        message: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+        message: t.apiMissing,
       });
       return;
     }
@@ -74,7 +127,7 @@ export default function AdminSettingsPage() {
     if (!adminKey) {
       setStatus({
         type: "error",
-        message: "Dodaj NEXT_PUBLIC_ADMIN_KEY u .env da bi CMS radio.",
+        message: t.adminMissing,
       });
       return;
     }
@@ -85,7 +138,7 @@ export default function AdminSettingsPage() {
     if (!Number.isFinite(minBooking) || minBooking < 0) {
       setStatus({
         type: "error",
-        message: "Unesi ispravan broj minuta za zakazivanje.",
+        message: t.bookingMinutesInvalid,
       });
       return;
     }
@@ -93,7 +146,7 @@ export default function AdminSettingsPage() {
     if (!Number.isFinite(minCancel) || minCancel < 0) {
       setStatus({
         type: "error",
-        message: "Unesi ispravan broj minuta za otkazivanje.",
+        message: t.cancelMinutesInvalid,
       });
       return;
     }
@@ -115,7 +168,7 @@ export default function AdminSettingsPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || "Ne mogu da sacuvam podesavanja.");
+        throw new Error(data?.message || t.cannotSave);
       }
 
       const settings = data?.settings ?? {};
@@ -123,26 +176,26 @@ export default function AdminSettingsPage() {
         minBookingLeadMinutes: String(settings.minBookingLeadMinutes ?? minBooking),
         minCancelLeadMinutes: String(settings.minCancelLeadMinutes ?? minCancel),
       });
-      setStatus({ type: "success", message: "Podesavanja su sacuvana." });
+      setStatus({ type: "success", message: t.saved });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : t.genericError;
       setStatus({ type: "error", message });
     }
   };
 
   return (
     <AdminShell
-      title="Podesavanja"
-      subtitle="Upravljanje pravilima zakazivanja i otkazivanja"
+      title={t.title}
+      subtitle={t.subtitle}
     >
       <div className="admin-grid">
         <div className="admin-card">
-          <h3>Pravila za termine</h3>
+          <h3>{t.rulesTitle}</h3>
           <form className="form-row" onSubmit={handleSubmit}>
             <div className="form-grid">
               <div className="form-row">
                 <label htmlFor="minBookingLeadMinutes">
-                  Minimalno minuta pre zakazivanja
+                  {t.minBooking}
                 </label>
                 <input
                   id="minBookingLeadMinutes"
@@ -157,7 +210,7 @@ export default function AdminSettingsPage() {
               </div>
               <div className="form-row">
                 <label htmlFor="minCancelLeadMinutes">
-                  Minimalno minuta pre otkazivanja
+                  {t.minCancel}
                 </label>
                 <input
                   id="minCancelLeadMinutes"
@@ -176,7 +229,7 @@ export default function AdminSettingsPage() {
             )}
             <div className="admin-actions">
               <button className="button" type="submit" disabled={status.type === "loading"}>
-                {status.type === "loading" ? "Cuvanje..." : "Sacuvaj podesavanja"}
+                {status.type === "loading" ? t.saving : t.save}
               </button>
             </div>
           </form>

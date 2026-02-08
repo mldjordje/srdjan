@@ -14,6 +14,7 @@ import {
 import AdminShell from "@/components/admin/AdminShell";
 import { fetchServices, services as fallbackServices, type Service } from "@/lib/services";
 import { siteConfig } from "@/lib/site";
+import { useLanguage, type Language } from "@/lib/useLanguage";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || "";
@@ -124,32 +125,32 @@ const formatDate = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const formatMonthLabel = (date: Date) =>
-  new Intl.DateTimeFormat("sr-RS", {
+const formatMonthLabel = (date: Date, locale: string) =>
+  new Intl.DateTimeFormat(locale, {
     month: "long",
     year: "numeric",
   }).format(date);
 
-const formatWeekday = (date: Date) =>
-  new Intl.DateTimeFormat("sr-RS", {
+const formatWeekday = (date: Date, locale: string) =>
+  new Intl.DateTimeFormat(locale, {
     weekday: "short",
   }).format(date);
 
-const formatLongDate = (value: string) => {
+const formatLongDate = (value: string, locale: string) => {
   const date = new Date(`${value}T00:00:00`);
-  return new Intl.DateTimeFormat("sr-RS", {
+  return new Intl.DateTimeFormat(locale, {
     weekday: "long",
     day: "2-digit",
     month: "long",
   }).format(date);
 };
 
-const formatRangeLabel = (start: Date, end: Date) => {
-  const startLabel = new Intl.DateTimeFormat("sr-RS", {
+const formatRangeLabel = (start: Date, end: Date, locale: string) => {
+  const startLabel = new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
   }).format(start);
-  const endLabel = new Intl.DateTimeFormat("sr-RS", {
+  const endLabel = new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
   }).format(end);
@@ -304,6 +305,74 @@ const buildTimeSlots = (
 };
 
 export default function AdminCalendarPage() {
+  const { language } = useLanguage();
+  const locale = language === "sr" ? "sr-RS" : language === "en" ? "en-US" : "it-IT";
+  const text: Record<Language, Record<string, string>> = {
+    sr: {
+      totalAppointments: "Ukupno termina",
+      totalBlocks: "Ukupno blokada",
+      apiMissing: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+      adminMissing: "Dodaj NEXT_PUBLIC_ADMIN_KEY u .env da bi CMS radio.",
+      cannotLoadBlocks: "Ne mogu da preuzmem blokade.",
+      genericError: "Doslo je do greske.",
+      calendarRefreshed: "Kalendar je osvezen.",
+      confirmDeleteAppointment: "Da li sigurno zelis da obrises termin?",
+      cannotDeleteAppointment: "Ne mogu da obrisem termin.",
+      appointmentDeleted: "Termin je obrisan.",
+      cannotSaveStatus: "Ne mogu da sacuvam status.",
+      statusSaved: "Status je sacuvan.",
+      cannotSaveBlock: "Ne mogu da sacuvam blokadu.",
+      cannotSaveAppointment: "Ne mogu da sacuvam termin.",
+      appointmentUpdated: "Termin je izmenjen.",
+      appointmentSaved: "Termin je sacuvan.",
+      cannotDeleteBlock: "Ne mogu da obrisem blokadu.",
+      feedMissing: "Dodaj API bazu i admin key da bi generisao feed.",
+      chooseDate: "Izaberi datum",
+    },
+    en: {
+      totalAppointments: "Total appointments",
+      totalBlocks: "Total blocks",
+      apiMissing: "API is not configured. Add NEXT_PUBLIC_API_BASE_URL to .env.",
+      adminMissing: "Add NEXT_PUBLIC_ADMIN_KEY to .env so CMS can work.",
+      cannotLoadBlocks: "Unable to load blocks.",
+      genericError: "Something went wrong.",
+      calendarRefreshed: "Calendar refreshed.",
+      confirmDeleteAppointment: "Are you sure you want to delete this appointment?",
+      cannotDeleteAppointment: "Unable to delete appointment.",
+      appointmentDeleted: "Appointment deleted.",
+      cannotSaveStatus: "Unable to save status.",
+      statusSaved: "Status saved.",
+      cannotSaveBlock: "Unable to save block.",
+      cannotSaveAppointment: "Unable to save appointment.",
+      appointmentUpdated: "Appointment updated.",
+      appointmentSaved: "Appointment saved.",
+      cannotDeleteBlock: "Unable to delete block.",
+      feedMissing: "Add API base URL and admin key to generate feed.",
+      chooseDate: "Select date",
+    },
+    it: {
+      totalAppointments: "Appuntamenti totali",
+      totalBlocks: "Blocchi totali",
+      apiMissing: "API non configurata. Aggiungi NEXT_PUBLIC_API_BASE_URL in .env.",
+      adminMissing: "Aggiungi NEXT_PUBLIC_ADMIN_KEY in .env per usare il CMS.",
+      cannotLoadBlocks: "Impossibile caricare i blocchi.",
+      genericError: "Si e verificato un errore.",
+      calendarRefreshed: "Calendario aggiornato.",
+      confirmDeleteAppointment: "Sei sicuro di voler eliminare questo appuntamento?",
+      cannotDeleteAppointment: "Impossibile eliminare l'appuntamento.",
+      appointmentDeleted: "Appuntamento eliminato.",
+      cannotSaveStatus: "Impossibile salvare lo stato.",
+      statusSaved: "Stato salvato.",
+      cannotSaveBlock: "Impossibile salvare il blocco.",
+      cannotSaveAppointment: "Impossibile salvare l'appuntamento.",
+      appointmentUpdated: "Appuntamento aggiornato.",
+      appointmentSaved: "Appuntamento salvato.",
+      cannotDeleteBlock: "Impossibile eliminare il blocco.",
+      feedMissing: "Aggiungi URL API e admin key per generare il feed.",
+      chooseDate: "Seleziona data",
+    },
+  };
+  const t = text[language];
   const today = useMemo(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -394,9 +463,9 @@ export default function AdminCalendarPage() {
     const base = new Date(2024, 0, 1);
     return WORKING_DAY_ORDER.map((dayIndex) => {
       const offset = dayIndex === 0 ? -1 : dayIndex - 1;
-      return formatWeekday(addDays(base, offset));
+      return formatWeekday(addDays(base, offset), locale);
     });
-  }, []);
+  }, [locale]);
 
   const gridStyles = useMemo(
     () => ({
@@ -413,10 +482,10 @@ export default function AdminCalendarPage() {
     [slotCount]
   );
 
-  const selectedDateLabel = selectedDate ? formatLongDate(selectedDate) : "";
+  const selectedDateLabel = selectedDate ? formatLongDate(selectedDate, locale) : "";
   const weekRangeLabel = useMemo(
-    () => formatRangeLabel(weekStart, weekEnd),
-    [weekStart, weekEnd]
+    () => formatRangeLabel(weekStart, weekEnd, locale),
+    [weekStart, weekEnd, locale]
   );
 
   const monthDays = useMemo(
@@ -649,7 +718,7 @@ export default function AdminCalendarPage() {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data?.message || "Ne mogu da preuzmem blokade.");
+      throw new Error(data?.message || t.cannotLoadBlocks);
     }
 
     const items = Array.isArray(data.blocks) ? data.blocks : [];
@@ -680,7 +749,7 @@ export default function AdminCalendarPage() {
       setClients(items);
       setClientsStatus({ type: "success" });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : t.genericError;
       setClientsStatus({ type: "error", message });
     }
   };
@@ -712,7 +781,7 @@ export default function AdminCalendarPage() {
     if (!apiBaseUrl) {
       setStatus({
         type: "error",
-        message: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+        message: t.apiMissing,
       });
       return;
     }
@@ -720,7 +789,7 @@ export default function AdminCalendarPage() {
     if (!adminKey) {
       setStatus({
         type: "error",
-        message: "Dodaj NEXT_PUBLIC_ADMIN_KEY u .env da bi CMS radio.",
+        message: t.adminMissing,
       });
       return;
     }
@@ -739,9 +808,9 @@ export default function AdminCalendarPage() {
         Object.fromEntries(appointmentEntries) as Record<string, Appointment[]>
       );
       setBlocksByDate(Object.fromEntries(blockEntries) as Record<string, Block[]>);
-      setStatus({ type: "success", message: "Kalendar je osvezen." });
+      setStatus({ type: "success", message: t.calendarRefreshed });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : t.genericError;
       setStatus({ type: "error", message });
     }
   };
@@ -1048,7 +1117,7 @@ export default function AdminCalendarPage() {
       return;
     }
 
-    const confirmed = window.confirm("Da li sigurno zelis da obrises termin?");
+    const confirmed = window.confirm(t.confirmDeleteAppointment);
     if (!confirmed) {
       return;
     }
@@ -1070,7 +1139,7 @@ export default function AdminCalendarPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || "Ne mogu da obrisem termin.");
+        throw new Error(data?.message || t.cannotDeleteAppointment);
       }
 
       setAppointmentsByDate((prev) => {
@@ -1082,9 +1151,9 @@ export default function AdminCalendarPage() {
 
       setSelectedAppointment(null);
       setEditingAppointment(null);
-      setAppointmentActionStatus({ type: "success", message: "Termin je obrisan." });
+      setAppointmentActionStatus({ type: "success", message: t.appointmentDeleted });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : t.genericError;
       setAppointmentActionStatus({ type: "error", message });
     }
   };
@@ -1119,7 +1188,7 @@ export default function AdminCalendarPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || "Ne mogu da sacuvam status.");
+        throw new Error(data?.message || t.cannotSaveStatus);
       }
 
       setAppointmentsByDate((prev) => {
@@ -1137,9 +1206,9 @@ export default function AdminCalendarPage() {
       setEditingAppointment((prev) =>
         prev ? { ...prev, status: nextStatus } : prev
       );
-      setAppointmentActionStatus({ type: "success", message: "Status je sacuvan." });
+      setAppointmentActionStatus({ type: "success", message: t.statusSaved });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : t.genericError;
       setAppointmentActionStatus({ type: "error", message });
     }
   };
@@ -1179,7 +1248,7 @@ export default function AdminCalendarPage() {
       const data = await createResponse.json();
 
       if (!createResponse.ok) {
-        throw new Error(data?.message || "Ne mogu da sacuvam blokadu.");
+        throw new Error(data?.message || t.cannotSaveBlock);
       }
 
       if (editingBlockId) {
@@ -1197,7 +1266,7 @@ export default function AdminCalendarPage() {
       setBlockForm((prev) => ({ ...prev, time: "", duration: "20", note: "" }));
       await refreshData(weekDateStrings);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : t.genericError;
       setStatus({ type: "error", message });
     }
   };
@@ -1208,7 +1277,7 @@ export default function AdminCalendarPage() {
     if (!apiBaseUrl) {
       setAppointmentStatus({
         type: "error",
-        message: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
+        message: t.apiMissing,
       });
       return;
     }
@@ -1216,7 +1285,7 @@ export default function AdminCalendarPage() {
     if (!adminKey) {
       setAppointmentStatus({
         type: "error",
-        message: "Dodaj NEXT_PUBLIC_ADMIN_KEY u .env da bi CMS radio.",
+        message: t.adminMissing,
       });
       return;
     }
@@ -1296,12 +1365,12 @@ export default function AdminCalendarPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || "Ne mogu da sacuvam termin.");
+        throw new Error(data?.message || t.cannotSaveAppointment);
       }
 
       setAppointmentStatus({
         type: "success",
-        message: editingAppointment ? "Termin je izmenjen." : "Termin je sacuvan.",
+        message: editingAppointment ? t.appointmentUpdated : t.appointmentSaved,
       });
       setAppointmentForm((prev) => ({
         ...prev,
@@ -1315,7 +1384,7 @@ export default function AdminCalendarPage() {
       setIsSlotModalOpen(false);
       await refreshData(weekDateStrings);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : t.genericError;
       setAppointmentStatus({ type: "error", message });
     }
   };
@@ -1337,7 +1406,7 @@ export default function AdminCalendarPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || "Ne mogu da obrisem blokadu.");
+        throw new Error(data?.message || t.cannotDeleteBlock);
       }
 
       if (editingBlockId === id) {
@@ -1346,7 +1415,7 @@ export default function AdminCalendarPage() {
 
       await refreshData(weekDateStrings);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Doslo je do greske.";
+      const message = error instanceof Error ? error.message : t.genericError;
       setStatus({ type: "error", message });
     }
   };
@@ -1418,7 +1487,7 @@ export default function AdminCalendarPage() {
                       >
                         <span className="calendar-day-number">{day.getDate()}</span>
                         <span className="calendar-day-label">
-                          {formatWeekday(day).toUpperCase()}
+                          {formatWeekday(day, locale).toUpperCase()}
                         </span>
                       </button>
                     );
@@ -1498,7 +1567,7 @@ export default function AdminCalendarPage() {
           <aside className="calendar-sidebar">
             <div className="calendar-selected">
               <span>Izabrani datum</span>
-              <strong>{selectedDateLabel || "Izaberi datum"}</strong>
+              <strong>{selectedDateLabel || t.chooseDate}</strong>
               <span className="calendar-selected__meta">{selectedDate}</span>
             </div>
 
@@ -1513,7 +1582,7 @@ export default function AdminCalendarPage() {
                   Prethodni
                 </button>
                 <div className="month-picker__title">
-                  {formatMonthLabel(calendarMonth)}
+                  {formatMonthLabel(calendarMonth, locale)}
                 </div>
                 <button
                   className="button small outline"
@@ -1581,7 +1650,7 @@ export default function AdminCalendarPage() {
                 </div>
               ) : (
                 <div className="form-status error">
-                  Dodaj API bazu i admin key da bi generisao feed.
+                  {t.feedMissing}
                 </div>
               )}
             </div>
