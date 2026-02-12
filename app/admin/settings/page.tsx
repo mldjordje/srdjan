@@ -11,6 +11,7 @@ const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || "";
 type SettingsState = {
   minBookingLeadMinutes: string;
   minCancelLeadMinutes: string;
+  homepageNotice: string;
 };
 
 type StatusState = {
@@ -34,6 +35,9 @@ export default function AdminSettingsPage() {
       rulesTitle: "Pravila za termine",
       minBooking: "Minimalno minuta pre zakazivanja",
       minCancel: "Minimalno minuta pre otkazivanja",
+      homepageNotice: "Obavestenje za pocetnu stranu",
+      homepageNoticeHint:
+        "Kratko obavestenje koje se prikazuje odmah na ulasku na sajt.",
       saving: "Cuvanje...",
       save: "Sacuvaj podesavanja",
     },
@@ -50,6 +54,8 @@ export default function AdminSettingsPage() {
       rulesTitle: "Appointment rules",
       minBooking: "Minimum minutes before booking",
       minCancel: "Minimum minutes before cancellation",
+      homepageNotice: "Homepage notice",
+      homepageNoticeHint: "Short notice shown immediately when visitors open the website.",
       saving: "Saving...",
       save: "Save settings",
     },
@@ -66,6 +72,8 @@ export default function AdminSettingsPage() {
       rulesTitle: "Regole appuntamenti",
       minBooking: "Minuti minimi prima della prenotazione",
       minCancel: "Minuti minimi prima della cancellazione",
+      homepageNotice: "Avviso in homepage",
+      homepageNoticeHint: "Breve avviso mostrato subito all'apertura del sito.",
       saving: "Salvataggio...",
       save: "Salva impostazioni",
     },
@@ -74,6 +82,7 @@ export default function AdminSettingsPage() {
   const [formState, setFormState] = useState<SettingsState>({
     minBookingLeadMinutes: "60",
     minCancelLeadMinutes: "60",
+    homepageNotice: "",
   });
   const [status, setStatus] = useState<StatusState>({ type: "idle" });
 
@@ -95,6 +104,7 @@ export default function AdminSettingsPage() {
         setFormState({
           minBookingLeadMinutes: String(settings.minBookingLeadMinutes ?? "60"),
           minCancelLeadMinutes: String(settings.minCancelLeadMinutes ?? "60"),
+          homepageNotice: String(settings.homepageNotice ?? ""),
         });
       })
       .catch(() => {
@@ -163,6 +173,7 @@ export default function AdminSettingsPage() {
         body: JSON.stringify({
           minBookingLeadMinutes: minBooking,
           minCancelLeadMinutes: minCancel,
+          homepageNotice: formState.homepageNotice.trim(),
         }),
       });
       const data = await response.json();
@@ -175,6 +186,7 @@ export default function AdminSettingsPage() {
       setFormState({
         minBookingLeadMinutes: String(settings.minBookingLeadMinutes ?? minBooking),
         minCancelLeadMinutes: String(settings.minCancelLeadMinutes ?? minCancel),
+        homepageNotice: String(settings.homepageNotice ?? formState.homepageNotice),
       });
       setStatus({ type: "success", message: t.saved });
     } catch (error) {
@@ -221,6 +233,19 @@ export default function AdminSettingsPage() {
                   value={formState.minCancelLeadMinutes}
                   onChange={handleChange}
                   required
+                />
+              </div>
+              <div className="form-row form-row--full">
+                <label htmlFor="homepageNotice">{t.homepageNotice}</label>
+                <input
+                  id="homepageNotice"
+                  name="homepageNotice"
+                  className="input"
+                  type="text"
+                  maxLength={220}
+                  value={formState.homepageNotice}
+                  onChange={handleChange}
+                  placeholder={t.homepageNoticeHint}
                 />
               </div>
             </div>

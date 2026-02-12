@@ -4,11 +4,14 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Card, CardBody, Button as HeroButton } from "@heroui/react";
 
 import BookingForm from "@/components/BookingForm";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useLanguage, type Language } from "@/lib/useLanguage";
 import { siteConfig } from "@/lib/site";
+
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -52,6 +55,11 @@ const content: Record<
     reviewBody: string;
     reviewSeo: string;
     reviewButton: string;
+    instagramTitle: string;
+    instagramText: string;
+    instagramHandle: string;
+    instagramButton: string;
+    homepageNoticeDefault: string;
   }
 > = {
   sr: {
@@ -90,6 +98,11 @@ const content: Record<
     reviewBody: "Klasicno sisanje, fade i brada. Tvoja preporuka nam puno znaci.",
     reviewSeo: "Frizer u Nisu za fade sisanje, klasicno sisanje i uredjivanje brade.",
     reviewButton: "Oceni na Google",
+    instagramTitle: "Instagram",
+    instagramText: "Prati najnovije transformacije, fade radove i dnevni vibe iz studija.",
+    instagramHandle: "@doctor__barber",
+    instagramButton: "Zapratite nas",
+    homepageNoticeDefault: "",
   },
   en: {
     menu: "Menu",
@@ -126,6 +139,11 @@ const content: Record<
     reviewBody: "Classic haircut, fade, and beard service. Your recommendation means a lot.",
     reviewSeo: "Barber in Nis for fade cuts, classic cuts, and beard grooming.",
     reviewButton: "Rate on Google",
+    instagramTitle: "Instagram",
+    instagramText: "Follow our latest transformations, fade work, and daily studio vibe.",
+    instagramHandle: "@doctor__barber",
+    instagramButton: "Follow us",
+    homepageNoticeDefault: "",
   },
   it: {
     menu: "Menu",
@@ -162,6 +180,11 @@ const content: Record<
     reviewBody: "Taglio classico, fade e barba. Il tuo consiglio e molto importante.",
     reviewSeo: "Barbiere a Nis per fade, taglio classico e cura della barba.",
     reviewButton: "Recensisci su Google",
+    instagramTitle: "Instagram",
+    instagramText: "Segui trasformazioni recenti, lavori fade e atmosfera quotidiana dello studio.",
+    instagramHandle: "@doctor__barber",
+    instagramButton: "Seguici",
+    homepageNoticeDefault: "",
   },
 };
 
@@ -175,6 +198,7 @@ export default function HomePage() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [installModalOpen, setInstallModalOpen] = useState(false);
   const [installPlatform, setInstallPlatform] = useState<"ios" | "android" | "desktop" | "other">("other");
+  const [homepageNotice, setHomepageNotice] = useState("");
   const prefersReducedMotion = useReducedMotion();
   const year = new Date().getFullYear();
   const easeOut: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -258,6 +282,34 @@ export default function HomePage() {
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
   }, []);
+
+  useEffect(() => {
+    if (!apiBaseUrl) {
+      setHomepageNotice(copy.homepageNoticeDefault);
+      return;
+    }
+
+    let active = true;
+    fetch(`${apiBaseUrl}/settings.php`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (!active) {
+          return;
+        }
+        const settings = data?.settings ?? data ?? {};
+        const notice = typeof settings.homepageNotice === "string" ? settings.homepageNotice.trim() : "";
+        setHomepageNotice(notice);
+      })
+      .catch(() => {
+        if (active) {
+          setHomepageNotice(copy.homepageNoticeDefault);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [copy.homepageNoticeDefault]);
 
   const handleNavToggle = () => setIsNavOpen((prev) => !prev);
   const handleNavClose = () => setIsNavOpen(false);
@@ -603,6 +655,22 @@ export default function HomePage() {
         </div>
       )}
 
+      {homepageNotice && (
+        <motion.div
+          className="site-notice-wrap"
+          initial={{ opacity: 0, y: prefersReducedMotion ? 0 : -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.4, ease: easeOut }}
+        >
+          <div className="container">
+            <div className="site-notice" role="status" aria-live="polite">
+              <span className="site-notice__dot" aria-hidden="true" />
+              <p>{homepageNotice}</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       <main>
         <motion.section
           className="hero-minimal"
@@ -848,6 +916,57 @@ export default function HomePage() {
                   sizes="(max-width: 900px) 100vw, 50vw"
                 />
               </motion.div>
+            </motion.div>
+          </div>
+        </motion.section>
+
+        <motion.section
+          className="section instagram-section"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+          variants={sectionVariants}
+        >
+          <div className="container">
+            <motion.div className="section-header" variants={itemVariants}>
+              <h2>{copy.instagramTitle}</h2>
+              <p>{copy.instagramText}</p>
+            </motion.div>
+            <motion.div className="instagram-showcase" variants={cardVariants}>
+              <motion.div
+                className="instagram-orb instagram-orb--one"
+                animate={prefersReducedMotion ? {} : { y: [0, -10, 0] }}
+                transition={prefersReducedMotion ? {} : { duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+              />
+              <motion.div
+                className="instagram-orb instagram-orb--two"
+                animate={prefersReducedMotion ? {} : { y: [0, 8, 0] }}
+                transition={prefersReducedMotion ? {} : { duration: 5.2, repeat: Infinity, ease: "easeInOut" }}
+              />
+              <Card className="instagram-card" shadow="lg">
+                <CardBody>
+                  <div className="instagram-card__head">
+                    <strong>{copy.instagramHandle}</strong>
+                    <span>Doctor Barber</span>
+                  </div>
+                  <div className="instagram-card__grid" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <HeroButton
+                    as="a"
+                    href="https://www.instagram.com/doctor__barber/?hl=en"
+                    target="_blank"
+                    rel="noreferrer"
+                    color="primary"
+                    radius="full"
+                    className="instagram-card__button"
+                  >
+                    {copy.instagramButton}
+                  </HeroButton>
+                </CardBody>
+              </Card>
             </motion.div>
           </div>
         </motion.section>

@@ -21,6 +21,7 @@ type ServiceFormState = {
   description: string;
   color: string;
   isActive: boolean;
+  vipWindow: "none" | "before" | "after";
 };
 
 const buildDefaultFormState = (overrides: Partial<ServiceFormState> = {}): ServiceFormState => ({
@@ -30,6 +31,7 @@ const buildDefaultFormState = (overrides: Partial<ServiceFormState> = {}): Servi
   description: "",
   color: "#111111",
   isActive: true,
+  vipWindow: "none",
   ...overrides,
 });
 
@@ -71,6 +73,10 @@ export default function AdminServicesPage() {
       serviceColor: "Boja termina",
       serviceDesc: "Opis",
       serviceActive: "Aktivna",
+      vipWindow: "VIP termin",
+      vipNone: "Nije VIP",
+      vipBefore: "VIP pre radnog vremena (1h)",
+      vipAfter: "VIP posle radnog vremena (1h)",
       cancel: "Otkazi",
       saveChanges: "Sacuvaj izmene",
       saveService: "Sacuvaj uslugu",
@@ -109,6 +115,10 @@ export default function AdminServicesPage() {
       serviceColor: "Appointment color",
       serviceDesc: "Description",
       serviceActive: "Active",
+      vipWindow: "VIP slot",
+      vipNone: "Not VIP",
+      vipBefore: "VIP before work hours (1h)",
+      vipAfter: "VIP after work hours (1h)",
       cancel: "Cancel",
       saveChanges: "Save changes",
       saveService: "Save service",
@@ -147,6 +157,10 @@ export default function AdminServicesPage() {
       serviceColor: "Colore appuntamento",
       serviceDesc: "Descrizione",
       serviceActive: "Attivo",
+      vipWindow: "Slot VIP",
+      vipNone: "Non VIP",
+      vipBefore: "VIP prima dell'orario (1h)",
+      vipAfter: "VIP dopo l'orario (1h)",
       cancel: "Annulla",
       saveChanges: "Salva modifiche",
       saveService: "Salva servizio",
@@ -200,17 +214,28 @@ export default function AdminServicesPage() {
   }, []);
 
   const handleChange = (
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const target = event.currentTarget;
     const nextValue =
       target instanceof HTMLInputElement && target.type === "checkbox"
         ? target.checked
         : target.value;
-    setFormState((prev) => ({
-      ...prev,
-      [target.name]: nextValue,
-    }));
+    setFormState((prev) => {
+      const next = {
+        ...prev,
+        [target.name]: nextValue,
+      };
+
+      if (
+        target.name === "vipWindow" &&
+        (nextValue === "before" || nextValue === "after")
+      ) {
+        next.duration = "1 h";
+      }
+
+      return next;
+    });
   };
 
   const handleEdit = (service: Service) => {
@@ -218,11 +243,18 @@ export default function AdminServicesPage() {
     setFormState(
       buildDefaultFormState({
         name: service.name || "",
-        duration: service.duration || "",
+        duration:
+          service.vipWindow === "before" || service.vipWindow === "after"
+            ? "1 h"
+            : service.duration || "",
         price: service.price ? String(service.price) : "",
         description: service.description || "",
         color: service.color || "#111111",
         isActive: service.isActive !== false,
+        vipWindow:
+          service.vipWindow === "before" || service.vipWindow === "after"
+            ? service.vipWindow
+            : "none",
       })
     );
     setFormStatus({ type: "idle" });
@@ -278,11 +310,15 @@ export default function AdminServicesPage() {
           adminAction: editingId ? "update" : "create",
           id: editingId ?? undefined,
           name: formState.name.trim(),
-          duration: formState.duration.trim(),
+          duration:
+            formState.vipWindow === "before" || formState.vipWindow === "after"
+              ? "1 h"
+              : formState.duration.trim(),
           price: Number(formState.price) || 0,
           description: formState.description.trim(),
           color: formState.color.trim(),
           isActive: formState.isActive ? 1 : 0,
+          vipWindow: formState.vipWindow === "none" ? null : formState.vipWindow,
         }),
       });
       const data = await response.json();
@@ -396,6 +432,16 @@ export default function AdminServicesPage() {
                 {service.color}
               </span>
             )}
+            {service.vipWindow === "before" && (
+              <span>
+                {t.vipWindow} {t.vipBefore}
+              </span>
+            )}
+            {service.vipWindow === "after" && (
+              <span>
+                {t.vipWindow} {t.vipAfter}
+              </span>
+            )}
             <span>{t.status} {service.isActive === false ? t.inactive : t.active}</span>
             <div className="admin-actions">
               <button className="button outline" type="button" onClick={() => handleEdit(service)}>
@@ -438,6 +484,9 @@ export default function AdminServicesPage() {
                   className="input"
                   value={formState.duration}
                   onChange={handleChange}
+                  disabled={
+                    formState.vipWindow === "before" || formState.vipWindow === "after"
+                  }
                   required
                 />
               </div>
@@ -463,6 +512,20 @@ export default function AdminServicesPage() {
                   value={formState.color}
                   onChange={handleChange}
                 />
+              </div>
+              <div className="form-row">
+                <label htmlFor="service-vip-window">{t.vipWindow}</label>
+                <select
+                  id="service-vip-window"
+                  name="vipWindow"
+                  className="select"
+                  value={formState.vipWindow}
+                  onChange={handleChange}
+                >
+                  <option value="none">{t.vipNone}</option>
+                  <option value="before">{t.vipBefore}</option>
+                  <option value="after">{t.vipAfter}</option>
+                </select>
               </div>
               <div className="form-row form-row--full">
                 <label htmlFor="service-description">{t.serviceDesc}</label>

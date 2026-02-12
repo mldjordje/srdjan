@@ -387,6 +387,14 @@ export default function AdminCalendarPage() {
   const firstWorkingDay = useMemo(() => getNextWorkingDay(today), [today]);
   const lastDay = useMemo(() => addMonthsClamped(today, MONTHS_AHEAD), [today]);
   const { open, close, slotMinutes, breaks = [] } = siteConfig.schedule;
+  const calendarOpen = useMemo(
+    () => minutesToTime(Math.max(0, timeToMinutes(open) - 60)),
+    [open]
+  );
+  const calendarClose = useMemo(
+    () => minutesToTime(Math.min(24 * 60, timeToMinutes(close) + 60)),
+    [close]
+  );
 
   const [selectedDate, setSelectedDate] = useState(formatDate(firstWorkingDay));
   const [calendarMonth, setCalendarMonth] = useState(
@@ -454,8 +462,8 @@ export default function AdminCalendarPage() {
   );
 
   const timeSlots = useMemo(
-    () => buildTimeSlots(open, close, slotMinutes, breaks),
-    [open, close, slotMinutes, breaks]
+    () => buildTimeSlots(calendarOpen, calendarClose, slotMinutes, breaks),
+    [calendarOpen, calendarClose, slotMinutes, breaks]
   );
   const slotCount = timeSlots.length;
   const slotIndexByTime = useMemo(() => {
@@ -584,8 +592,8 @@ export default function AdminCalendarPage() {
 
   const scheduleItems = useMemo(() => {
     const items: ScheduleItem[] = [];
-    const openMinutes = timeToMinutes(open);
-    const closeMinutes = timeToMinutes(close);
+    const openMinutes = timeToMinutes(calendarOpen);
+    const closeMinutes = timeToMinutes(calendarClose);
 
     weekDays.forEach((day, dayIndex) => {
       const dateKey = formatDate(day);
@@ -676,6 +684,8 @@ export default function AdminCalendarPage() {
     blocksByDate,
     open,
     close,
+    calendarOpen,
+    calendarClose,
     slotMinutes,
     slotCount,
     slotIndexByTime,
@@ -1460,7 +1470,12 @@ export default function AdminCalendarPage() {
     }
 
     const baseClass = "calendar-item calendar-item--appointment is-editable";
-    return item.serviceColor ? `${baseClass} has-service-color` : baseClass;
+    const normalizedStatus = (item.status || "pending")
+      .toLowerCase()
+      .replace(/[^\w]+/g, "_");
+    const statusClass = `calendar-item--${normalizedStatus}`;
+    const serviceColorClass = item.serviceColor ? " has-service-color" : "";
+    return `${baseClass} ${statusClass}${serviceColorClass}`;
   };
 
   return (
@@ -1587,8 +1602,19 @@ export default function AdminCalendarPage() {
                         }
                       }}
                     >
-                      {item.type === "appointment" && item.status === "confirmed" && (
-                        <span className="calendar-item__badge" aria-label="Potvrdjen">
+                      {item.type === "appointment" && (
+                        <span
+                          className={`calendar-item__badge ${
+                            item.status === "confirmed" || item.status === "completed"
+                              ? "is-confirmed"
+                              : "is-pending"
+                          }`}
+                          aria-label={
+                            item.status === "confirmed" || item.status === "completed"
+                              ? "Potvrdjen"
+                              : "Nepotvrdjen"
+                          }
+                        >
                           ✓
                         </span>
                       )}

@@ -6,6 +6,7 @@ export type Service = {
   description?: string | null;
   color?: string | null;
   isActive?: boolean;
+  vipWindow?: "before" | "after" | null;
 };
 
 export const services: Service[] = [
@@ -58,6 +59,22 @@ export const services: Service[] = [
     price: 1500,
     color: "#8a5a2b",
   },
+  {
+    id: "vip-pre-radnog-vremena",
+    name: "VIP pre radnog vremena",
+    duration: "1 h",
+    price: 2000,
+    color: "#b26e1e",
+    vipWindow: "before",
+  },
+  {
+    id: "vip-posle-radnog-vremena",
+    name: "VIP posle radnog vremena",
+    duration: "1 h",
+    price: 2000,
+    color: "#7f4ca3",
+    vipWindow: "after",
+  },
 ];
 
 type FetchServicesOptions = {
@@ -97,6 +114,10 @@ export const fetchServices = async (
     description: item.description ?? null,
     color: typeof item.color === "string" && item.color.trim() !== "" ? item.color : null,
     isActive: item.isActive !== undefined ? Boolean(item.isActive) : true,
+    vipWindow:
+      item.vipWindow === "before" || item.vipWindow === "after"
+        ? item.vipWindow
+        : null,
   }));
 };
 

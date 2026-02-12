@@ -109,18 +109,6 @@ const formatSlotLabel = (time: string, locale: string) => {
   }).format(date);
 };
 
-const normalizeTime = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return "";
-  }
-  const match = trimmed.match(/^(\d{1,2}):(\d{2})/);
-  if (!match) {
-    return trimmed;
-  }
-  return `${match[1].padStart(2, "0")}:${match[2]}`;
-};
-
 const timeToMinutes = (time: string) => {
   const [hours, minutes] = time.split(":").map((part) => Number(part));
   return hours * 60 + minutes;
@@ -348,7 +336,8 @@ const buildSlots = (
   durationMinutes: number,
   appointments: AvailabilityItem[],
   blocks: AvailabilityItem[],
-  minBookingLeadMinutes = 0
+  minBookingLeadMinutes = 0,
+  vipWindow?: Service["vipWindow"]
 ) => {
   const dateObj = new Date(`${date}T00:00:00`);
   if (!isWorkingDay(dateObj)) {
@@ -361,7 +350,8 @@ const buildSlots = (
   const now = new Date();
   const minLeadMinutes = Math.max(0, minBookingLeadMinutes);
   const minAllowedTime = minLeadMinutes > 0 ? now.getTime() + minLeadMinutes * 60000 : now.getTime();
-  const required = durationMinutes || slotMinutes;
+  const isVipWindow = vipWindow === "before" || vipWindow === "after";
+  const required = isVipWindow ? 60 : durationMinutes || slotMinutes;
   const breakWindows = buildBreakWindows(breaks);
 
   const reserved = [...appointments, ...blocks].map((item) => {
@@ -371,6 +361,22 @@ const buildSlots = (
   });
 
   const slots: string[] = [];
+  if (isVipWindow) {
+    const start =
+      vipWindow === "before" ? Math.max(0, openMinutes - 60) : closeMinutes;
+    const end = start + required;
+    const slotDateTime = new Date(`${date}T${minutesToTime(start)}:00`).getTime();
+
+    if (slotDateTime < minAllowedTime) {
+      return slots;
+    }
+
+    const overlap = reserved.some((item) => start < item.end && end > item.start);
+    if (!overlap) {
+      slots.push(minutesToTime(start));
+    }
+    return slots;
+  }
 
   const stepMinutes = slotMinutes;
 
@@ -428,6 +434,8 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
       selectedService: "Izabrana usluga",
       duration: "Trajanje",
       price: "Cena",
+      vipBeforeShort: "VIP pre radnog vremena",
+      vipAfterShort: "VIP posle radnog vremena",
       previous: "Prethodni",
       next: "Sledeci",
       availableOn: "Dostupno",
@@ -482,6 +490,8 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
       selectedService: "Selected service",
       duration: "Duration",
       price: "Price",
+      vipBeforeShort: "VIP before work hours",
+      vipAfterShort: "VIP after work hours",
       previous: "Previous",
       next: "Next",
       availableOn: "Available",
@@ -536,6 +546,8 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
       selectedService: "Servizio selezionato",
       duration: "Durata",
       price: "Prezzo",
+      vipBeforeShort: "VIP prima dell'orario",
+      vipAfterShort: "VIP dopo l'orario",
       previous: "Precedente",
       next: "Successivo",
       availableOn: "Disponibile",
@@ -573,7 +585,6 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
     }
     return `Termin mora biti zakazan najmanje ${minutes} minuta unapred.`;
   };
-  const [activeStep, setActiveStep] = useState<1 | 2>(1);
   const today = useMemo(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -595,7 +606,6 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
     minCancelLeadMinutes: 60,
   });
   const [clientAppointments, setClientAppointments] = useState<Appointment[]>([]);
-  const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [formData, setFormData] = useState({
     serviceId: "",
     date: formatDate(firstWorkingDay),
@@ -640,7 +650,6 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
       return;
     }
 
-    setLoadingAppointments(true);
     try {
       const response = await fetch(
         `${apiBaseUrl}/appointments.php?clientToken=${encodeURIComponent(token)}`
@@ -660,8 +669,6 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
       const message =
         error instanceof Error ? error.message : text.genericError;
       setStatus({ type: "error", message });
-    } finally {
-      setLoadingAppointments(false);
     }
   };
 
@@ -744,6 +751,23 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
     () => serviceItems.find((service) => service.id === formData.serviceId),
     [formData.serviceId, serviceItems]
   );
+  const selectedServiceDurationLabel = selectedService
+    ? selectedService.vipWindow === "before" || selectedService.vipWindow === "after"
+      ? "1 h"
+      : selectedService.duration
+    : "";
+  const selectedServiceDurationMinutes = selectedService
+    ? selectedService.vipWindow === "before" || selectedService.vipWindow === "after"
+      ? 60
+      : parseDurationMinutes(selectedService.duration)
+    : 0;
+  const selectedServiceVipLabel = selectedService
+    ? selectedService.vipWindow === "before"
+      ? text.vipBeforeShort
+      : selectedService.vipWindow === "after"
+        ? text.vipAfterShort
+        : ""
+    : "";
   const activeServices = useMemo(
     () => getActiveServices(serviceItems),
     [serviceItems]
@@ -759,19 +783,24 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
       return {};
     }
 
-    const durationMinutes = parseDurationMinutes(selectedService.duration);
     const map: Record<string, number> = {};
     dateList.forEach((date) => {
       map[date] = buildSlots(
         date,
-        durationMinutes,
+        selectedServiceDurationMinutes,
         [],
         [],
-        bookingSettings.minBookingLeadMinutes
+        bookingSettings.minBookingLeadMinutes,
+        selectedService.vipWindow
       ).length;
     });
     return map;
-  }, [dateList, selectedService?.duration, bookingSettings.minBookingLeadMinutes]);
+  }, [
+    dateList,
+    selectedServiceDurationMinutes,
+    selectedService?.vipWindow,
+    bookingSettings.minBookingLeadMinutes,
+  ]);
 
   const selectedDateObj = useMemo(
     () => new Date(`${formData.date}T00:00:00`),
@@ -795,8 +824,6 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
     setAvailabilityStatus({ type: "loading" });
     setAvailabilityByDate({});
 
-    const durationMinutes = parseDurationMinutes(selectedService.duration);
-
     const fetchForDate = async (date: string) => {
       const response = await fetch(
         `${apiBaseUrl}/availability.php?date=${encodeURIComponent(date)}`
@@ -811,10 +838,11 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
       const blocks = Array.isArray(data.blocks) ? data.blocks : [];
       const slots = buildSlots(
         date,
-        durationMinutes,
+        selectedServiceDurationMinutes,
         appointments,
         blocks,
-        bookingSettings.minBookingLeadMinutes
+        bookingSettings.minBookingLeadMinutes,
+        selectedService.vipWindow
       );
 
       return [date, slots] as const;
@@ -850,8 +878,9 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
   }, [
     apiBaseUrl,
     dateList,
-    selectedService?.duration,
+    selectedServiceDurationMinutes,
     selectedService?.id,
+    selectedService?.vipWindow,
     bookingSettings.minBookingLeadMinutes,
   ]);
 
@@ -976,7 +1005,7 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
 
     setStatus({ type: "sending" });
 
-    const durationMinutes = parseDurationMinutes(selectedService.duration);
+    const durationMinutes = selectedServiceDurationMinutes;
 
     const payload = {
       clientName: client.name,
@@ -984,7 +1013,7 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
       email: client.email,
       serviceId: formData.serviceId,
       serviceName: selectedService.name,
-      duration: selectedService.duration,
+      duration: selectedServiceDurationLabel || selectedService.duration,
       price: selectedService.price,
       date: formData.date,
       time: formData.time,
@@ -1168,23 +1197,6 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
     return ratio >= 0.6 ? "is-high" : "is-medium";
   };
 
-  const upcomingAppointments = useMemo(() => {
-    const now = new Date();
-    return clientAppointments
-      .filter((appointment) => appointment.status !== "cancelled")
-      .map((appointment) => {
-        const time = normalizeTime(appointment.time) || "00:00";
-        return {
-          ...appointment,
-          displayTime: time,
-          dateTime: new Date(`${appointment.date}T${time}:00`),
-        };
-      })
-      .filter((appointment) => appointment.dateTime >= now)
-      .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime())
-      .slice(0, 2);
-  }, [clientAppointments]);
-
   const unpaidAppointments = useMemo(
     () => clientAppointments.filter((appointment) => appointment.status === "no_show"),
     [clientAppointments]
@@ -1219,17 +1231,7 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
   }
 
   return (
-    <form className="booking-form" data-step={activeStep} onSubmit={handleSubmit}>
-      <div className="booking-header">
-        <div>
-          <h3>{text.title}</h3>
-          <p>{text.subtitle}</p>
-        </div>
-        <div className="booking-user">
-          <span>{text.loggedIn}</span>
-          <strong>{client.name}</strong>
-        </div>
-      </div>
+    <form className="booking-form" onSubmit={handleSubmit}>
 
       {unpaidAppointments.length > 0 && (
         <div className="booking-debt">
@@ -1249,54 +1251,6 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      <div className="booking-stepper">
-        <button
-          className={`booking-step ${activeStep === 1 ? "is-active" : ""}`}
-          type="button"
-          onClick={() => setActiveStep(1)}
-        >
-          {text.serviceStep}
-        </button>
-        <button
-          className={`booking-step ${activeStep === 2 ? "is-active" : ""}`}
-          type="button"
-          disabled={!selectedService}
-          onClick={() => setActiveStep(2)}
-        >
-          {text.slotStep}
-        </button>
-      </div>
-
-      {client && (
-        <div className="booking-upcoming">
-          <div className="booking-upcoming__header">
-            <span>{text.nextAppointment}</span>
-            <button
-              className="button small ghost"
-              type="button"
-              disabled={loadingAppointments}
-              onClick={() => fetchClientAppointments(client.token)}
-            >
-              {loadingAppointments ? text.loading : text.refresh}
-            </button>
-          </div>
-          {upcomingAppointments.length === 0 && !loadingAppointments && (
-            <div className="booking-upcoming__empty">{text.noAppointments}</div>
-          )}
-          {upcomingAppointments.map((appointment) => (
-            <div key={appointment.id} className="booking-upcoming__item">
-              <strong>{appointment.serviceName}</strong>
-              <span>
-                {formatLongDate(appointment.date, locale)} | {appointment.displayTime}
-              </span>
-              {appointment.status && (
-                <em>{text.statusLabels[appointment.status as keyof typeof text.statusLabels] || appointment.status}</em>
-              )}
-            </div>
-          ))}
         </div>
       )}
 
@@ -1324,15 +1278,23 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
                       time: "",
                     }));
                     setAutoSelectPending(true);
-                    setActiveStep(2);
                     window.setTimeout(scrollToCalendar, 0);
                   }}
                 >
                   <div className="service-info">
                     <strong>{service.name}</strong>
                     <span>
-                      {service.duration} | RSD {service.price.toLocaleString(locale)}
+                      {service.vipWindow === "before" || service.vipWindow === "after"
+                        ? "1 h"
+                        : service.duration}{" "}
+                      | RSD {service.price.toLocaleString(locale)}
                     </span>
+                    {service.vipWindow === "before" && (
+                      <em>{text.vipBeforeShort}</em>
+                    )}
+                    {service.vipWindow === "after" && (
+                      <em>{text.vipAfterShort}</em>
+                    )}
                   </div>
                   <span className="service-action">
                     {isActive ? text.selected : text.choose}
@@ -1340,17 +1302,6 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
                 </button>
               );
             })}
-          </div>
-          <div className="booking-step-actions">
-            <span />
-            <button
-              className="button"
-              type="button"
-              disabled={!selectedService}
-              onClick={() => setActiveStep(2)}
-            >
-              {text.continue}
-            </button>
           </div>
         </section>
 
@@ -1373,10 +1324,11 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
                 <div>
                   <span>{text.selectedService}</span>
                   <strong>{selectedService.name}</strong>
+                  {selectedServiceVipLabel && <em>{selectedServiceVipLabel}</em>}
                 </div>
                 <div>
                   <span>{text.duration}</span>
-                  <strong>{selectedService.duration}</strong>
+                  <strong>{selectedServiceDurationLabel || selectedService.duration}</strong>
                 </div>
                 <div>
                   <span>{text.price}</span>
@@ -1582,13 +1534,6 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
           )}
 
           <div className="booking-submit" ref={submitRef}>
-            <button
-              className="button outline booking-back"
-              type="button"
-              onClick={() => setActiveStep(1)}
-            >
-              {text.back}
-            </button>
             <button
               className="button"
               type="submit"

@@ -577,6 +577,40 @@ h4 {
   outline-offset: 4px;
 }
 
+.site-notice-wrap {
+  position: sticky;
+  top: 85px;
+  z-index: 9;
+  padding: 10px 0 0;
+}
+
+.site-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(17, 17, 17, 0.16);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(10px);
+  padding: 8px 14px;
+  box-shadow: 0 10px 20px rgba(17, 17, 17, 0.1);
+}
+
+.site-notice p {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.site-notice__dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: #2f9b5f;
+  box-shadow: 0 0 0 5px rgba(47, 155, 95, 0.16);
+}
+
 .booking-stage {
   padding-top: 30px;
 }
@@ -588,6 +622,104 @@ h4 {
 
 .details {
   background: linear-gradient(160deg, rgba(17, 17, 17, 0.04), rgba(255, 255, 255, 0.6));
+}
+
+.instagram-section {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(243, 93, 121, 0.14), transparent 52%),
+    radial-gradient(circle at 84% 18%, rgba(255, 195, 113, 0.16), transparent 50%),
+    linear-gradient(150deg, rgba(255, 255, 255, 0.78), rgba(249, 245, 240, 0.92));
+}
+
+.instagram-showcase {
+  position: relative;
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  border-radius: 26px;
+  border: 1px solid rgba(17, 17, 17, 0.1);
+  background: rgba(255, 255, 255, 0.74);
+  backdrop-filter: blur(10px);
+}
+
+.instagram-orb {
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+  filter: blur(0.2px);
+}
+
+.instagram-orb--one {
+  width: 150px;
+  height: 150px;
+  left: -20px;
+  top: -28px;
+  background: radial-gradient(circle, rgba(241, 91, 123, 0.2), transparent 70%);
+}
+
+.instagram-orb--two {
+  width: 180px;
+  height: 180px;
+  right: -30px;
+  bottom: -34px;
+  background: radial-gradient(circle, rgba(255, 196, 113, 0.22), transparent 70%);
+}
+
+.instagram-card {
+  width: min(520px, 100%);
+  background: linear-gradient(140deg, #f95f7f 0%, #d7489d 44%, #6f4cff 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+}
+
+.instagram-card [data-slot="base"] {
+  background: transparent;
+}
+
+.instagram-card [data-slot="body"] {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+}
+
+.instagram-card__head {
+  display: grid;
+  gap: 3px;
+}
+
+.instagram-card__head strong {
+  font-size: 1.35rem;
+  letter-spacing: 0.04em;
+}
+
+.instagram-card__head span {
+  font-size: 0.86rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.92;
+}
+
+.instagram-card__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.instagram-card__grid span {
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.08));
+}
+
+.instagram-card__button {
+  justify-self: start;
+  background: #ffffff !important;
+  color: #251128 !important;
+  font-weight: 700;
 }
 
 .hero {
@@ -1103,6 +1235,14 @@ h4 {
   font-size: 0.9rem;
 }
 
+.service-info em {
+  font-style: normal;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #226e49;
+}
+
 .service-action {
   padding: 8px 14px;
   border-radius: 999px;
@@ -1142,6 +1282,15 @@ h4 {
   display: block;
   margin-top: 4px;
   font-size: 1rem;
+}
+
+.booking-meta em {
+  margin-top: 6px;
+  font-style: normal;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #226e49;
 }
 
 .booking-locked {
@@ -1806,20 +1955,35 @@ h4 {
 }
 
 .admin-shell--full {
-  padding: 30px 18px 90px;
+  padding: 16px 18px 0;
   width: 100%;
+  min-height: calc(100svh - 88px);
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-shell--full .admin-grid {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .admin-shell--full .calendar-layout {
   width: 100%;
+  height: 100%;
+  align-items: stretch;
 }
 
 .admin-shell--full .calendar-main {
   min-width: 0;
+  height: 100%;
+  min-height: 0;
 }
 
 .admin-shell--full .calendar-schedule {
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .admin-shell__header {
@@ -2278,7 +2442,9 @@ h4 {
   display: flex;
   overflow-y: auto;
   overflow-x: hidden;
-  max-height: min(70vh, 760px);
+  flex: 1 1 auto;
+  max-height: none;
+  height: 100%;
   padding-bottom: 10px;
   overscroll-behavior: contain;
   touch-action: pan-y;
@@ -2469,7 +2635,7 @@ h4 {
   margin: 0;
   width: 100%;
   height: 100%;
-  padding: 7px 8px;
+  padding: 7px 8px 7px 12px;
   border-radius: 10px;
   border: 2px solid rgba(255, 255, 255, 0.7);
   box-sizing: border-box;
@@ -2483,7 +2649,7 @@ h4 {
   z-index: 2;
   position: relative;
   overflow: hidden;
-  background-color: var(--service-color, #1b1b1b);
+  background-color: #64b874;
   color: #ffffff;
   animation: itemPop 0.25s ease;
 }
@@ -2519,6 +2685,22 @@ h4 {
 
 .calendar-item.has-service-color {
   background-image: none;
+}
+
+.calendar-item.has-service-color::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background-color: var(--service-color, rgba(255, 255, 255, 0.35));
+  opacity: 0.95;
+}
+
+.calendar-item--appointment {
+  background-color: #64b874;
+  color: #ffffff;
 }
 
 .calendar-item--pending {
@@ -2559,7 +2741,7 @@ h4 {
   height: 18px;
   padding: 0 6px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.35);
+  background: #8e939b;
   color: #ffffff;
   font-size: 0.6rem;
   font-weight: 700;
@@ -2568,6 +2750,14 @@ h4 {
   justify-content: center;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.calendar-item__badge.is-confirmed {
+  background: #1e8f50;
+}
+
+.calendar-item__badge.is-pending {
+  background: #8e939b;
 }
 
 .calendar-detail-grid {
@@ -2955,6 +3145,10 @@ h4 {
     min-height: 48vh;
   }
 
+  .site-notice-wrap {
+    top: 78px;
+  }
+
   .hero-actions--stack {
     width: min(480px, 100%);
     gap: 10px;
@@ -2985,6 +3179,10 @@ h4 {
   .review-actions .button {
     width: 100%;
     justify-content: center;
+  }
+
+  .instagram-card {
+    width: 100%;
   }
 
   .booking-form {
@@ -3063,7 +3261,8 @@ h4 {
 
 @media (max-width: 600px) {
   .admin-shell--full {
-    padding: 12px 0 70px;
+    padding: 12px 0 0;
+    min-height: calc(100svh - 70px);
   }
 
   .admin-shell--full .calendar-layout {
@@ -3111,6 +3310,20 @@ h4 {
   .hero-minimal {
     padding: 86px 0 26px;
     min-height: 46vh;
+  }
+
+  .site-notice-wrap {
+    top: 70px;
+    padding-top: 8px;
+  }
+
+  .site-notice {
+    border-radius: 14px;
+    align-items: flex-start;
+  }
+
+  .site-notice p {
+    font-size: 0.8rem;
   }
 
   .hero-actions--stack {
@@ -3253,9 +3466,19 @@ h4 {
     width: 100%;
   }
 
+  .instagram-showcase {
+    min-height: 220px;
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .instagram-card [data-slot="body"] {
+    padding: 18px;
+  }
+
   .calendar-schedule__scroll {
     max-height: none;
-    height: calc(100svh - 220px);
+    height: 100%;
   }
 
   .calendar-schedule__times {
