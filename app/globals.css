@@ -1225,6 +1225,30 @@ h4 {
   background: rgba(17, 17, 17, 0.08);
 }
 
+.service-option.is-vip {
+  border-color: rgba(185, 145, 58, 0.78);
+  box-shadow: inset 0 0 0 1px rgba(185, 145, 58, 0.35);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 248, 232, 0.95),
+    rgba(247, 238, 214, 0.92)
+  );
+}
+
+.service-option.is-vip:hover {
+  border-color: rgba(185, 145, 58, 0.92);
+}
+
+.service-option.is-vip.is-active {
+  border-color: rgba(164, 124, 39, 0.95);
+  box-shadow: inset 0 0 0 2px rgba(164, 124, 39, 0.45);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 243, 210, 0.98),
+    rgba(246, 229, 184, 0.95)
+  );
+}
+
 .service-info {
   display: grid;
   gap: 6px;
@@ -2443,8 +2467,9 @@ h4 {
   overflow-y: auto;
   overflow-x: hidden;
   flex: 1 1 auto;
-  max-height: none;
-  height: 100%;
+  min-height: 0;
+  max-height: calc(100svh - 150px);
+  height: auto;
   padding-bottom: 10px;
   overscroll-behavior: contain;
   touch-action: pan-y;
@@ -2737,19 +2762,15 @@ h4 {
   position: absolute;
   top: 6px;
   right: 6px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 6px;
+  width: 14px;
+  height: 14px;
+  padding: 0;
   border-radius: 999px;
   background: #8e939b;
-  color: #ffffff;
-  font-size: 0.6rem;
-  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.35);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .calendar-item__badge.is-confirmed {
@@ -3477,8 +3498,8 @@ h4 {
   }
 
   .calendar-schedule__scroll {
-    max-height: none;
-    height: 100%;
+    max-height: calc(100svh - 150px);
+    height: auto;
   }
 
   .calendar-schedule__times {

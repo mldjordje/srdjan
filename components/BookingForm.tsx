@@ -1270,7 +1270,11 @@ export default function BookingForm({ language = "sr" }: BookingFormProps) {
                 <button
                   key={service.id}
                   type="button"
-                  className={`service-option ${isActive ? "is-active" : ""}`}
+                  className={`service-option ${isActive ? "is-active" : ""}${
+                    service.vipWindow === "before" || service.vipWindow === "after"
+                      ? " is-vip"
+                      : ""
+                  }`}
                   onClick={() => {
                     setFormData((prev) => ({
                       ...prev,

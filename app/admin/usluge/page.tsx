@@ -413,50 +413,6 @@ export default function AdminServicesPage() {
           )}
         </div>
 
-        {services.length === 0 && status.type !== "loading" && (
-          <div className="admin-card">{t.noItems}</div>
-        )}
-
-        {services.map((service) => (
-          <div key={service.id} className="admin-card">
-            <strong>{service.name}</strong>
-            <span>{t.duration} {service.duration}</span>
-            <span>{t.price} RSD {service.price?.toLocaleString(locale)}</span>
-            {service.description && <span>{t.description} {service.description}</span>}
-            {service.color && (
-              <span className="service-color">
-                <span
-                  className="service-color__dot"
-                  style={{ backgroundColor: service.color }}
-                />
-                {service.color}
-              </span>
-            )}
-            {service.vipWindow === "before" && (
-              <span>
-                {t.vipWindow} {t.vipBefore}
-              </span>
-            )}
-            {service.vipWindow === "after" && (
-              <span>
-                {t.vipWindow} {t.vipAfter}
-              </span>
-            )}
-            <span>{t.status} {service.isActive === false ? t.inactive : t.active}</span>
-            <div className="admin-actions">
-              <button className="button outline" type="button" onClick={() => handleEdit(service)}>
-                {t.edit}
-              </button>
-              <button className="button outline" type="button" onClick={() => handleToggleActive(service.id)}>
-                {service.isActive === false ? t.activate : t.deactivate}
-              </button>
-              <button className="button outline" type="button" onClick={() => handleDelete(service.id)}>
-                {t.delete}
-              </button>
-            </div>
-          </div>
-        ))}
-
         <div
           className={`admin-card${editingId ? " is-editing" : ""}`}
           ref={editCardRef}
@@ -563,6 +519,50 @@ export default function AdminServicesPage() {
             </div>
           </form>
         </div>
+
+        {services.length === 0 && status.type !== "loading" && (
+          <div className="admin-card">{t.noItems}</div>
+        )}
+
+        {services.map((service) => (
+          <div key={service.id} className="admin-card">
+            <strong>{service.name}</strong>
+            <span>{t.duration} {service.duration}</span>
+            <span>{t.price} RSD {service.price?.toLocaleString(locale)}</span>
+            {service.description && <span>{t.description} {service.description}</span>}
+            {service.color && (
+              <span className="service-color">
+                <span
+                  className="service-color__dot"
+                  style={{ backgroundColor: service.color }}
+                />
+                {service.color}
+              </span>
+            )}
+            {service.vipWindow === "before" && (
+              <span>
+                {t.vipWindow} {t.vipBefore}
+              </span>
+            )}
+            {service.vipWindow === "after" && (
+              <span>
+                {t.vipWindow} {t.vipAfter}
+              </span>
+            )}
+            <span>{t.status} {service.isActive === false ? t.inactive : t.active}</span>
+            <div className="admin-actions">
+              <button className="button outline" type="button" onClick={() => handleEdit(service)}>
+                {t.edit}
+              </button>
+              <button className="button outline" type="button" onClick={() => handleToggleActive(service.id)}>
+                {service.isActive === false ? t.activate : t.deactivate}
+              </button>
+              <button className="button outline" type="button" onClick={() => handleDelete(service.id)}>
+                {t.delete}
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </AdminShell>
   );

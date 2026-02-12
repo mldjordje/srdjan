@@ -1614,9 +1614,7 @@ export default function AdminCalendarPage() {
                               ? "Potvrdjen"
                               : "Nepotvrdjen"
                           }
-                        >
-                          ✓
-                        </span>
+                        />
                       )}
                       <strong>{item.title}</strong>
                       {item.subtitle && <span>{item.subtitle}</span>}
