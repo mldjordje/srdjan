@@ -76,7 +76,7 @@ export default function AdminLoginPage() {
 
   useEffect(() => {
     if (localStorage.getItem("db_admin_auth") === "true") {
-      router.replace("/admin/calendar");
+      router.replace("/admin/dashboard");
     }
   }, [router]);
 
@@ -94,7 +94,7 @@ export default function AdminLoginPage() {
     if (credentials.user === adminUser && credentials.pass === adminPass) {
       localStorage.setItem("db_admin_auth", "true");
       setStatus({ type: "success", message: t.loginSuccess });
-      router.push("/admin/calendar");
+      router.push("/admin/dashboard");
       return;
     }
 

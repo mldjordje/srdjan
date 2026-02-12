@@ -16,6 +16,7 @@ type AdminShellProps = {
 };
 
 type NavLabelKey =
+  | "dashboard"
   | "appointments"
   | "calendar"
   | "clients"
@@ -30,6 +31,7 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
+  { href: "/admin/dashboard", key: "dashboard" },
   { href: "/admin/termini", key: "appointments" },
   { href: "/admin/calendar", key: "calendar" },
   { href: "/admin/clients", key: "clients" },
@@ -56,6 +58,7 @@ export default function AdminShell({
       menu: string;
       home: string;
       book: string;
+      dashboard: string;
       appointments: string;
       calendar: string;
       clients: string;
@@ -71,6 +74,7 @@ export default function AdminShell({
       menu: "Meni",
       home: "Pocetna",
       book: "Zakazi termin",
+      dashboard: "Dashboard",
       appointments: "Termini",
       calendar: "Kalendar",
       clients: "Klijenti",
@@ -85,6 +89,7 @@ export default function AdminShell({
       menu: "Menu",
       home: "Home",
       book: "Book appointment",
+      dashboard: "Dashboard",
       appointments: "Appointments",
       calendar: "Calendar",
       clients: "Clients",
@@ -99,6 +104,7 @@ export default function AdminShell({
       menu: "Menu",
       home: "Home",
       book: "Prenota",
+      dashboard: "Dashboard",
       appointments: "Appuntamenti",
       calendar: "Calendario",
       clients: "Clienti",
@@ -117,6 +123,7 @@ export default function AdminShell({
 
     const directMap: Record<string, { en: string; it: string }> = {
       Termini: { en: "Appointments", it: "Appuntamenti" },
+      Dashboard: { en: "Dashboard", it: "Dashboard" },
       Kalendar: { en: "Calendar", it: "Calendario" },
       Klijenti: { en: "Clients", it: "Clienti" },
       Usluge: { en: "Services", it: "Servizi" },
