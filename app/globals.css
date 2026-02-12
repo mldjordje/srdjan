@@ -2724,61 +2724,38 @@ h4 {
 }
 
 .calendar-item--appointment {
-  background-color: #64b874;
+  background-color: #8e939b;
   color: #ffffff;
 }
 
 .calendar-item--pending {
-  background-color: inherit;
-  color: inherit;
+  background-color: #8e939b;
+  color: #ffffff;
 }
 
 .calendar-item--confirmed {
-  background-color: inherit;
-  color: inherit;
+  background-color: #64b874;
+  color: #ffffff;
 }
 
 .calendar-item--completed {
-  background-color: inherit;
-  color: inherit;
+  background-color: #64b874;
+  color: #ffffff;
 }
 
 .calendar-item--cancelled {
-  background-color: inherit;
-  color: inherit;
+  background-color: #8e939b;
+  color: #ffffff;
 }
 
 .calendar-item--no_show {
-  background-color: inherit;
-  color: inherit;
+  background-color: #8e939b;
+  color: #ffffff;
 }
 
 .calendar-item--block {
   background-color: #d6a554;
   color: #111111;
-}
-
-.calendar-item__badge {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 14px;
-  height: 14px;
-  padding: 0;
-  border-radius: 999px;
-  background: #8e939b;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.calendar-item__badge.is-confirmed {
-  background: #1e8f50;
-}
-
-.calendar-item__badge.is-pending {
-  background: #8e939b;
 }
 
 .calendar-detail-grid {

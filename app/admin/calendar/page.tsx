@@ -1602,20 +1602,6 @@ export default function AdminCalendarPage() {
                         }
                       }}
                     >
-                      {item.type === "appointment" && (
-                        <span
-                          className={`calendar-item__badge ${
-                            item.status === "confirmed" || item.status === "completed"
-                              ? "is-confirmed"
-                              : "is-pending"
-                          }`}
-                          aria-label={
-                            item.status === "confirmed" || item.status === "completed"
-                              ? "Potvrdjen"
-                              : "Nepotvrdjen"
-                          }
-                        />
-                      )}
                       <strong>{item.title}</strong>
                       {item.subtitle && <span>{item.subtitle}</span>}
                     </div>
