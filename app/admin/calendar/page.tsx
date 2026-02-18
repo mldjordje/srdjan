@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/srdjan/admin/AdminShell";
 
 type Worker = { id: string; name: string; location_id: string };
+type AdminMe = { id: string; username: string; role: "owner" | "staff-admin" };
 type CalendarPayload = {
   appointments: {
     id: string;
@@ -42,6 +43,7 @@ export default function AdminCalendarPage() {
     };
   });
   const [workers, setWorkers] = useState<Worker[]>([]);
+  const [adminMe, setAdminMe] = useState<AdminMe | null>(null);
   const [locationId, setLocationId] = useState("");
   const [workerId, setWorkerId] = useState("");
   const [from, setFrom] = useState(initialDates.from);
@@ -59,7 +61,23 @@ export default function AdminCalendarPage() {
     workerBId: "",
   });
 
-  const loadWorkers = async () => {
+  const staffLocked = adminMe?.role === "staff-admin";
+  const activeWorker = useMemo(
+    () => workers.find((worker) => worker.id === workerId) || null,
+    [workers, workerId]
+  );
+
+  const loadAdmin = async () => {
+    const response = await fetch("/api/admin/me");
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Niste prijavljeni.");
+    }
+    setAdminMe(data);
+    return data as AdminMe;
+  };
+
+  const loadWorkers = async (admin?: AdminMe) => {
     const bootstrapResponse = await fetch("/api/public/bootstrap");
     const bootstrapData = await bootstrapResponse.json();
     if (!bootstrapResponse.ok) {
@@ -69,11 +87,27 @@ export default function AdminCalendarPage() {
       bootstrapData.defaultLocationId || bootstrapData.locations?.[0]?.id || "";
     setLocationId(currentLocationId);
     const workerList: Worker[] = Array.isArray(bootstrapData.workers) ? bootstrapData.workers : [];
-    setWorkers(workerList);
-    const defaultWorker = workerList[0]?.id || "";
+    let effectiveWorkers = workerList;
+    let defaultWorker = workerList[0]?.id || "";
+
+    if (admin?.role === "staff-admin") {
+      const username = admin.username.toLowerCase().trim();
+      const match =
+        workerList.find((worker) => worker.name.toLowerCase().trim() === username) ||
+        workerList.find((worker) => worker.name.toLowerCase().includes(username)) ||
+        workerList[0];
+      effectiveWorkers = match ? [match] : workerList;
+      defaultWorker = match?.id || defaultWorker;
+    }
+
+    setWorkers(effectiveWorkers);
     setWorkerId(defaultWorker);
     setShiftForm((prev) => ({ ...prev, workerId: defaultWorker }));
-    setSwapForm((prev) => ({ ...prev, workerAId: defaultWorker, workerBId: workerList[1]?.id || defaultWorker }));
+    setSwapForm((prev) => ({
+      ...prev,
+      workerAId: defaultWorker,
+      workerBId: effectiveWorkers[1]?.id || defaultWorker,
+    }));
   };
 
   const loadCalendar = async (nextWorkerId = workerId) => {
@@ -96,8 +130,11 @@ export default function AdminCalendarPage() {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadWorkers()
+    const boot = async () => {
+      const admin = await loadAdmin();
+      await loadWorkers(admin);
+    };
+    boot()
       .then(() => undefined)
       .catch((error) => setStatus(error instanceof Error ? error.message : "Greska."));
   }, []);
@@ -156,14 +193,19 @@ export default function AdminCalendarPage() {
   return (
     <AdminShell title="Kalendar">
       <div className="admin-card">
-        <h3>Podmeni po clanu staff-a</h3>
+        <h3>{staffLocked ? "Moj kalendar (danas)" : "Podmeni po clanu staff-a"}</h3>
+        {activeWorker && <p>Aktivni radnik: <strong>{activeWorker.name}</strong></p>}
         <div className="admin-actions">
           {workers.map((worker) => (
             <button
               key={worker.id}
               className={`button outline small ${workerId === worker.id ? "is-active" : ""}`}
-              onClick={() => setWorkerId(worker.id)}
+              onClick={() => {
+                setWorkerId(worker.id);
+                void loadCalendar(worker.id);
+              }}
               type="button"
+              disabled={staffLocked && worker.id !== workerId}
             >
               {worker.name}
             </button>
@@ -204,7 +246,7 @@ export default function AdminCalendarPage() {
         ))}
       </div>
 
-      <div className="admin-card">
+      {!staffLocked && <div className="admin-card">
         <h3>Planiranje smena (petak/naredna nedelja ili ad-hoc)</h3>
         <form className="form-grid" onSubmit={saveShift}>
           <div className="form-row">
@@ -246,9 +288,9 @@ export default function AdminCalendarPage() {
             <button className="button" type="submit">Sacuvaj smenu</button>
           </div>
         </form>
-      </div>
+      </div>}
 
-      <div className="admin-card">
+      {!staffLocked && <div className="admin-card">
         <h3>Zamena smena (dozvoljena samo ako oba radnika imaju 0 termina)</h3>
         <form className="form-grid" onSubmit={swapShifts}>
           <div className="form-row">
@@ -292,7 +334,7 @@ export default function AdminCalendarPage() {
             <button className="button" type="submit">Zameni smene</button>
           </div>
         </form>
-      </div>
+      </div>}
 
       {status && <p className="form-status success">{status}</p>}
     </AdminShell>

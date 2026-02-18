@@ -60,6 +60,80 @@ const dateAfter = (days: number) => {
   return toDateInput(now);
 };
 
+const addDays = (date: Date, days: number) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+};
+
+const addMonths = (date: Date, months: number) =>
+  new Date(date.getFullYear(), date.getMonth() + months, 1);
+
+const WORKING_DAYS = [1, 2, 3, 4, 5];
+const WORKING_DAY_ORDER = [...WORKING_DAYS].sort((a, b) => a - b);
+const getWorkdayColumn = (day: number) => WORKING_DAY_ORDER.indexOf(day);
+
+const formatMonthLabel = (date: Date, locale: string) =>
+  new Intl.DateTimeFormat(locale, {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+
+type CalendarDay = {
+  value: string | null;
+  label: string;
+  inMonth: boolean;
+  inRange: boolean;
+};
+
+const buildCalendarDays = (
+  monthDate: Date,
+  minDate: Date,
+  maxDate: Date
+): CalendarDay[] => {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const days: CalendarDay[] = [];
+
+  let firstWorking = new Date(year, month, 1);
+  while (
+    firstWorking.getMonth() === month &&
+    getWorkdayColumn(firstWorking.getDay()) === -1
+  ) {
+    firstWorking = addDays(firstWorking, 1);
+  }
+
+  const startOffset =
+    firstWorking.getMonth() === month ? Math.max(0, getWorkdayColumn(firstWorking.getDay())) : 0;
+
+  for (let i = 0; i < startOffset; i += 1) {
+    days.push({ value: null, label: "", inMonth: false, inRange: false });
+  }
+
+  for (let dayNumber = 1; dayNumber <= daysInMonth; dayNumber += 1) {
+    const day = new Date(year, month, dayNumber);
+    if (getWorkdayColumn(day.getDay()) === -1) {
+      continue;
+    }
+    const inRange = day >= minDate && day <= maxDate;
+    days.push({
+      value: toDateInput(day),
+      label: String(dayNumber),
+      inMonth: true,
+      inRange,
+    });
+  }
+
+  const totalCells =
+    Math.ceil(days.length / WORKING_DAY_ORDER.length) * WORKING_DAY_ORDER.length;
+  while (days.length < totalCells) {
+    days.push({ value: null, label: "", inMonth: false, inRange: false });
+  }
+
+  return days;
+};
+
 const urlBase64ToUint8Array = (base64String: string) => {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -93,6 +167,10 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
   const [workerId, setWorkerId] = useState("");
   const [serviceId, setServiceId] = useState("");
   const [date, setDate] = useState(dateAfter(1));
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const base = new Date();
+    return new Date(base.getFullYear(), base.getMonth(), 1);
+  });
   const [time, setTime] = useState("");
   const [note, setNote] = useState("");
   const [slots, setSlots] = useState<string[]>([]);
@@ -103,6 +181,21 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
 
   const appName = process.env.NEXT_PUBLIC_APP_NAME || "Frizerski salon Srdjan";
   const webPushPublicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY || "";
+  const locale = "sr-RS";
+
+  const minDate = useMemo(() => {
+    const tomorrow = addDays(new Date(), 1);
+    return new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
+  }, []);
+  const maxDate = useMemo(() => addDays(minDate, 30), [minDate]);
+  const monthDays = useMemo(
+    () => buildCalendarDays(calendarMonth, minDate, maxDate),
+    [calendarMonth, minDate, maxDate]
+  );
+  const minMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+  const maxMonth = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
+  const canGoPrevMonth = calendarMonth > minMonth;
+  const canGoNextMonth = calendarMonth < maxMonth;
 
   const workerServices = useMemo(
     () => (bootstrap?.workerServices || []).filter((item) => item.worker_id === workerId),
@@ -185,6 +278,13 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
     setServiceId(next);
     setTime("");
   }, [workerServices, serviceId]);
+
+  useEffect(() => {
+    const selected = new Date(`${date}T00:00:00`);
+    if (!Number.isNaN(selected.getTime())) {
+      setCalendarMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
+    }
+  }, [date]);
 
   useEffect(() => {
     if (!locationId || !workerId || !serviceId || !date) {
@@ -451,14 +551,55 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
 
           <div className="form-row">
             <label htmlFor="date">Datum</label>
-            <input
-              id="date"
-              type="date"
-              className="input"
-              value={date}
-              onChange={(event) => setDate(event.target.value)}
-              required
-            />
+            <div className="calendar">
+              <div className="calendar-header">
+                <button
+                  type="button"
+                  className="button outline small"
+                  onClick={() => setCalendarMonth(addMonths(calendarMonth, -1))}
+                  disabled={!canGoPrevMonth}
+                >
+                  Prethodni
+                </button>
+                <div className="calendar-title">{formatMonthLabel(calendarMonth, locale)}</div>
+                <button
+                  type="button"
+                  className="button outline small"
+                  onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))}
+                  disabled={!canGoNextMonth}
+                >
+                  Sledeci
+                </button>
+              </div>
+              <div className="calendar-weekdays">
+                {["pon", "uto", "sre", "cet", "pet"].map((day) => (
+                  <span key={day}>{day}</span>
+                ))}
+              </div>
+              <div className="calendar-grid">
+                {monthDays.map((day, index) => {
+                  if (!day.inMonth || !day.value) {
+                    return <div key={`empty-${index}`} className="calendar-cell" />;
+                  }
+                  const isActive = day.value === date;
+                  return (
+                    <button
+                      key={day.value}
+                      type="button"
+                      className={`calendar-day ${isActive ? "is-active" : ""}`}
+                      disabled={!day.inRange}
+                      onClick={() => {
+                        setDate(day.value || date);
+                        setTime("");
+                      }}
+                    >
+                      <span>{day.label}</span>
+                      <span className={`calendar-indicator ${isActive ? "is-high" : "is-medium"}`} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             {shiftLabel && <small>{shiftLabel}</small>}
           </div>
 
