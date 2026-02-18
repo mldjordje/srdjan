@@ -1,5 +1,1 @@
-import AdminAppointmentsManager from "@/components/admin/AdminAppointmentsManager";
-
-export default function AdminAppointmentsPage() {
-  return <AdminAppointmentsManager />;
-}
+export { default } from "@/app/admin/termini/page";

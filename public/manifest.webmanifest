@@ -1,7 +1,7 @@
 {
-  "name": "Doctor Barber",
-  "short_name": "Doctor Barber",
-  "description": "Premium barber studio u Beogradu.",
+  "name": "Frizerski salon Srdjan",
+  "short_name": "Salon Srdjan",
+  "description": "Aplikacija za zakazivanje termina.",
   "lang": "sr",
   "start_url": "/?source=pwa",
   "scope": "/",

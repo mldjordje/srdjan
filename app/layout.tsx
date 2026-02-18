@@ -17,29 +17,19 @@ const bodyFont = Manrope({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.doctorbarber.rs"),
-  title: "Doctor Barber Niš | Barber Studio",
+  metadataBase: new URL("https://www.salonsrdjan.rs"),
+  title: "Frizerski salon Srdjan | Zakazivanje",
   description:
-    "Barber studio u Nišu za klasično šišanje, fade i bradu. Online zakazivanje termina bez čekanja.",
-  keywords: [
-    "frizer Niš",
-    "barber Niš",
-    "šišanje Niš",
-    "fade Niš",
-    "fade šišanje",
-    "brada",
-    "muški frizer Niš",
-    "Doctor Barber",
-  ],
+    "Online zakazivanje termina za Frizerski salon Srdjan, sa kalendarima po radniku i upravljanjem smenama.",
+  keywords: ["frizerski salon", "zakazivanje", "srdjan", "sisanje", "fade", "brada", "termini"],
   alternates: {
-    canonical: "https://www.doctorbarber.rs/",
+    canonical: "https://www.salonsrdjan.rs/",
   },
   openGraph: {
-    title: "Doctor Barber Niš | Barber Studio",
-    description:
-      "Barber studio u Nišu za klasično šišanje, fade i bradu. Online zakazivanje termina bez čekanja.",
-    url: "https://www.doctorbarber.rs/",
-    siteName: "Doctor Barber",
+    title: "Frizerski salon Srdjan | Zakazivanje",
+    description: "Aplikacija za zakazivanje termina sa smenama i kalendarima po radniku.",
+    url: "https://www.salonsrdjan.rs/",
+    siteName: "Salon Srdjan",
     locale: "sr_RS",
     type: "website",
   },

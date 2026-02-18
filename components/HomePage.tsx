@@ -6,12 +6,10 @@ import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Card, CardBody, Button as HeroButton } from "@heroui/react";
 
-import BookingForm from "@/components/BookingForm";
+import SrdjanApp from "@/components/srdjan/SrdjanApp";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useLanguage, type Language } from "@/lib/useLanguage";
 import { siteConfig } from "@/lib/site";
-
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -70,7 +68,7 @@ const content: Record<
     login: "Prijava",
     register: "Registracija",
     logout: "Odjava",
-    installTitle: "Instaliraj Doctor Barber",
+    installTitle: "Instaliraj Frizerski salon Srdjan",
     installSubtitle: "Dodaj aplikaciju na pocetni ekran.",
     close: "Zatvori",
     installHttpsHint: "Instalacija se pojavi samo kada je sajt otvoren preko HTTPS.",
@@ -94,13 +92,13 @@ const content: Record<
     galleryText: "Dve scene iz studija koje najbolje opisuju atmosferu.",
     reviewTitle: "Oceni nas na Google",
     reviewText:
-      "Ako si zadovoljan uslugom, ostavi kratku ocenu. Hvala na podrsci lokalnom barber studiju u Nisu.",
-    reviewBody: "Klasicno sisanje, fade i brada. Tvoja preporuka nam puno znaci.",
-    reviewSeo: "Frizer u Nisu za fade sisanje, klasicno sisanje i uredjivanje brade.",
+      "Ako si zadovoljan uslugom, ostavi kratku ocenu. Hvala na podrsci lokalnom salonu.",
+    reviewBody: "Moderno sisanje, fade i brada. Tvoja preporuka nam puno znaci.",
+    reviewSeo: "Frizerski salon Srdjan za sisanje, fade i uredjivanje brade.",
     reviewButton: "Oceni na Google",
     instagramTitle: "Instagram",
     instagramText: "Prati najnovije transformacije, fade radove i dnevni vibe iz studija.",
-    instagramHandle: "@doctor__barber",
+    instagramHandle: "@salon_srdjan",
     instagramButton: "Zapratite nas",
     homepageNoticeDefault: "",
   },
@@ -112,7 +110,7 @@ const content: Record<
     login: "Login",
     register: "Register",
     logout: "Logout",
-    installTitle: "Install Doctor Barber",
+    installTitle: "Install Frizerski salon Srdjan",
     installSubtitle: "Add the app to your home screen.",
     close: "Close",
     installHttpsHint: "Install prompt appears only when the site is opened via HTTPS.",
@@ -137,11 +135,11 @@ const content: Record<
     reviewTitle: "Rate us on Google",
     reviewText: "If you liked the service, leave a short review. Thank you for supporting local business.",
     reviewBody: "Classic haircut, fade, and beard service. Your recommendation means a lot.",
-    reviewSeo: "Barber in Nis for fade cuts, classic cuts, and beard grooming.",
+    reviewSeo: "Frizerski salon Srdjan for fade cuts, classic cuts, and beard grooming.",
     reviewButton: "Rate on Google",
     instagramTitle: "Instagram",
     instagramText: "Follow our latest transformations, fade work, and daily studio vibe.",
-    instagramHandle: "@doctor__barber",
+    instagramHandle: "@salon_srdjan",
     instagramButton: "Follow us",
     homepageNoticeDefault: "",
   },
@@ -153,7 +151,7 @@ const content: Record<
     login: "Accedi",
     register: "Registrati",
     logout: "Esci",
-    installTitle: "Installa Doctor Barber",
+    installTitle: "Installa Frizerski salon Srdjan",
     installSubtitle: "Aggiungi l'app alla schermata principale.",
     close: "Chiudi",
     installHttpsHint: "L'installazione appare solo quando il sito e aperto in HTTPS.",
@@ -178,11 +176,11 @@ const content: Record<
     reviewTitle: "Lascia una recensione su Google",
     reviewText: "Se sei soddisfatto, lascia una recensione breve. Grazie per il supporto.",
     reviewBody: "Taglio classico, fade e barba. Il tuo consiglio e molto importante.",
-    reviewSeo: "Barbiere a Nis per fade, taglio classico e cura della barba.",
+    reviewSeo: "Frizerski salon Srdjan per fade, taglio classico e cura della barba.",
     reviewButton: "Recensisci su Google",
     instagramTitle: "Instagram",
     instagramText: "Segui trasformazioni recenti, lavori fade e atmosfera quotidiana dello studio.",
-    instagramHandle: "@doctor__barber",
+    instagramHandle: "@salon_srdjan",
     instagramButton: "Seguici",
     homepageNoticeDefault: "",
   },
@@ -210,8 +208,15 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem("db_client_token");
-    setIsClientLoggedIn(Boolean(token));
+    const checkSession = async () => {
+      try {
+        const response = await fetch("/api/public/session/me");
+        setIsClientLoggedIn(response.ok);
+      } catch {
+        setIsClientLoggedIn(false);
+      }
+    };
+    checkSession().catch(() => setIsClientLoggedIn(false));
   }, []);
 
   useEffect(() => {
@@ -284,40 +289,13 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (!apiBaseUrl) {
-      setHomepageNotice(copy.homepageNoticeDefault);
-      return;
-    }
-
-    let active = true;
-    fetch(`${apiBaseUrl}/settings.php`)
-      .then((response) => response.json())
-      .then((data) => {
-        if (!active) {
-          return;
-        }
-        const settings = data?.settings ?? data ?? {};
-        const notice = typeof settings.homepageNotice === "string" ? settings.homepageNotice.trim() : "";
-        setHomepageNotice(notice);
-      })
-      .catch(() => {
-        if (active) {
-          setHomepageNotice(copy.homepageNoticeDefault);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
+    setHomepageNotice(copy.homepageNoticeDefault);
   }, [copy.homepageNoticeDefault]);
 
   const handleNavToggle = () => setIsNavOpen((prev) => !prev);
   const handleNavClose = () => setIsNavOpen(false);
-  const handleClientLogout = () => {
-    localStorage.removeItem("db_client_token");
-    localStorage.removeItem("db_client_name");
-    localStorage.removeItem("db_client_phone");
-    localStorage.removeItem("db_client_email");
+  const handleClientLogout = async () => {
+    await fetch("/api/public/session/logout", { method: "POST" });
     setIsClientLoggedIn(false);
     handleNavClose();
   };
@@ -512,11 +490,11 @@ export default function HomePage() {
             >
               <div className="preloader-brand">
                 <div className="preloader-mark">
-                  <Image src="/logo.png" alt="Doctor Barber" width={42} height={42} />
+                  <Image src="/logo.png" alt="Frizerski salon Srdjan" width={42} height={42} />
                 </div>
                 <div className="preloader-title">
-                  <span>Doctor Barber</span>
-                  <span>Barber Studio</span>
+                  <span>Frizerski salon</span>
+                  <span>Srdjan</span>
                 </div>
               </div>
               <div className="preloader-bars" aria-hidden="true">
@@ -547,15 +525,15 @@ export default function HomePage() {
               <div className="brand-mark">
                 <Image
                   src="/logo.png"
-                  alt="Doctor Barber"
+                  alt="Frizerski salon Srdjan"
                   width={36}
                   height={36}
                   priority
                 />
               </div>
               <div className="brand-title">
-                <span>Doctor Barber</span>
-                <span>Barber Studio</span>
+                <span>Frizerski salon</span>
+                <span>Srdjan</span>
               </div>
             </div>
             <button
@@ -604,7 +582,7 @@ export default function HomePage() {
               </Link>
             )}
             {isClientLoggedIn && (
-              <button className="button small ghost" type="button" onClick={handleClientLogout}>
+              <button className="button small ghost" type="button" onClick={() => { void handleClientLogout(); }}>
                 {copy.logout}
               </button>
             )}
@@ -681,7 +659,7 @@ export default function HomePage() {
           <motion.div className="hero-minimal__bg" variants={heroBgVariants}>
             <Image
               src="/newhero.jpg"
-              alt="Doctor Barber studio"
+              alt="Frizerski salon Srdjan studio"
               fill
               priority
               sizes="100vw"
@@ -733,7 +711,7 @@ export default function HomePage() {
                   <button
                     className="button outline hero-secondary"
                     type="button"
-                    onClick={handleClientLogout}
+                    onClick={() => { void handleClientLogout(); }}
                   >
                     {copy.logout}
                   </button>
@@ -758,7 +736,7 @@ export default function HomePage() {
               whileHover={cardHover}
               whileTap={cardTap}
             >
-              <BookingForm language={language} />
+              <SrdjanApp embedded />
             </motion.div>
           </div>
         </motion.section>
@@ -858,8 +836,8 @@ export default function HomePage() {
               whileTap={cardTap}
             >
               <iframe
-                title="Doctor Barber lokacija"
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2903.2545068929708!2d21.8622563!3d43.3089314!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x4755b0b14f921bab%3A0xa0b0730c4935e4ae!2sDoctor%20Barber!5e0!3m2!1sen!2srs!4v1766882078982!5m2!1sen!2srs"
+                title="Frizerski salon Srdjan lokacija"
+                src="https://www.google.com/maps?q=Belgrade&output=embed"
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
@@ -867,7 +845,7 @@ export default function HomePage() {
               <div className="map-actions">
                 <a
                   className="button outline"
-                  href="https://maps.app.goo.gl/V9ZjSA8dCXB2cwbn7"
+                  href="https://maps.google.com/?q=Belgrade"
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -947,7 +925,7 @@ export default function HomePage() {
                 <CardBody>
                   <div className="instagram-card__head">
                     <strong>{copy.instagramHandle}</strong>
-                    <span>Doctor Barber</span>
+                    <span>Frizerski salon</span>
                   </div>
                   <div className="instagram-card__grid" aria-hidden="true">
                     <span />
@@ -956,7 +934,7 @@ export default function HomePage() {
                   </div>
                   <HeroButton
                     as="a"
-                    href="https://www.instagram.com/doctor__barber/?hl=en"
+                    href="https://www.instagram.com/"
                     target="_blank"
                     rel="noreferrer"
                     color="primary"
@@ -985,14 +963,14 @@ export default function HomePage() {
             </motion.div>
             <motion.div className="banner review-banner" variants={cardVariants}>
               <div className="review-copy">
-                <strong>Doctor Barber Nis</strong>
+                <strong>Frizerski salon Srdjan</strong>
                 <p>{copy.reviewBody}</p>
                 <p className="seo-note">{copy.reviewSeo}</p>
               </div>
               <div className="review-actions">
                 <a
                   className="button outline"
-                  href="https://share.google/hF9NR9UUlcHPwfLcM"
+                  href="https://www.google.com/search?q=frizerski+salon+srdjan+reviews"
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -1006,12 +984,15 @@ export default function HomePage() {
 
       <footer className="footer">
         <div className="container">
-          <p>Doctor Barber | {year}</p>
+          <p>Frizerski salon Srdjan | {year}</p>
         </div>
       </footer>
     </div>
   );
 }
+
+
+
 
 
 

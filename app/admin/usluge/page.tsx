@@ -1,569 +1,209 @@
-﻿"use client";
+"use client";
 
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import AdminShell from "@/components/admin/AdminShell";
-import { fetchServices, services as fallbackServices, type Service } from "@/lib/services";
-import { useLanguage, type Language } from "@/lib/useLanguage";
+import AdminShell from "@/components/srdjan/admin/AdminShell";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || "";
-
-type StatusState = {
-  type: "idle" | "loading" | "success" | "error";
-  message?: string;
+type Worker = { id: string; name: string; location_id: string };
+type WorkerService = {
+  id: string;
+  worker_id: string;
+  duration_min: number;
+  price: number;
+  is_active: boolean;
+  services?: { id: string; name: string } | null;
+  workers?: { id: string; name: string } | null;
 };
-
-type ServiceFormState = {
-  name: string;
-  duration: string;
-  price: string;
-  description: string;
-  color: string;
-  isActive: boolean;
-  vipWindow: "none" | "before" | "after";
-};
-
-const buildDefaultFormState = (overrides: Partial<ServiceFormState> = {}): ServiceFormState => ({
-  name: "",
-  duration: "",
-  price: "",
-  description: "",
-  color: "#111111",
-  isActive: true,
-  vipWindow: "none",
-  ...overrides,
-});
 
 export default function AdminServicesPage() {
-  const { language } = useLanguage();
-  const locale = language === "sr" ? "sr-RS" : language === "en" ? "en-US" : "it-IT";
-  const text: Record<Language, Record<string, string>> = {
-    sr: {
-      apiMissing: "API nije podesen. Dodaj NEXT_PUBLIC_API_BASE_URL u .env.",
-      adminMissing: "Dodaj NEXT_PUBLIC_ADMIN_KEY u .env da bi CMS radio.",
-      refreshed: "Usluge su osvezene.",
-      genericError: "Doslo je do greske.",
-      enterNameDuration: "Unesi naziv i trajanje usluge.",
-      cannotSave: "Ne mogu da sacuvam uslugu.",
-      updated: "Usluga je izmenjena.",
-      saved: "Usluga je sacuvana.",
-      cannotChangeStatus: "Ne mogu da promenim status.",
-      confirmDelete: "Da li sigurno zelis da obrises uslugu?",
-      cannotDelete: "Ne mogu da obrisem uslugu.",
-      title: "Usluge",
-      subtitlePrefix: "Ukupno usluga:",
-      refresh: "Osvezi listu",
-      noItems: "Nema usluga za prikaz.",
-      duration: "Trajanje:",
-      price: "Cena:",
-      description: "Opis:",
-      status: "Status:",
-      inactive: "Neaktivna",
-      active: "Aktivna",
-      edit: "Izmeni",
-      activate: "Aktiviraj",
-      deactivate: "Deaktiviraj",
-      delete: "Obrisi",
-      editService: "Izmeni uslugu",
-      newService: "Nova usluga",
-      serviceName: "Naziv usluge",
-      serviceDuration: "Trajanje",
-      servicePrice: "Cena",
-      serviceColor: "Boja termina",
-      serviceDesc: "Opis",
-      serviceActive: "Aktivna",
-      vipWindow: "VIP termin",
-      vipNone: "Nije VIP",
-      vipBefore: "VIP pre radnog vremena (1h)",
-      vipAfter: "VIP posle radnog vremena (1h)",
-      cancel: "Otkazi",
-      saveChanges: "Sacuvaj izmene",
-      saveService: "Sacuvaj uslugu",
-    },
-    en: {
-      apiMissing: "API is not configured. Add NEXT_PUBLIC_API_BASE_URL to .env.",
-      adminMissing: "Add NEXT_PUBLIC_ADMIN_KEY to .env so CMS can work.",
-      refreshed: "Services refreshed.",
-      genericError: "Something went wrong.",
-      enterNameDuration: "Enter service name and duration.",
-      cannotSave: "Unable to save service.",
-      updated: "Service updated.",
-      saved: "Service saved.",
-      cannotChangeStatus: "Unable to change status.",
-      confirmDelete: "Are you sure you want to delete this service?",
-      cannotDelete: "Unable to delete service.",
-      title: "Services",
-      subtitlePrefix: "Total services:",
-      refresh: "Refresh list",
-      noItems: "No services to show.",
-      duration: "Duration:",
-      price: "Price:",
-      description: "Description:",
-      status: "Status:",
-      inactive: "Inactive",
-      active: "Active",
-      edit: "Edit",
-      activate: "Activate",
-      deactivate: "Deactivate",
-      delete: "Delete",
-      editService: "Edit service",
-      newService: "New service",
-      serviceName: "Service name",
-      serviceDuration: "Duration",
-      servicePrice: "Price",
-      serviceColor: "Appointment color",
-      serviceDesc: "Description",
-      serviceActive: "Active",
-      vipWindow: "VIP slot",
-      vipNone: "Not VIP",
-      vipBefore: "VIP before work hours (1h)",
-      vipAfter: "VIP after work hours (1h)",
-      cancel: "Cancel",
-      saveChanges: "Save changes",
-      saveService: "Save service",
-    },
-    it: {
-      apiMissing: "API non configurata. Aggiungi NEXT_PUBLIC_API_BASE_URL in .env.",
-      adminMissing: "Aggiungi NEXT_PUBLIC_ADMIN_KEY in .env per usare il CMS.",
-      refreshed: "Servizi aggiornati.",
-      genericError: "Si e verificato un errore.",
-      enterNameDuration: "Inserisci nome servizio e durata.",
-      cannotSave: "Impossibile salvare il servizio.",
-      updated: "Servizio aggiornato.",
-      saved: "Servizio salvato.",
-      cannotChangeStatus: "Impossibile cambiare stato.",
-      confirmDelete: "Sei sicuro di voler eliminare questo servizio?",
-      cannotDelete: "Impossibile eliminare il servizio.",
-      title: "Servizi",
-      subtitlePrefix: "Servizi totali:",
-      refresh: "Aggiorna elenco",
-      noItems: "Nessun servizio da mostrare.",
-      duration: "Durata:",
-      price: "Prezzo:",
-      description: "Descrizione:",
-      status: "Stato:",
-      inactive: "Non attivo",
-      active: "Attivo",
-      edit: "Modifica",
-      activate: "Attiva",
-      deactivate: "Disattiva",
-      delete: "Elimina",
-      editService: "Modifica servizio",
-      newService: "Nuovo servizio",
-      serviceName: "Nome servizio",
-      serviceDuration: "Durata",
-      servicePrice: "Prezzo",
-      serviceColor: "Colore appuntamento",
-      serviceDesc: "Descrizione",
-      serviceActive: "Attivo",
-      vipWindow: "Slot VIP",
-      vipNone: "Non VIP",
-      vipBefore: "VIP prima dell'orario (1h)",
-      vipAfter: "VIP dopo l'orario (1h)",
-      cancel: "Annulla",
-      saveChanges: "Salva modifiche",
-      saveService: "Salva servizio",
-    },
+  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [workerId, setWorkerId] = useState("");
+  const [services, setServices] = useState<WorkerService[]>([]);
+  const [status, setStatus] = useState("");
+  const [form, setForm] = useState({
+    workerId: "",
+    name: "",
+    durationMin: "30",
+    price: "1000",
+  });
+
+  const loadWorkers = async () => {
+    const bootstrapRes = await fetch("/api/public/bootstrap");
+    const bootstrap = await bootstrapRes.json();
+    if (!bootstrapRes.ok) {
+      throw new Error(bootstrap.error || "Ne mogu da ucitam radnike.");
+    }
+    const workerList: Worker[] = bootstrap.workers || [];
+    setWorkers(workerList);
+    const first = workerList[0]?.id || "";
+    setWorkerId(first);
+    setForm((prev) => ({ ...prev, workerId: first }));
   };
-  const t = text[language];
-  const [services, setServices] = useState<Service[]>(fallbackServices);
-  const [status, setStatus] = useState<StatusState>({ type: "idle" });
-  const [formStatus, setFormStatus] = useState<StatusState>({ type: "idle" });
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formState, setFormState] = useState<ServiceFormState>(
-    buildDefaultFormState()
-  );
-  const editCardRef = useRef<HTMLDivElement | null>(null);
-  const nameInputRef = useRef<HTMLInputElement | null>(null);
 
-  const fetchServiceItems = async () => {
-    if (!apiBaseUrl) {
-      setStatus({
-        type: "error",
-        message: t.apiMissing,
-      });
-      return;
+  const loadServices = async (nextWorkerId = workerId) => {
+    const query = nextWorkerId ? `?workerId=${encodeURIComponent(nextWorkerId)}` : "";
+    const response = await fetch(`/api/admin/services${query}`);
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Ne mogu da ucitam usluge.");
     }
-
-    if (!adminKey) {
-      setStatus({
-        type: "error",
-        message: t.adminMissing,
-      });
-      return;
-    }
-
-    setStatus({ type: "loading" });
-
-    try {
-      const items = await fetchServices(apiBaseUrl, {
-        adminKey,
-        includeInactive: true,
-      });
-      setServices(items);
-      setStatus({ type: "success", message: t.refreshed });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t.genericError;
-      setStatus({ type: "error", message });
-    }
+    setServices(data.services || []);
   };
 
   useEffect(() => {
-    fetchServiceItems();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadWorkers()
+      .then(() => undefined)
+      .catch((error) => setStatus(error instanceof Error ? error.message : "Greska."));
   }, []);
 
-  const handleChange = (
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const target = event.currentTarget;
-    const nextValue =
-      target instanceof HTMLInputElement && target.type === "checkbox"
-        ? target.checked
-        : target.value;
-    setFormState((prev) => {
-      const next = {
-        ...prev,
-        [target.name]: nextValue,
-      };
+  useEffect(() => {
+    if (!workerId) {
+      return;
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadServices().catch((error) => setStatus(error instanceof Error ? error.message : "Greska."));
+  }, [workerId]);
 
-      if (
-        target.name === "vipWindow" &&
-        (nextValue === "before" || nextValue === "after")
-      ) {
-        next.duration = "1 h";
-      }
+  const filtered = useMemo(
+    () => services.filter((service) => !workerId || service.worker_id === workerId),
+    [services, workerId]
+  );
 
-      return next;
-    });
-  };
-
-  const handleEdit = (service: Service) => {
-    setEditingId(service.id);
-    setFormState(
-      buildDefaultFormState({
-        name: service.name || "",
-        duration:
-          service.vipWindow === "before" || service.vipWindow === "after"
-            ? "1 h"
-            : service.duration || "",
-        price: service.price ? String(service.price) : "",
-        description: service.description || "",
-        color: service.color || "#111111",
-        isActive: service.isActive !== false,
-        vipWindow:
-          service.vipWindow === "before" || service.vipWindow === "after"
-            ? service.vipWindow
-            : "none",
-      })
-    );
-    setFormStatus({ type: "idle" });
-    requestAnimationFrame(() => {
-      editCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      nameInputRef.current?.focus();
-    });
-  };
-
-  const resetForm = () => {
-    setEditingId(null);
-    setFormState(buildDefaultFormState());
-    setFormStatus({ type: "idle" });
-  };
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const create = async (event: React.FormEvent) => {
     event.preventDefault();
-
-    if (!apiBaseUrl) {
-      setFormStatus({
-        type: "error",
-        message: t.apiMissing,
-      });
+    setStatus("");
+    const response = await fetch("/api/admin/services", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        workerId: form.workerId,
+        name: form.name,
+        durationMin: Number(form.durationMin),
+        price: Number(form.price),
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setStatus(data.error || "Ne mogu da kreiram uslugu.");
       return;
     }
-
-    if (!adminKey) {
-      setFormStatus({
-        type: "error",
-        message: t.adminMissing,
-      });
-      return;
-    }
-
-    if (!formState.name.trim() || !formState.duration.trim()) {
-      setFormStatus({
-        type: "error",
-        message: t.enterNameDuration,
-      });
-      return;
-    }
-
-    setFormStatus({ type: "loading" });
-
-    try {
-      const response = await fetch(`${apiBaseUrl}/services.php`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Admin-Key": adminKey,
-        },
-        body: JSON.stringify({
-          adminAction: editingId ? "update" : "create",
-          id: editingId ?? undefined,
-          name: formState.name.trim(),
-          duration:
-            formState.vipWindow === "before" || formState.vipWindow === "after"
-              ? "1 h"
-              : formState.duration.trim(),
-          price: Number(formState.price) || 0,
-          description: formState.description.trim(),
-          color: formState.color.trim(),
-          isActive: formState.isActive ? 1 : 0,
-          vipWindow: formState.vipWindow === "none" ? null : formState.vipWindow,
-        }),
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.message || t.cannotSave);
-      }
-
-      setFormStatus({
-        type: "success",
-        message: editingId ? t.updated : t.saved,
-      });
-      resetForm();
-      fetchServiceItems();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t.genericError;
-      setFormStatus({ type: "error", message });
-    }
+    setStatus("Usluga je sacuvana.");
+    setForm((prev) => ({ ...prev, name: "" }));
+    await loadServices();
   };
 
-  const handleToggleActive = async (id: string) => {
-    if (!apiBaseUrl || !adminKey) {
+  const toggleActive = async (item: WorkerService) => {
+    const response = await fetch("/api/admin/services", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        workerServiceId: item.id,
+        isActive: !item.is_active,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setStatus(data.error || "Ne mogu da promenim status.");
       return;
     }
-
-    try {
-      const response = await fetch(`${apiBaseUrl}/services.php`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Admin-Key": adminKey,
-        },
-        body: JSON.stringify({ adminAction: "toggle_active", id }),
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.message || t.cannotChangeStatus);
-      }
-
-      fetchServiceItems();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t.genericError;
-      setStatus({ type: "error", message });
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!apiBaseUrl || !adminKey) {
-      return;
-    }
-
-    const confirmed = window.confirm(t.confirmDelete);
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiBaseUrl}/services.php`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Admin-Key": adminKey,
-        },
-        body: JSON.stringify({ adminAction: "delete", id }),
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.message || t.cannotDelete);
-      }
-
-      fetchServiceItems();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t.genericError;
-      setStatus({ type: "error", message });
-    }
+    await loadServices();
   };
 
   return (
-    <AdminShell
-      title={t.title}
-      subtitle={`${t.subtitlePrefix} ${services.length}`}
-    >
-      <div className="admin-grid">
-        <div className="admin-toolbar">
-          <button className="button" type="button" onClick={fetchServiceItems}>
-            {t.refresh}
-          </button>
-          {status.type !== "idle" && status.message && (
-            <div className={`form-status ${status.type}`}>{status.message}</div>
-          )}
+    <AdminShell title="Usluge">
+      <div className="admin-card">
+        <h3>Podmeni po clanu staff-a</h3>
+        <div className="admin-actions">
+          {workers.map((worker) => (
+            <button
+              key={worker.id}
+              className={`button outline small ${workerId === worker.id ? "is-active" : ""}`}
+              type="button"
+              onClick={() => {
+                setWorkerId(worker.id);
+                setForm((prev) => ({ ...prev, workerId: worker.id }));
+              }}
+            >
+              {worker.name}
+            </button>
+          ))}
         </div>
+      </div>
 
-        <div
-          className={`admin-card${editingId ? " is-editing" : ""}`}
-          ref={editCardRef}
-        >
-          <h3>{editingId ? t.editService : t.newService}</h3>
-          <form className="form-row" onSubmit={handleSubmit}>
-            <div className="form-grid">
-              <div className="form-row">
-                <label htmlFor="service-name">{t.serviceName}</label>
-                <input
-                  id="service-name"
-                  name="name"
-                  className="input"
-                  value={formState.name}
-                  onChange={handleChange}
-                  ref={nameInputRef}
-                  required
-                />
-              </div>
-              <div className="form-row">
-                <label htmlFor="service-duration">{t.serviceDuration}</label>
-                <input
-                  id="service-duration"
-                  name="duration"
-                  className="input"
-                  value={formState.duration}
-                  onChange={handleChange}
-                  disabled={
-                    formState.vipWindow === "before" || formState.vipWindow === "after"
-                  }
-                  required
-                />
-              </div>
-              <div className="form-row">
-                <label htmlFor="service-price">{t.servicePrice}</label>
-                <input
-                  id="service-price"
-                  name="price"
-                  className="input"
-                  type="number"
-                  min="0"
-                  value={formState.price}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-row">
-                <label htmlFor="service-color">{t.serviceColor}</label>
-                <input
-                  id="service-color"
-                  name="color"
-                  className="input input--color"
-                  type="color"
-                  value={formState.color}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-row">
-                <label htmlFor="service-vip-window">{t.vipWindow}</label>
-                <select
-                  id="service-vip-window"
-                  name="vipWindow"
-                  className="select"
-                  value={formState.vipWindow}
-                  onChange={handleChange}
-                >
-                  <option value="none">{t.vipNone}</option>
-                  <option value="before">{t.vipBefore}</option>
-                  <option value="after">{t.vipAfter}</option>
-                </select>
-              </div>
-              <div className="form-row form-row--full">
-                <label htmlFor="service-description">{t.serviceDesc}</label>
-                <textarea
-                  id="service-description"
-                  name="description"
-                  className="textarea"
-                  value={formState.description}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-row">
-                <label htmlFor="service-active">{t.serviceActive}</label>
-                <input
-                  id="service-active"
-                  name="isActive"
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-            {formStatus.type !== "idle" && formStatus.message && (
-              <div className={`form-status ${formStatus.type}`}>{formStatus.message}</div>
-            )}
-            <div className="admin-actions">
-              {editingId && (
-                <button className="button outline" type="button" onClick={resetForm}>
-                  {t.cancel}
-                </button>
-              )}
-              <button className="button" type="submit">
-                {editingId ? t.saveChanges : t.saveService}
-              </button>
-            </div>
-          </form>
-        </div>
+      <div className="admin-card">
+        <h3>Nova usluga za radnika</h3>
+        <form className="form-grid" onSubmit={create}>
+          <div className="form-row">
+            <label>Radnik</label>
+            <select
+              className="select"
+              value={form.workerId}
+              onChange={(event) => setForm((prev) => ({ ...prev, workerId: event.target.value }))}
+              required
+            >
+              {workers.map((worker) => (
+                <option key={worker.id} value={worker.id}>
+                  {worker.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-row">
+            <label>Naziv usluge</label>
+            <input
+              className="input"
+              value={form.name}
+              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+              required
+            />
+          </div>
+          <div className="form-row">
+            <label>Trajanje (min)</label>
+            <input
+              className="input"
+              type="number"
+              min="5"
+              step="5"
+              value={form.durationMin}
+              onChange={(event) => setForm((prev) => ({ ...prev, durationMin: event.target.value }))}
+              required
+            />
+          </div>
+          <div className="form-row">
+            <label>Cena (RSD)</label>
+            <input
+              className="input"
+              type="number"
+              min="0"
+              value={form.price}
+              onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))}
+              required
+            />
+          </div>
+          <div className="form-row">
+            <button className="button" type="submit">Sacuvaj uslugu</button>
+          </div>
+        </form>
+      </div>
 
-        {services.length === 0 && status.type !== "loading" && (
-          <div className="admin-card">{t.noItems}</div>
-        )}
-
-        {services.map((service) => (
-          <div key={service.id} className="admin-card">
-            <strong>{service.name}</strong>
-            <span>{t.duration} {service.duration}</span>
-            <span>{t.price} RSD {service.price?.toLocaleString(locale)}</span>
-            {service.description && <span>{t.description} {service.description}</span>}
-            {service.color && (
-              <span className="service-color">
-                <span
-                  className="service-color__dot"
-                  style={{ backgroundColor: service.color }}
-                />
-                {service.color}
-              </span>
-            )}
-            {service.vipWindow === "before" && (
-              <span>
-                {t.vipWindow} {t.vipBefore}
-              </span>
-            )}
-            {service.vipWindow === "after" && (
-              <span>
-                {t.vipWindow} {t.vipAfter}
-              </span>
-            )}
-            <span>{t.status} {service.isActive === false ? t.inactive : t.active}</span>
-            <div className="admin-actions">
-              <button className="button outline" type="button" onClick={() => handleEdit(service)}>
-                {t.edit}
-              </button>
-              <button className="button outline" type="button" onClick={() => handleToggleActive(service.id)}>
-                {service.isActive === false ? t.activate : t.deactivate}
-              </button>
-              <button className="button outline" type="button" onClick={() => handleDelete(service.id)}>
-                {t.delete}
-              </button>
-            </div>
+      <div className="admin-card">
+        <h3>Usluge ({filtered.length})</h3>
+        {filtered.map((item) => (
+          <div key={item.id} className="admin-card">
+            <strong>{item.services?.name || "-"}</strong>
+            <div>Radnik: {item.workers?.name || "-"}</div>
+            <div>Trajanje: {item.duration_min} min</div>
+            <div>Cena: {item.price} RSD</div>
+            <div>Status: {item.is_active ? "Aktivna" : "Neaktivna"}</div>
+            <button className="button outline" type="button" onClick={() => toggleActive(item)}>
+              {item.is_active ? "Deaktiviraj" : "Aktiviraj"}
+            </button>
           </div>
         ))}
       </div>
+
+      {status && <p className="form-status success">{status}</p>}
     </AdminShell>
   );
 }
