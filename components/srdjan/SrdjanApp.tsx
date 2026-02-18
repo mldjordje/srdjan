@@ -67,6 +67,18 @@ const urlBase64ToUint8Array = (base64String: string) => {
   return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
 };
 
+const readResponseJsonSafe = async <T,>(response: Response): Promise<T | null> => {
+  const text = await response.text();
+  if (!text) {
+    return null;
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+};
+
 type SrdjanAppProps = {
   embedded?: boolean;
 };
@@ -107,9 +119,17 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
           fetch("/api/public/session/me"),
         ]);
 
-        const bootstrapData = (await bootstrapRes.json()) as BootstrapPayload;
+        const bootstrapData = await readResponseJsonSafe<BootstrapPayload & { error?: string }>(
+          bootstrapRes
+        );
         if (!bootstrapRes.ok) {
-          throw new Error((bootstrapData as unknown as { error?: string }).error || "Bootstrap failed.");
+          throw new Error(
+            bootstrapData?.error ||
+              `Bootstrap failed (HTTP ${bootstrapRes.status}). Proverite Vercel env varijable.`
+          );
+        }
+        if (!bootstrapData) {
+          throw new Error("Bootstrap endpoint je vratio prazan ili neispravan JSON.");
         }
         setBootstrap(bootstrapData);
         const loc = bootstrapData.defaultLocationId || bootstrapData.locations?.[0]?.id || "";
@@ -123,8 +143,8 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
         setServiceId(firstService?.service_id || "");
 
         if (meRes.ok) {
-          const me = await meRes.json();
-          setClient(me.client);
+          const me = await readResponseJsonSafe<{ client?: ClientProfile }>(meRes);
+          setClient(me?.client || null);
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Neuspesno ucitavanje.";
@@ -138,15 +158,15 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
 
   const loadMyAppointments = async () => {
     const response = await fetch("/api/public/my-appointments");
-    const data = (await response.json()) as MyAppointmentsPayload;
+    const data = await readResponseJsonSafe<MyAppointmentsPayload & { error?: string }>(response);
     if (!response.ok) {
       if (response.status === 401) {
         setAppointments([]);
         return;
       }
-      throw new Error((data as unknown as { error?: string }).error || "Ne mogu da ucitam termine.");
+      throw new Error(data?.error || `Ne mogu da ucitam termine (HTTP ${response.status}).`);
     }
-    setAppointments(data.appointments || []);
+    setAppointments(data?.appointments || []);
   };
 
   useEffect(() => {
@@ -182,14 +202,18 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
           )}&serviceId=${encodeURIComponent(serviceId)}&date=${encodeURIComponent(date)}`,
           { signal: controller.signal }
         );
-        const data = await response.json();
+        const data = await readResponseJsonSafe<{ error?: string; slots?: string[]; shiftType?: string }>(
+          response
+        );
         if (!response.ok) {
-          throw new Error(data.error || "Ne mogu da ucitam slobodne termine.");
+          throw new Error(
+            data?.error || `Ne mogu da ucitam slobodne termine (HTTP ${response.status}).`
+          );
         }
-        setSlots(Array.isArray(data.slots) ? data.slots : []);
-        if (data.shiftType === "morning") {
+        setSlots(Array.isArray(data?.slots) ? data.slots : []);
+        if (data?.shiftType === "morning") {
           setShiftLabel("Prepodnevna smena");
-        } else if (data.shiftType === "afternoon") {
+        } else if (data?.shiftType === "afternoon") {
           setShiftLabel("Popodnevna smena");
         } else {
           setShiftLabel("Radnik ne radi taj dan");
@@ -218,12 +242,12 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(authForm),
     });
-    const data = await response.json();
+    const data = await readResponseJsonSafe<{ error?: string; client?: ClientProfile }>(response);
     if (!response.ok) {
-      setStatus(data.error || "Prijava nije uspela.");
+      setStatus(data?.error || `Prijava nije uspela (HTTP ${response.status}).`);
       return;
     }
-    setClient(data.client);
+    setClient(data?.client || null);
     setStatus("Prijava je uspesna.");
   };
 
@@ -252,9 +276,9 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
         note,
       }),
     });
-    const data = await response.json();
+    const data = await readResponseJsonSafe<{ error?: string }>(response);
     if (!response.ok) {
-      setStatus(data.error || "Zakazivanje nije uspelo.");
+      setStatus(data?.error || `Zakazivanje nije uspelo (HTTP ${response.status}).`);
       return;
     }
     setStatus("Termin je uspesno zakazan.");
@@ -291,9 +315,9 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(subscription),
       });
-      const data = await response.json();
+      const data = await readResponseJsonSafe<{ error?: string }>(response);
       if (!response.ok) {
-        setStatus(data.error || "Ne mogu da sacuvam push pretplatu.");
+        setStatus(data?.error || `Ne mogu da sacuvam push pretplatu (HTTP ${response.status}).`);
         return;
       }
       setStatus("Push notifikacije su aktivirane.");
