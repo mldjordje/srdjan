@@ -1509,6 +1509,16 @@ h4 {
   box-shadow: 0 0 8px rgba(214, 165, 84, 0.4);
 }
 
+.calendar-indicator.is-morning {
+  background: #4fae62;
+  box-shadow: 0 0 8px rgba(79, 174, 98, 0.45);
+}
+
+.calendar-indicator.is-afternoon {
+  background: #d0893c;
+  box-shadow: 0 0 8px rgba(208, 137, 60, 0.4);
+}
+
 .calendar-indicator.is-none {
   background: #c94a4a;
   box-shadow: 0 0 8px rgba(201, 74, 74, 0.4);
@@ -3466,6 +3476,22 @@ h4 {
   }
 
   .booking-form .calendar-week {
+    display: none;
+  }
+
+  .srdjan-booking .calendar-title {
+    display: block;
+  }
+
+  .srdjan-booking .calendar-weekdays {
+    display: grid;
+  }
+
+  .srdjan-booking .calendar-grid {
+    display: grid;
+  }
+
+  .srdjan-booking .calendar-week {
     display: none;
   }
 

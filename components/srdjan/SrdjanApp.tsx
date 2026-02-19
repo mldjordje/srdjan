@@ -47,6 +47,15 @@ type MyAppointmentsPayload = {
   }[];
 };
 
+type ShiftType = "morning" | "afternoon" | "off";
+
+type WorkerShiftsPayload = {
+  shifts: {
+    date: string;
+    shift_type: ShiftType;
+  }[];
+};
+
 const toDateInput = (date: Date) => {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -175,6 +184,7 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
   const [note, setNote] = useState("");
   const [slots, setSlots] = useState<string[]>([]);
   const [shiftLabel, setShiftLabel] = useState("");
+  const [shiftByDate, setShiftByDate] = useState<Record<string, ShiftType>>({});
   const [status, setStatus] = useState("");
   const [appointments, setAppointments] = useState<MyAppointmentsPayload["appointments"]>([]);
   const [subscribingPush, setSubscribingPush] = useState(false);
@@ -285,6 +295,54 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
       setCalendarMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
     }
   }, [date]);
+
+  useEffect(() => {
+    if (!locationId || !workerId) {
+      setShiftByDate({});
+      return;
+    }
+
+    const monthStart = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
+    const monthEnd = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0);
+    const fromDate = monthStart < minDate ? minDate : monthStart;
+    const toDate = monthEnd > maxDate ? maxDate : monthEnd;
+    if (fromDate > toDate) {
+      setShiftByDate({});
+      return;
+    }
+
+    const controller = new AbortController();
+    const loadShifts = async () => {
+      try {
+        const response = await fetch(
+          `/api/public/worker-shifts?locationId=${encodeURIComponent(
+            locationId
+          )}&workerId=${encodeURIComponent(workerId)}&from=${encodeURIComponent(
+            toDateInput(fromDate)
+          )}&to=${encodeURIComponent(toDateInput(toDate))}`,
+          { signal: controller.signal }
+        );
+        const data = await readResponseJsonSafe<WorkerShiftsPayload & { error?: string }>(response);
+        if (!response.ok || !data) {
+          return;
+        }
+        const next: Record<string, ShiftType> = {};
+        for (const item of data.shifts || []) {
+          if (item?.date && item?.shift_type) {
+            next[item.date] = item.shift_type;
+          }
+        }
+        setShiftByDate(next);
+      } catch {
+        if (!controller.signal.aborted) {
+          setShiftByDate({});
+        }
+      }
+    };
+
+    loadShifts();
+    return () => controller.abort();
+  }, [calendarMonth, locationId, workerId, minDate, maxDate]);
 
   useEffect(() => {
     if (!locationId || !workerId || !serviceId || !date) {
@@ -441,7 +499,7 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
 
       {error && <p className="form-status error">{error}</p>}
 
-      <section className="admin-card" style={{ marginBottom: 16 }}>
+      <section className="admin-card srdjan-booking" style={{ marginBottom: 16 }}>
         <h3>Prijava klijenta</h3>
         {!client ? (
           <form className="form-grid" onSubmit={handleSessionStart}>
@@ -594,7 +652,17 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
                       }}
                     >
                       <span>{day.label}</span>
-                      <span className={`calendar-indicator ${isActive ? "is-high" : "is-medium"}`} />
+                      <span
+                        className={`calendar-indicator ${
+                          shiftByDate[day.value] === "morning"
+                            ? "is-morning"
+                            : shiftByDate[day.value] === "afternoon"
+                            ? "is-afternoon"
+                            : shiftByDate[day.value] === "off"
+                            ? "is-none"
+                            : "is-loading"
+                        }`}
+                      />
                     </button>
                   );
                 })}
