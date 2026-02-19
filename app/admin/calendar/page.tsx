@@ -43,7 +43,6 @@ export default function AdminCalendarPage() {
     };
   });
   const [workers, setWorkers] = useState<Worker[]>([]);
-  const [adminMe, setAdminMe] = useState<AdminMe | null>(null);
   const [locationId, setLocationId] = useState("");
   const [workerId, setWorkerId] = useState("");
   const [from, setFrom] = useState(initialDates.from);
@@ -61,7 +60,6 @@ export default function AdminCalendarPage() {
     workerBId: "",
   });
 
-  const staffLocked = adminMe?.role === "staff-admin";
   const activeWorker = useMemo(
     () => workers.find((worker) => worker.id === workerId) || null,
     [workers, workerId]
@@ -73,7 +71,6 @@ export default function AdminCalendarPage() {
     if (!response.ok) {
       throw new Error(data.error || "Niste prijavljeni.");
     }
-    setAdminMe(data);
     return data as AdminMe;
   };
 
@@ -87,7 +84,6 @@ export default function AdminCalendarPage() {
       bootstrapData.defaultLocationId || bootstrapData.locations?.[0]?.id || "";
     setLocationId(currentLocationId);
     const workerList: Worker[] = Array.isArray(bootstrapData.workers) ? bootstrapData.workers : [];
-    let effectiveWorkers = workerList;
     let defaultWorker = workerList[0]?.id || "";
 
     if (admin?.role === "staff-admin") {
@@ -95,18 +91,17 @@ export default function AdminCalendarPage() {
       const match =
         workerList.find((worker) => worker.name.toLowerCase().trim() === username) ||
         workerList.find((worker) => worker.name.toLowerCase().includes(username)) ||
-        workerList[0];
-      effectiveWorkers = match ? [match] : workerList;
+        null;
       defaultWorker = match?.id || defaultWorker;
     }
 
-    setWorkers(effectiveWorkers);
+    setWorkers(workerList);
     setWorkerId(defaultWorker);
     setShiftForm((prev) => ({ ...prev, workerId: defaultWorker }));
     setSwapForm((prev) => ({
       ...prev,
       workerAId: defaultWorker,
-      workerBId: effectiveWorkers[1]?.id || defaultWorker,
+      workerBId: workerList[1]?.id || defaultWorker,
     }));
   };
 
@@ -193,7 +188,7 @@ export default function AdminCalendarPage() {
   return (
     <AdminShell title="Kalendar">
       <div className="admin-card">
-        <h3>{staffLocked ? "Moj kalendar (danas)" : "Podmeni po clanu staff-a"}</h3>
+        <h3>Podmeni po clanu staff-a</h3>
         {activeWorker && <p>Aktivni radnik: <strong>{activeWorker.name}</strong></p>}
         <div className="admin-actions">
           {workers.map((worker) => (
@@ -205,7 +200,6 @@ export default function AdminCalendarPage() {
                 void loadCalendar(worker.id);
               }}
               type="button"
-              disabled={staffLocked && worker.id !== workerId}
             >
               {worker.name}
             </button>
@@ -246,7 +240,7 @@ export default function AdminCalendarPage() {
         ))}
       </div>
 
-      {!staffLocked && <div className="admin-card">
+      <div className="admin-card">
         <h3>Planiranje smena (petak/naredna nedelja ili ad-hoc)</h3>
         <form className="form-grid" onSubmit={saveShift}>
           <div className="form-row">
@@ -288,9 +282,9 @@ export default function AdminCalendarPage() {
             <button className="button" type="submit">Sacuvaj smenu</button>
           </div>
         </form>
-      </div>}
+      </div>
 
-      {!staffLocked && <div className="admin-card">
+      <div className="admin-card">
         <h3>Zamena smena (dozvoljena samo ako oba radnika imaju 0 termina)</h3>
         <form className="form-grid" onSubmit={swapShifts}>
           <div className="form-row">
@@ -334,7 +328,7 @@ export default function AdminCalendarPage() {
             <button className="button" type="submit">Zameni smene</button>
           </div>
         </form>
-      </div>}
+      </div>
 
       {status && <p className="form-status success">{status}</p>}
     </AdminShell>
