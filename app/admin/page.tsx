@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -16,7 +17,7 @@ export default function AdminLoginPage() {
       if (response.ok) {
         const data = await response.json();
         if (data.role === "staff-admin") {
-          router.replace("/admin/calendar");
+          router.replace("/admin/staff");
           return;
         }
         router.replace("/admin/dashboard");
@@ -41,51 +42,87 @@ export default function AdminLoginPage() {
       return;
     }
     if (data.admin?.role === "staff-admin") {
-      router.push("/admin/calendar");
+      router.push("/admin/staff");
       return;
     }
     router.push("/admin/dashboard");
   };
 
   if (checking) {
-    return <main className="container"><p>Ucitavanje...</p></main>;
+    return (
+      <main className="container" style={{ paddingTop: 24 }}>
+        <p>Ucitavanje...</p>
+      </main>
+    );
   }
 
   return (
-    <main className="container" style={{ paddingTop: 24 }}>
-      <h1>Admin prijava</h1>
-      <p>Owner i Staff-admin imaju razlicite privilegije.</p>
-      <form className="admin-card" onSubmit={submit}>
-        <div className="form-row">
-          <label>Korisnicko ime</label>
-          <input
-            className="input"
-            value={form.username}
-            onChange={(event) => setForm((prev) => ({ ...prev, username: event.target.value }))}
-            required
-          />
+    <div className="page">
+      <header className="nav">
+        <div className="container nav-inner">
+          <Link className="brand" href="/">
+            <div className="brand-mark">
+              <Image src="/logo.png" alt="Frizerski salon Srdjan" width={36} height={36} />
+            </div>
+            <div className="brand-title">
+              <span>Frizerski salon Srdjan</span>
+              <span>Admin panel</span>
+            </div>
+          </Link>
+          <nav className="nav-links">
+            <Link href="/">Pocetna</Link>
+            <Link href="/#booking">Zakazivanje</Link>
+          </nav>
         </div>
-        <div className="form-row">
-          <label>Lozinka</label>
-          <input
-            type="password"
-            className="input"
-            value={form.password}
-            onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
-            required
-          />
+      </header>
+
+      <main className="admin-layout container">
+        <div className="login-card">
+          <div>
+            <h1>Admin prijava</h1>
+            <p>Owner i staff imaju razlicite privilegije, ali oboje imaju pristup kalendarima.</p>
+          </div>
+          <form className="form-row" onSubmit={submit}>
+            <div className="form-row">
+              <label>Korisnicko ime</label>
+              <input
+                className="input"
+                value={form.username}
+                onChange={(event) => setForm((prev) => ({ ...prev, username: event.target.value }))}
+                required
+              />
+            </div>
+            <div className="form-row">
+              <label>Lozinka</label>
+              <input
+                type="password"
+                className="input"
+                value={form.password}
+                onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+                required
+              />
+            </div>
+            {status && <p className="form-status error">{status}</p>}
+            <div className="admin-actions">
+              <button className="button" type="submit">
+                Prijava
+              </button>
+              <Link className="button outline" href="/">
+                Nazad
+              </Link>
+            </div>
+          </form>
+          <div className="admin-card">
+            <strong>Seed nalozi</strong>
+            <div>
+              Owner: <code>owner / owner123!</code>
+            </div>
+            <div>
+              Staff: <code>staff / staff123!</code>
+            </div>
+          </div>
         </div>
-        {status && <p className="form-status error">{status}</p>}
-        <div className="admin-actions">
-          <button className="button" type="submit">Prijava</button>
-          <Link className="button outline" href="/">Nazad</Link>
-        </div>
-      </form>
-      <div className="admin-card">
-        <strong>Seed nalozi</strong>
-        <div>Owner: <code>owner / owner123!</code></div>
-        <div>Staff: <code>staff / staff123!</code></div>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

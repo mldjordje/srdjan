@@ -23,5 +23,5 @@ export type AdminUserRecord = {
   password_hash: string;
   role: AdminRole;
   is_active: boolean;
+  worker_id?: string | null;
 };
-

@@ -1510,13 +1510,13 @@ h4 {
 }
 
 .calendar-indicator.is-morning {
-  background: #4fae62;
-  box-shadow: 0 0 8px rgba(79, 174, 98, 0.45);
+  background: #3f78d1;
+  box-shadow: 0 0 8px rgba(63, 120, 209, 0.38);
 }
 
 .calendar-indicator.is-afternoon {
-  background: #d0893c;
-  box-shadow: 0 0 8px rgba(208, 137, 60, 0.4);
+  background: #7a59c9;
+  box-shadow: 0 0 8px rgba(122, 89, 201, 0.35);
 }
 
 .calendar-indicator.is-none {
@@ -1526,6 +1526,17 @@ h4 {
 
 .calendar-indicator.is-loading {
   background: rgba(17, 17, 17, 0.2);
+}
+
+.calendar-indicator--shift {
+  width: 42%;
+  height: 2px;
+  opacity: 0.95;
+}
+
+.calendar-indicator--shift.is-none {
+  background: #8a8a8a;
+  box-shadow: none;
 }
 
 .slot-section {
@@ -3480,19 +3491,24 @@ h4 {
   }
 
   .srdjan-booking .calendar-title {
-    display: block;
+    display: block !important;
   }
 
   .srdjan-booking .calendar-weekdays {
-    display: grid;
+    display: grid !important;
   }
 
   .srdjan-booking .calendar-grid {
-    display: grid;
+    display: grid !important;
   }
 
   .srdjan-booking .calendar-week {
-    display: none;
+    display: none !important;
+  }
+
+  .srdjan-booking .calendar-day {
+    min-height: 54px;
+    gap: 3px;
   }
 
   .service-option {

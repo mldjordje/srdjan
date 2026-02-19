@@ -20,6 +20,7 @@ type BootstrapPayload = {
     service_id: string;
     duration_min: number;
     price: number;
+    color?: string | null;
     is_active: boolean;
     services: { id: string; name: string; is_active: boolean } | null;
   }[];
@@ -49,10 +50,11 @@ type MyAppointmentsPayload = {
 
 type ShiftType = "morning" | "afternoon" | "off";
 
-type WorkerShiftsPayload = {
-  shifts: {
+type WorkerCalendarSummaryPayload = {
+  summaries: {
     date: string;
-    shift_type: ShiftType;
+    shiftType: ShiftType;
+    availability: "free" | "busy" | "off";
   }[];
 };
 
@@ -184,7 +186,9 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
   const [note, setNote] = useState("");
   const [slots, setSlots] = useState<string[]>([]);
   const [shiftLabel, setShiftLabel] = useState("");
-  const [shiftByDate, setShiftByDate] = useState<Record<string, ShiftType>>({});
+  const [calendarSummaryByDate, setCalendarSummaryByDate] = useState<
+    Record<string, { shiftType: ShiftType; availability: "free" | "busy" | "off" }>
+  >({});
   const [status, setStatus] = useState("");
   const [appointments, setAppointments] = useState<MyAppointmentsPayload["appointments"]>([]);
   const [subscribingPush, setSubscribingPush] = useState(false);
@@ -297,8 +301,8 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
   }, [date]);
 
   useEffect(() => {
-    if (!locationId || !workerId) {
-      setShiftByDate({});
+    if (!locationId || !workerId || !serviceId) {
+      setCalendarSummaryByDate({});
       return;
     }
 
@@ -307,42 +311,50 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
     const fromDate = monthStart < minDate ? minDate : monthStart;
     const toDate = monthEnd > maxDate ? maxDate : monthEnd;
     if (fromDate > toDate) {
-      setShiftByDate({});
+      setCalendarSummaryByDate({});
       return;
     }
 
     const controller = new AbortController();
-    const loadShifts = async () => {
+    const loadSummary = async () => {
       try {
         const response = await fetch(
-          `/api/public/worker-shifts?locationId=${encodeURIComponent(
+          `/api/public/worker-calendar-summary?locationId=${encodeURIComponent(
             locationId
-          )}&workerId=${encodeURIComponent(workerId)}&from=${encodeURIComponent(
-            toDateInput(fromDate)
-          )}&to=${encodeURIComponent(toDateInput(toDate))}`,
+          )}&workerId=${encodeURIComponent(workerId)}&serviceId=${encodeURIComponent(
+            serviceId
+          )}&from=${encodeURIComponent(toDateInput(fromDate))}&to=${encodeURIComponent(
+            toDateInput(toDate)
+          )}`,
           { signal: controller.signal }
         );
-        const data = await readResponseJsonSafe<WorkerShiftsPayload & { error?: string }>(response);
+        const data = await readResponseJsonSafe<WorkerCalendarSummaryPayload & { error?: string }>(
+          response
+        );
         if (!response.ok || !data) {
           return;
         }
-        const next: Record<string, ShiftType> = {};
-        for (const item of data.shifts || []) {
-          if (item?.date && item?.shift_type) {
-            next[item.date] = item.shift_type;
+        const next: Record<string, { shiftType: ShiftType; availability: "free" | "busy" | "off" }> =
+          {};
+        for (const item of data.summaries || []) {
+          if (item?.date && item?.shiftType) {
+            next[item.date] = {
+              shiftType: item.shiftType,
+              availability: item.availability || "off",
+            };
           }
         }
-        setShiftByDate(next);
+        setCalendarSummaryByDate(next);
       } catch {
         if (!controller.signal.aborted) {
-          setShiftByDate({});
+          setCalendarSummaryByDate({});
         }
       }
     };
 
-    loadShifts();
+    loadSummary();
     return () => controller.abort();
-  }, [calendarMonth, locationId, workerId, minDate, maxDate]);
+  }, [calendarMonth, locationId, workerId, serviceId, minDate, maxDate]);
 
   useEffect(() => {
     if (!locationId || !workerId || !serviceId || !date) {
@@ -558,7 +570,7 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
         )}
       </section>
 
-      <section className="admin-card" style={{ marginBottom: 16 }}>
+      <section className="admin-card srdjan-booking" style={{ marginBottom: 16 }}>
         <h3>Zakazivanje termina</h3>
         <form className="form-grid" onSubmit={handleBook}>
           <div className="form-row">
@@ -640,6 +652,21 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
                     return <div key={`empty-${index}`} className="calendar-cell" />;
                   }
                   const isActive = day.value === date;
+                  const summary = calendarSummaryByDate[day.value];
+                  const availabilityClass =
+                    summary?.availability === "free"
+                      ? "is-high"
+                      : summary?.availability === "busy"
+                      ? "is-none"
+                      : "is-loading";
+                  const shiftClass =
+                    summary?.shiftType === "morning"
+                      ? "is-morning"
+                      : summary?.shiftType === "afternoon"
+                      ? "is-afternoon"
+                      : summary?.shiftType === "off"
+                      ? "is-none"
+                      : "is-loading";
                   return (
                     <button
                       key={day.value}
@@ -652,23 +679,18 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
                       }}
                     >
                       <span>{day.label}</span>
-                      <span
-                        className={`calendar-indicator ${
-                          shiftByDate[day.value] === "morning"
-                            ? "is-morning"
-                            : shiftByDate[day.value] === "afternoon"
-                            ? "is-afternoon"
-                            : shiftByDate[day.value] === "off"
-                            ? "is-none"
-                            : "is-loading"
-                        }`}
-                      />
+                      <span className={`calendar-indicator ${availabilityClass}`} />
+                      <span className={`calendar-indicator calendar-indicator--shift ${shiftClass}`} />
                     </button>
                   );
                 })}
               </div>
             </div>
             {shiftLabel && <small>{shiftLabel}</small>}
+            <small>
+              Linija 1: <strong>zelena</strong> slobodno, <strong>crvena</strong> zauzeto. Linija 2:
+              smena (<strong>zelena</strong> prepodne, <strong>narandzasta</strong> popodne).
+            </small>
           </div>
 
           <div className="form-row">
@@ -692,7 +714,7 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
           </div>
 
           <div className="form-row form-row--full">
-            <label>Termin (5 min mreza)</label>
+            <label>Termin (20 min mreza)</label>
             <div className="slot-items slot-items--single">
               {slots.map((slot) => (
                 <button

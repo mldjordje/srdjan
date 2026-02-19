@@ -9,6 +9,7 @@ type CreateServiceBody = {
   name?: string;
   durationMin?: number;
   price?: number;
+  color?: string;
   isActive?: boolean;
 };
 
@@ -17,7 +18,21 @@ type PatchServiceBody = {
   name?: string;
   durationMin?: number;
   price?: number;
+  color?: string | null;
   isActive?: boolean;
+};
+
+const ALLOWED_DURATIONS = new Set([20, 40, 60]);
+const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
+const normalizeColor = (value?: string | null) => {
+  const trimmed = (value || "").trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (!HEX_COLOR_RE.test(trimmed)) {
+    return null;
+  }
+  return trimmed.toUpperCase();
 };
 
 export async function GET(request: Request) {
@@ -27,13 +42,21 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const workerId = (searchParams.get("workerId") || "").trim();
+  const requestedWorkerId = (searchParams.get("workerId") || "").trim();
+  const workerId =
+    admin.role === "staff-admin"
+      ? (admin.worker_id || "").trim()
+      : requestedWorkerId;
+
+  if (admin.role === "staff-admin" && !workerId) {
+    return jsonError("Staff account is not linked to a worker.", 422);
+  }
 
   const db = getSupabaseAdmin();
   let query = db
     .from("worker_services")
     .select(
-      "id, worker_id, service_id, duration_min, price, is_active, workers(id, name), services(id, name, is_active)"
+      "id, worker_id, service_id, duration_min, price, color, is_active, workers(id, name), services(id, name, is_active)"
     )
     .order("created_at", { ascending: false });
 
@@ -60,11 +83,16 @@ export async function POST(request: Request) {
     return jsonError("Invalid JSON body.");
   }
 
-  const workerId = (body.workerId || "").trim();
+  const requestedWorkerId = (body.workerId || "").trim();
+  const workerId =
+    admin.role === "staff-admin"
+      ? (admin.worker_id || "").trim()
+      : requestedWorkerId;
   const providedServiceId = (body.serviceId || "").trim();
   const name = (body.name || "").trim();
   const durationMin = Number(body.durationMin || 0);
   const price = Number(body.price || 0);
+  const color = normalizeColor(body.color);
   const isActive = body.isActive !== false;
 
   if (!workerId || (!providedServiceId && !name) || durationMin <= 0 || price < 0) {
@@ -72,6 +100,12 @@ export async function POST(request: Request) {
       "workerId and (serviceId or name) with valid durationMin/price are required.",
       422
     );
+  }
+  if (!ALLOWED_DURATIONS.has(durationMin)) {
+    return jsonError("durationMin must be one of: 20, 40, 60.", 422);
+  }
+  if ((body.color || "").trim() && !color) {
+    return jsonError("color must be a valid HEX code (#RRGGBB).", 422);
   }
 
   const db = getSupabaseAdmin();
@@ -96,10 +130,11 @@ export async function POST(request: Request) {
       service_id: serviceId,
       duration_min: normalizedDuration,
       price,
+      color,
       is_active: isActive,
     })
     .select(
-      "id, worker_id, service_id, duration_min, price, is_active, workers(id, name), services(id, name, is_active)"
+      "id, worker_id, service_id, duration_min, price, color, is_active, workers(id, name), services(id, name, is_active)"
     )
     .single();
 
@@ -126,12 +161,47 @@ export async function PATCH(request: Request) {
   }
 
   const db = getSupabaseAdmin();
+  const { data: currentService, error: currentServiceError } = await db
+    .from("worker_services")
+    .select("id, worker_id, service_id")
+    .eq("id", workerServiceId)
+    .maybeSingle<{ id: string; worker_id: string; service_id: string }>();
+  if (currentServiceError) {
+    return jsonError(currentServiceError.message, 500);
+  }
+  if (!currentService) {
+    return jsonError("Service row not found.", 404);
+  }
+  if (
+    admin.role === "staff-admin" &&
+    currentService.worker_id !== (admin.worker_id || "")
+  ) {
+    return jsonError("Forbidden", 403);
+  }
+  if (admin.role === "staff-admin" && body.name && body.name.trim()) {
+    return jsonError("Staff cannot rename service names.", 403);
+  }
+
   const patch: Record<string, unknown> = {};
   if (typeof body.durationMin === "number" && body.durationMin > 0) {
+    if (!ALLOWED_DURATIONS.has(body.durationMin)) {
+      return jsonError("durationMin must be one of: 20, 40, 60.", 422);
+    }
     patch.duration_min = normalizeDurationToStep(body.durationMin);
   }
   if (typeof body.price === "number" && body.price >= 0) {
     patch.price = body.price;
+  }
+  if (body.color !== undefined) {
+    if (body.color === null || body.color.trim() === "") {
+      patch.color = null;
+    } else {
+      const normalized = normalizeColor(body.color);
+      if (!normalized) {
+        return jsonError("color must be a valid HEX code (#RRGGBB).", 422);
+      }
+      patch.color = normalized;
+    }
   }
   if (typeof body.isActive === "boolean") {
     patch.is_active = body.isActive;
@@ -148,18 +218,10 @@ export async function PATCH(request: Request) {
   }
 
   if (body.name && body.name.trim()) {
-    const { data: current, error: currentError } = await db
-      .from("worker_services")
-      .select("service_id")
-      .eq("id", workerServiceId)
-      .single();
-    if (currentError || !current?.service_id) {
-      return jsonError(currentError?.message || "Cannot resolve service.", 500);
-    }
     const { error: renameError } = await db
       .from("services")
       .update({ name: body.name.trim() })
-      .eq("id", current.service_id);
+      .eq("id", currentService.service_id);
     if (renameError) {
       return jsonError(renameError.message, 500);
     }
@@ -168,7 +230,7 @@ export async function PATCH(request: Request) {
   const { data: row, error: fetchError } = await db
     .from("worker_services")
     .select(
-      "id, worker_id, service_id, duration_min, price, is_active, workers(id, name), services(id, name, is_active)"
+      "id, worker_id, service_id, duration_min, price, color, is_active, workers(id, name), services(id, name, is_active)"
     )
     .eq("id", workerServiceId)
     .single();
@@ -179,4 +241,3 @@ export async function PATCH(request: Request) {
 
   return jsonOk({ service: row });
 }
-

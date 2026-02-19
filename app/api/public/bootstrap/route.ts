@@ -39,7 +39,7 @@ export async function GET() {
           ? db
               .from("worker_services")
               .select(
-                "id, worker_id, service_id, duration_min, price, is_active, services(id, name, is_active)"
+                "id, worker_id, service_id, duration_min, price, color, is_active, services(id, name, is_active)"
               )
               .in("worker_id", workerIds)
               .eq("is_active", true)

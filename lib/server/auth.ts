@@ -175,7 +175,7 @@ export const verifyAdminCredentials = async (username: string, password: string)
   const db = getSupabaseAdmin();
   const { data: user, error } = await db
     .from("admin_users")
-    .select("id, username, password_hash, role, is_active")
+    .select("id, username, password_hash, role, is_active, worker_id")
     .eq("username", username)
     .eq("is_active", true)
     .maybeSingle<AdminUserRecord>();
@@ -225,7 +225,7 @@ export const clearAdminSessionCookie = (response: NextResponse) => {
 
 export const getAdminFromRequest = async (
   request: Request
-): Promise<{ id: string; username: string; role: AdminRole } | null> => {
+): Promise<{ id: string; username: string; role: AdminRole; worker_id: string | null } | null> => {
   const token = getCookie(request, ADMIN_SESSION_COOKIE);
   if (!token) {
     return null;
@@ -238,14 +238,20 @@ export const getAdminFromRequest = async (
   const db = getSupabaseAdmin();
   const { data: user, error } = await db
     .from("admin_users")
-    .select("id, username, role, is_active")
+    .select("id, username, role, worker_id, is_active")
     .eq("id", payload.sub)
     .eq("is_active", true)
-    .maybeSingle<{ id: string; username: string; role: AdminRole; is_active: boolean }>();
+    .maybeSingle<{
+      id: string;
+      username: string;
+      role: AdminRole;
+      worker_id: string | null;
+      is_active: boolean;
+    }>();
 
   if (error || !user) {
     return null;
   }
 
-  return { id: user.id, username: user.username, role: user.role };
+  return { id: user.id, username: user.username, role: user.role, worker_id: user.worker_id };
 };

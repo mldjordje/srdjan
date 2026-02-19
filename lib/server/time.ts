@@ -1,4 +1,4 @@
-export const SLOT_STEP_MINUTES = 5;
+export const SLOT_STEP_MINUTES = 20;
 
 export const parseTimeToMinutes = (value: string) => {
   const [hoursRaw, minutesRaw] = value.split(":");
@@ -34,4 +34,3 @@ export const rangesOverlap = (
   bStart: number,
   bEnd: number
 ) => aStart < bEnd && aEnd > bStart;
-
