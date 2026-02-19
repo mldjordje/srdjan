@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Card, CardBody, Button as HeroButton } from "@heroui/react";
@@ -490,7 +489,7 @@ export default function HomePage() {
             >
               <div className="preloader-brand">
                 <div className="preloader-mark">
-                  <Image src="/logo.png" alt="Frizerski salon Srdjan" width={42} height={42} />
+                  <span className="preloader-mark__text">FS</span>
                 </div>
                 <div className="preloader-title">
                   <span>Frizerski salon</span>
@@ -523,13 +522,7 @@ export default function HomePage() {
           <div className="nav-top">
             <div className="brand">
               <div className="brand-mark">
-                <Image
-                  src="/logo.png"
-                  alt="Frizerski salon Srdjan"
-                  width={36}
-                  height={36}
-                  priority
-                />
+                <span className="brand-mark__text">FS</span>
               </div>
               <div className="brand-title">
                 <span>Frizerski salon</span>
@@ -657,13 +650,7 @@ export default function HomePage() {
           variants={sectionVariants}
         >
           <motion.div className="hero-minimal__bg" variants={heroBgVariants}>
-            <Image
-              src="/newhero.jpg"
-              alt="Frizerski salon Srdjan studio"
-              fill
-              priority
-              sizes="100vw"
-            />
+            <div className="hero-minimal__bg-art" aria-hidden="true" />
           </motion.div>
           <div className="hero-minimal__glow" aria-hidden="true" />
           <div className="hero-minimal__grain" aria-hidden="true" />
@@ -874,12 +861,7 @@ export default function HomePage() {
                 whileHover={cardHover}
                 whileTap={cardTap}
               >
-                <Image
-                  src="/newhero.jpg"
-                  alt="Ambijent studija"
-                  fill
-                  sizes="(max-width: 900px) 100vw, 50vw"
-                />
+                <div className="gallery-art gallery-art--one" aria-label="Ambijent studija" />
               </motion.div>
               <motion.div
                 className="gallery-card"
@@ -887,12 +869,7 @@ export default function HomePage() {
                 whileHover={cardHover}
                 whileTap={cardTap}
               >
-                <Image
-                  src="/new1.jpg"
-                  alt="Detalji enterijera"
-                  fill
-                  sizes="(max-width: 900px) 100vw, 50vw"
-                />
+                <div className="gallery-art gallery-art--two" aria-label="Detalji enterijera" />
               </motion.div>
             </motion.div>
           </div>

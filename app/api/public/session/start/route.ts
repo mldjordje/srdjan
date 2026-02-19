@@ -26,55 +26,115 @@ export async function POST(request: Request) {
   }
 
   const fullName = (body.fullName || "").trim();
-  const phone = (body.phone || "").trim();
+  const rawPhone = (body.phone || "").trim();
+  const normalizedPhone = rawPhone.replace(/\D+/g, "");
   const email = (body.email || "").trim().toLowerCase();
+  const hasPhone = normalizedPhone.length >= 6;
+  const hasEmail = email.length > 0;
 
-  if (!fullName || !phone || !email) {
-    return jsonError("fullName, phone, and email are required.", 422);
+  if (!hasPhone && !hasEmail) {
+    return jsonError("Unesite barem telefon ili email.", 422);
+  }
+
+  if (hasEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return jsonError("Email format nije validan.", 422);
   }
 
   const db = getSupabaseAdmin();
 
-  const { data: existing, error: existingError } = await db
-    .from("clients")
-    .select("id, full_name, phone, email, created_at, updated_at")
-    .or(`phone.eq.${phone},email.eq.${email}`)
-    .limit(1)
-    .maybeSingle();
+  const [phoneLookup, emailLookup] = await Promise.all([
+    hasPhone
+      ? db
+          .from("clients")
+          .select("id, full_name, phone, email, created_at, updated_at")
+          .eq("phone", normalizedPhone)
+          .maybeSingle<ClientLookupRow>()
+      : Promise.resolve({ data: null, error: null }),
+    hasEmail
+      ? db
+          .from("clients")
+          .select("id, full_name, phone, email, created_at, updated_at")
+          .eq("email", email)
+          .maybeSingle<ClientLookupRow>()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
 
-  if (existingError) {
-    return jsonError(existingError.message, 500);
+  if (phoneLookup.error) {
+    return jsonError(phoneLookup.error.message, 500);
+  }
+  if (emailLookup.error) {
+    return jsonError(emailLookup.error.message, 500);
   }
 
-  const typedExisting = (existing as ClientLookupRow | null) || null;
+  const phoneExisting = (phoneLookup.data as ClientLookupRow | null) || null;
+  const emailExisting = (emailLookup.data as ClientLookupRow | null) || null;
+
+  if (
+    phoneExisting &&
+    emailExisting &&
+    phoneExisting.id !== emailExisting.id
+  ) {
+    return jsonError(
+      "Telefon i email su povezani sa razlicitim nalozima. Javite se salonu da spoji naloge.",
+      409
+    );
+  }
+
+  const typedExisting = phoneExisting || emailExisting;
   let clientId = typedExisting?.id;
 
   if (typedExisting) {
-    const { error: updateError } = await db
-      .from("clients")
-      .update({
-        full_name: fullName,
-        phone,
-        email,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", typedExisting.id);
+    const patch: Record<string, string> = {};
 
-    if (updateError) {
-      return jsonError(updateError.message, 500);
+    if (hasPhone && typedExisting.phone !== normalizedPhone) {
+      patch.phone = normalizedPhone;
+    }
+    if (hasEmail && typedExisting.email !== email) {
+      patch.email = email;
+    }
+    if (!typedExisting.full_name?.trim() && fullName) {
+      patch.full_name = fullName;
+    }
+
+    if (Object.keys(patch).length > 0) {
+      patch.updated_at = new Date().toISOString();
+      const { error: updateError } = await db
+        .from("clients")
+        .update(patch)
+        .eq("id", typedExisting.id);
+
+      if (updateError) {
+        if (updateError.code === "23505") {
+          return jsonError(
+            "Telefon ili email su vec povezani sa drugim nalogom.",
+            409
+          );
+        }
+        return jsonError(updateError.message, 500);
+      }
     }
   } else {
+    if (!fullName || !hasPhone || !hasEmail) {
+      return jsonError(
+        "Prva prijava trazi ime i prezime, telefon i email.",
+        422
+      );
+    }
+
     const { data: created, error: insertError } = await db
       .from("clients")
       .insert({
         full_name: fullName,
-        phone,
+        phone: normalizedPhone,
         email,
       })
       .select("id")
       .single();
 
     if (insertError || !created?.id) {
+      if (insertError?.code === "23505") {
+        return jsonError("Klijent sa tim telefonom ili emailom vec postoji.", 409);
+      }
       return jsonError(insertError?.message || "Cannot create client.", 500);
     }
     clientId = created.id as string;

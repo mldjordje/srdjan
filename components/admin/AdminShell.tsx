@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useLanguage, type Language } from "@/lib/useLanguage";
@@ -410,15 +409,10 @@ export default function AdminShell({
           <div className="nav-top">
             <Link className="brand" href="/">
               <div className="brand-mark">
-                <Image
-                  src="/logo.png"
-                  alt="Doctor Barber"
-                  width={36}
-                  height={36}
-                />
+                <span className="brand-mark__text">FS</span>
               </div>
               <div className="brand-title">
-                <span>Doctor Barber</span>
+                <span>Frizerski salon Srdjan</span>
                 <span>{t.cmsPanel}</span>
               </div>
             </Link>

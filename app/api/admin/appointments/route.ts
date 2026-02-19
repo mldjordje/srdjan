@@ -5,7 +5,6 @@ import { getSupabaseAdmin } from "@/lib/server/supabase";
 import {
   isIsoDate,
   minutesToTime,
-  normalizeDurationToStep,
   parseTimeToMinutes,
 } from "@/lib/server/time";
 
@@ -39,8 +38,7 @@ type ClientLookupRow = {
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const trim = (value?: string) => (value || "").trim();
-const parseDurationFromService = (durationValue: number) =>
-  normalizeDurationToStep(Number(durationValue || 0));
+const parseDurationFromService = (durationValue: number) => Number(durationValue || 0);
 
 const resolveClientId = async ({
   fullName,
@@ -258,6 +256,9 @@ export async function POST(request: Request) {
   }
 
   const durationMin = parseDurationFromService(workerService.duration_min);
+  if (!Number.isFinite(durationMin) || durationMin <= 0) {
+    return jsonError("Invalid service duration.", 500);
+  }
   const endTime = minutesToTime(startMinutes + durationMin);
   let existingAppointment:
     | {

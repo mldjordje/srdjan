@@ -10,7 +10,6 @@ import { getSupabaseAdmin } from "@/lib/server/supabase";
 import {
   isIsoDate,
   minutesToTime,
-  normalizeDurationToStep,
   parseTimeToMinutes,
 } from "@/lib/server/time";
 
@@ -69,7 +68,10 @@ export async function POST(request: Request) {
     return jsonError("Shift setup is invalid.", 500);
   }
 
-  const durationMin = normalizeDurationToStep(workerService.duration_min);
+  const durationMin = Number(workerService.duration_min);
+  if (!Number.isFinite(durationMin) || durationMin <= 0) {
+    return jsonError("Invalid service duration.", 500);
+  }
   const endMinutes = startMinutes + durationMin;
   const endTime = minutesToTime(endMinutes);
 
@@ -102,7 +104,7 @@ export async function POST(request: Request) {
       start_time: time,
       end_time: endTime,
       note: note || null,
-      status: "confirmed",
+      status: "pending",
       source: "web",
     })
     .select(
@@ -116,4 +118,3 @@ export async function POST(request: Request) {
 
   return jsonOk({ appointment }, 201);
 }
-

@@ -3,7 +3,6 @@ import {
   SLOT_STEP_MINUTES,
   isIsoDate,
   minutesToTime,
-  normalizeDurationToStep,
   parseTimeToMinutes,
   rangesOverlap,
 } from "@/lib/server/time";
@@ -163,7 +162,9 @@ export const buildAvailability = ({
     return [];
   }
 
-  const normalizedDuration = normalizeDurationToStep(durationMin);
+  if (!Number.isFinite(durationMin) || durationMin <= 0) {
+    return [];
+  }
   const occupiedRanges = occupied
     .map((item) => {
       const s = parseTimeToMinutes(item.start_time);
@@ -178,10 +179,10 @@ export const buildAvailability = ({
   const slots: string[] = [];
   for (
     let slotStart = startMinutes;
-    slotStart + normalizedDuration <= endMinutes;
+    slotStart + durationMin <= endMinutes;
     slotStart += SLOT_STEP_MINUTES
   ) {
-    const slotEnd = slotStart + normalizedDuration;
+    const slotEnd = slotStart + durationMin;
     const overlaps = occupiedRanges.some((range) =>
       rangesOverlap(slotStart, slotEnd, range.start, range.end)
     );
@@ -219,4 +220,3 @@ export const ensureNoConflict = ({
   }
   return true;
 };
-

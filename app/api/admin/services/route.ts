@@ -1,7 +1,6 @@
 import { jsonError, jsonOk, parseJson } from "@/lib/server/http";
 import { requireAdmin } from "@/lib/server/rbac";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
-import { normalizeDurationToStep } from "@/lib/server/time";
 
 type CreateServiceBody = {
   workerId?: string;
@@ -22,8 +21,21 @@ type PatchServiceBody = {
   isActive?: boolean;
 };
 
-const ALLOWED_DURATIONS = new Set([20, 40, 60]);
 const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
+const MIN_DURATION_MIN = 5;
+const MAX_DURATION_MIN = 240;
+
+const parseDuration = (value: unknown) => {
+  const num = Number(value);
+  if (!Number.isFinite(num) || !Number.isInteger(num)) {
+    return null;
+  }
+  if (num < MIN_DURATION_MIN || num > MAX_DURATION_MIN) {
+    return null;
+  }
+  return num;
+};
+
 const normalizeColor = (value?: string | null) => {
   const trimmed = (value || "").trim();
   if (!trimmed) {
@@ -90,19 +102,25 @@ export async function POST(request: Request) {
       : requestedWorkerId;
   const providedServiceId = (body.serviceId || "").trim();
   const name = (body.name || "").trim();
-  const durationMin = Number(body.durationMin || 0);
+  const durationMin = parseDuration(body.durationMin);
   const price = Number(body.price || 0);
   const color = normalizeColor(body.color);
   const isActive = body.isActive !== false;
 
-  if (!workerId || (!providedServiceId && !name) || durationMin <= 0 || price < 0) {
+  if (!workerId || (!providedServiceId && !name)) {
     return jsonError(
       "workerId and (serviceId or name) with valid durationMin/price are required.",
       422
     );
   }
-  if (!ALLOWED_DURATIONS.has(durationMin)) {
-    return jsonError("durationMin must be one of: 20, 40, 60.", 422);
+  if (!durationMin) {
+    return jsonError(
+      `durationMin must be an integer between ${MIN_DURATION_MIN} and ${MAX_DURATION_MIN}.`,
+      422
+    );
+  }
+  if (!Number.isFinite(price) || price < 0) {
+    return jsonError("price must be a non-negative number.", 422);
   }
   if ((body.color || "").trim() && !color) {
     return jsonError("color must be a valid HEX code (#RRGGBB).", 422);
@@ -122,13 +140,12 @@ export async function POST(request: Request) {
     serviceId = createdService.id as string;
   }
 
-  const normalizedDuration = normalizeDurationToStep(durationMin);
   const { data: row, error: createError } = await db
     .from("worker_services")
     .insert({
       worker_id: workerId,
       service_id: serviceId,
-      duration_min: normalizedDuration,
+      duration_min: durationMin,
       price,
       color,
       is_active: isActive,
@@ -183,14 +200,22 @@ export async function PATCH(request: Request) {
   }
 
   const patch: Record<string, unknown> = {};
-  if (typeof body.durationMin === "number" && body.durationMin > 0) {
-    if (!ALLOWED_DURATIONS.has(body.durationMin)) {
-      return jsonError("durationMin must be one of: 20, 40, 60.", 422);
+  if (body.durationMin !== undefined) {
+    const durationMin = parseDuration(body.durationMin);
+    if (!durationMin) {
+      return jsonError(
+        `durationMin must be an integer between ${MIN_DURATION_MIN} and ${MAX_DURATION_MIN}.`,
+        422
+      );
     }
-    patch.duration_min = normalizeDurationToStep(body.durationMin);
+    patch.duration_min = durationMin;
   }
-  if (typeof body.price === "number" && body.price >= 0) {
-    patch.price = body.price;
+  if (body.price !== undefined) {
+    const price = Number(body.price);
+    if (!Number.isFinite(price) || price < 0) {
+      return jsonError("price must be a non-negative number.", 422);
+    }
+    patch.price = price;
   }
   if (body.color !== undefined) {
     if (body.color === null || body.color.trim() === "") {

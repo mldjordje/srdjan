@@ -210,6 +210,12 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
   const maxMonth = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
   const canGoPrevMonth = calendarMonth > minMonth;
   const canGoNextMonth = calendarMonth < maxMonth;
+  const workersForLocation = useMemo(
+    () => (bootstrap?.workers || []).filter((item) => item.location_id === locationId),
+    [bootstrap?.workers, locationId]
+  );
+  const canChooseWorker = Boolean(locationId);
+  const canChooseDateAndService = Boolean(locationId && workerId);
 
   const workerServices = useMemo(
     () => (bootstrap?.workerServices || []).filter((item) => item.worker_id === workerId),
@@ -239,15 +245,9 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
           throw new Error("Bootstrap endpoint je vratio prazan ili neispravan JSON.");
         }
         setBootstrap(bootstrapData);
-        const loc = bootstrapData.defaultLocationId || bootstrapData.locations?.[0]?.id || "";
-        setLocationId(loc);
-        const firstWorker = bootstrapData.workers?.[0]?.id || "";
-        setWorkerId(firstWorker);
-
-        const firstService = bootstrapData.workerServices.find(
-          (item) => item.worker_id === firstWorker
-        );
-        setServiceId(firstService?.service_id || "");
+        setLocationId("");
+        setWorkerId("");
+        setServiceId("");
 
         if (meRes.ok) {
           const me = await readResponseJsonSafe<{ client?: ClientProfile }>(meRes);
@@ -407,6 +407,10 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
   const handleSessionStart = async (event: React.FormEvent) => {
     event.preventDefault();
     setStatus("");
+    if (!authForm.phone.trim() && !authForm.email.trim()) {
+      setStatus("Unesite telefon ili email.");
+      return;
+    }
     const response = await fetch("/api/public/session/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -418,6 +422,13 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
       return;
     }
     setClient(data?.client || null);
+    if (data?.client) {
+      setAuthForm({
+        fullName: data.client.fullName || "",
+        phone: data.client.phone || authForm.phone,
+        email: data.client.email || authForm.email,
+      });
+    }
     setStatus("Prijava je uspesna.");
   };
 
@@ -451,7 +462,7 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
       setStatus(data?.error || `Zakazivanje nije uspelo (HTTP ${response.status}).`);
       return;
     }
-    setStatus("Termin je uspesno zakazan.");
+    setStatus("Termin je poslat i ceka potvrdu radnika.");
     setTime("");
     setNote("");
     await loadMyAppointments();
@@ -524,8 +535,8 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
                 onChange={(event) =>
                   setAuthForm((prev) => ({ ...prev, fullName: event.target.value }))
                 }
-                required
               />
+              <small>Prva prijava: unesite sva 3 polja.</small>
             </div>
             <div className="form-row">
               <label htmlFor="phone">Telefon</label>
@@ -536,7 +547,6 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
                 onChange={(event) =>
                   setAuthForm((prev) => ({ ...prev, phone: event.target.value }))
                 }
-                required
               />
             </div>
             <div className="form-row">
@@ -549,8 +559,8 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
                 onChange={(event) =>
                   setAuthForm((prev) => ({ ...prev, email: event.target.value }))
                 }
-                required
               />
+              <small>Sledeca prijava: dovoljan je telefon ili email.</small>
             </div>
             <div className="form-row">
               <button className="button" type="submit">Prijava</button>
@@ -582,14 +592,12 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
               onChange={(event) => {
                 const nextLocation = event.target.value;
                 setLocationId(nextLocation);
-                const nextWorkers = (bootstrap?.workers || []).filter(
-                  (item) => item.location_id === nextLocation
-                );
-                setWorkerId(nextWorkers[0]?.id || "");
+                setWorkerId("");
                 setServiceId("");
                 setTime("");
               }}
             >
+              <option value="">Izaberite radnju</option>
               {(bootstrap?.locations || []).map((location) => (
                 <option key={location.id} value={location.id}>
                   {location.name}
@@ -604,146 +612,162 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
               id="worker"
               className="select"
               value={workerId}
+              disabled={!canChooseWorker}
               onChange={(event) => {
                 setWorkerId(event.target.value);
+                setServiceId("");
                 setTime("");
               }}
             >
-              {(bootstrap?.workers || [])
-                .filter((worker) => worker.location_id === locationId)
-                .map((worker) => (
-                  <option key={worker.id} value={worker.id}>
-                    {worker.name}
-                  </option>
-                ))}
-            </select>
-          </div>
-
-          <div className="form-row">
-            <label htmlFor="date">Datum</label>
-            <div className="calendar">
-              <div className="calendar-header">
-                <button
-                  type="button"
-                  className="button outline small"
-                  onClick={() => setCalendarMonth(addMonths(calendarMonth, -1))}
-                  disabled={!canGoPrevMonth}
-                >
-                  Prethodni
-                </button>
-                <div className="calendar-title">{formatMonthLabel(calendarMonth, locale)}</div>
-                <button
-                  type="button"
-                  className="button outline small"
-                  onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))}
-                  disabled={!canGoNextMonth}
-                >
-                  Sledeci
-                </button>
-              </div>
-              <div className="calendar-weekdays">
-                {["pon", "uto", "sre", "cet", "pet"].map((day) => (
-                  <span key={day}>{day}</span>
-                ))}
-              </div>
-              <div className="calendar-grid">
-                {monthDays.map((day, index) => {
-                  if (!day.inMonth || !day.value) {
-                    return <div key={`empty-${index}`} className="calendar-cell" />;
-                  }
-                  const isActive = day.value === date;
-                  const summary = calendarSummaryByDate[day.value];
-                  const availabilityClass =
-                    summary?.availability === "free"
-                      ? "is-high"
-                      : summary?.availability === "busy"
-                      ? "is-none"
-                      : "is-loading";
-                  const shiftClass =
-                    summary?.shiftType === "morning"
-                      ? "is-morning"
-                      : summary?.shiftType === "afternoon"
-                      ? "is-afternoon"
-                      : summary?.shiftType === "off"
-                      ? "is-none"
-                      : "is-loading";
-                  return (
-                    <button
-                      key={day.value}
-                      type="button"
-                      className={`calendar-day ${isActive ? "is-active" : ""}`}
-                      disabled={!day.inRange}
-                      onClick={() => {
-                        setDate(day.value || date);
-                        setTime("");
-                      }}
-                    >
-                      <span>{day.label}</span>
-                      <span className={`calendar-indicator ${availabilityClass}`} />
-                      <span className={`calendar-indicator calendar-indicator--shift ${shiftClass}`} />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            {shiftLabel && <small>{shiftLabel}</small>}
-            <small>
-              Linija 1: <strong>zelena</strong> slobodno, <strong>crvena</strong> zauzeto. Linija 2:
-              smena (<strong>zelena</strong> prepodne, <strong>narandzasta</strong> popodne).
-            </small>
-          </div>
-
-          <div className="form-row">
-            <label htmlFor="service">Usluga</label>
-            <select
-              id="service"
-              className="select"
-              value={serviceId}
-              onChange={(event) => {
-                setServiceId(event.target.value);
-                setTime("");
-              }}
-              required
-            >
-              {workerServices.map((item) => (
-                <option key={item.id} value={item.service_id}>
-                  {item.services?.name || "Usluga"} ({item.duration_min} min / {item.price} RSD)
+              <option value="">{canChooseWorker ? "Izaberite radnika" : "Prvo izaberite radnju"}</option>
+              {workersForLocation.map((worker) => (
+                <option key={worker.id} value={worker.id}>
+                  {worker.name}
                 </option>
               ))}
             </select>
           </div>
 
-          <div className="form-row form-row--full">
-            <label>Termin (20 min mreza)</label>
-            <div className="slot-items slot-items--single">
-              {slots.map((slot) => (
-                <button
-                  type="button"
-                  key={slot}
-                  className={`button outline small ${time === slot ? "is-active" : ""}`}
-                  onClick={() => setTime(slot)}
-                >
-                  {slot}
-                </button>
-              ))}
+          {!canChooseDateAndService && (
+            <div className="form-row form-row--full">
+              <p className="form-status">Izaberite radnju i radnika da se prikazu kalendar, usluge i termini.</p>
             </div>
-          </div>
+          )}
 
-          <div className="form-row form-row--full">
-            <label htmlFor="note">Napomena</label>
-            <textarea
-              id="note"
-              className="textarea"
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-            />
-          </div>
+          {canChooseDateAndService && (
+            <>
+              <div className="form-row">
+                <label htmlFor="date">Datum</label>
+                <div className="calendar">
+                  <div className="calendar-header">
+                    <button
+                      type="button"
+                      className="button outline small"
+                      onClick={() => setCalendarMonth(addMonths(calendarMonth, -1))}
+                      disabled={!canGoPrevMonth}
+                    >
+                      Prethodni
+                    </button>
+                    <div className="calendar-title">{formatMonthLabel(calendarMonth, locale)}</div>
+                    <button
+                      type="button"
+                      className="button outline small"
+                      onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))}
+                      disabled={!canGoNextMonth}
+                    >
+                      Sledeci
+                    </button>
+                  </div>
+                  <div className="calendar-weekdays">
+                    {["pon", "uto", "sre", "cet", "pet"].map((day) => (
+                      <span key={day}>{day}</span>
+                    ))}
+                  </div>
+                  <div className="calendar-grid">
+                    {monthDays.map((day, index) => {
+                      if (!day.inMonth || !day.value) {
+                        return <div key={`empty-${index}`} className="calendar-cell" />;
+                      }
+                      const isActive = day.value === date;
+                      const summary = calendarSummaryByDate[day.value];
+                      const availabilityClass =
+                        summary?.availability === "free"
+                          ? "is-high"
+                          : summary?.availability === "busy"
+                          ? "is-none"
+                          : "is-loading";
+                      const shiftClass =
+                        summary?.shiftType === "morning"
+                          ? "is-morning"
+                          : summary?.shiftType === "afternoon"
+                          ? "is-afternoon"
+                          : summary?.shiftType === "off"
+                          ? "is-none"
+                          : "is-loading";
+                      return (
+                        <button
+                          key={day.value}
+                          type="button"
+                          className={`calendar-day ${isActive ? "is-active" : ""}`}
+                          disabled={!day.inRange}
+                          onClick={() => {
+                            setDate(day.value || date);
+                            setTime("");
+                          }}
+                        >
+                          <span>{day.label}</span>
+                          <span className={`calendar-indicator ${availabilityClass}`} />
+                          <span className={`calendar-indicator calendar-indicator--shift ${shiftClass}`} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                {shiftLabel && <small>{shiftLabel}</small>}
+                <small>
+                  Linija 1: <strong>zelena</strong> slobodno, <strong>crvena</strong> zauzeto. Linija 2:
+                  smena (<strong>plava</strong> prepodne, <strong>narandzasta</strong> popodne).
+                </small>
+              </div>
 
-          <div className="form-row">
-            <button className="button" type="submit" disabled={!client || !time || !selectedService}>
-              Potvrdi termin
-            </button>
-          </div>
+              <div className="form-row">
+                <label htmlFor="service">Usluga</label>
+                <select
+                  id="service"
+                  className="select"
+                  value={serviceId}
+                  onChange={(event) => {
+                    setServiceId(event.target.value);
+                    setTime("");
+                  }}
+                  required
+                >
+                  <option value="">Izaberite uslugu</option>
+                  {workerServices.map((item) => (
+                    <option key={item.id} value={item.service_id}>
+                      {item.services?.name || "Usluga"} ({item.duration_min} min / {item.price} RSD)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-row form-row--full">
+                <label>Termin</label>
+                <div className="slot-items slot-items--single">
+                  {slots.map((slot) => (
+                    <button
+                      type="button"
+                      key={slot}
+                      className={`slot-button ${time === slot ? "is-active is-selected" : ""}`}
+                      onClick={() => setTime(slot)}
+                    >
+                      {slot}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="form-row form-row--full">
+                <label htmlFor="note">Napomena</label>
+                <textarea
+                  id="note"
+                  className="textarea"
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
+                />
+              </div>
+
+              <div className="form-row">
+                <button
+                  className="button booking-submit-button"
+                  type="submit"
+                  disabled={!client || !time || !selectedService}
+                >
+                  Posalji zahtev za termin
+                </button>
+              </div>
+            </>
+          )}
         </form>
         <p>
           Izabrano: <strong>{selectedWorker?.name || "-"}</strong> /{" "}

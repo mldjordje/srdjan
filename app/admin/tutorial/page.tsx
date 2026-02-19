@@ -43,11 +43,10 @@ export default function AdminTutorialPage() {
       <div className="admin-card">
         <h3>5. Usluge</h3>
         <p>
-          U sekciji <strong>Usluge</strong> dodaj novu uslugu za izabranog radnika. Preporucene
-          vremenske opcije su <strong>20, 40 i 60 min</strong>.
+          U sekciji <strong>Usluge</strong> dodaj novu uslugu za izabranog radnika. Trajanje moze
+          biti bilo koji broj minuta, npr. <strong>35, 40 ili 50 min</strong>.
         </p>
       </div>
     </AdminShell>
   );
 }
-

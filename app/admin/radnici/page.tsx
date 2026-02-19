@@ -39,12 +39,23 @@ type StaffUser = {
   workers?: { id: string; name: string; location_id: string } | null;
 };
 
+const normalizeUsername = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "")
+    .slice(0, 24);
+
 export default function AdminWorkersPage() {
   const [admin, setAdmin] = useState<AdminMe | null>(null);
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [locationStats, setLocationStats] = useState<LocationStat[]>([]);
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
+  const [workerNames, setWorkerNames] = useState<Record<string, string>>({});
+  const [staffUsernames, setStaffUsernames] = useState<Record<string, string>>({});
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -89,6 +100,12 @@ export default function AdminWorkersPage() {
     setWorkers(listWorkers);
     setLocations(listLocations);
     setLocationStats(listStats);
+    setWorkerNames(
+      listWorkers.reduce((acc: Record<string, string>, worker: Worker) => {
+        acc[worker.id] = worker.name;
+        return acc;
+      }, {})
+    );
     setWorkerForm((prev) => ({
       ...prev,
       locationId: prev.locationId || listLocations[0]?.id || "",
@@ -98,15 +115,25 @@ export default function AdminWorkersPage() {
     if (!staffRes.ok) {
       throw new Error(staffData.error || "Ne mogu da ucitam staff naloge.");
     }
-    setStaffUsers(Array.isArray(staffData.staffUsers) ? staffData.staffUsers : []);
+    const nextStaffUsers = Array.isArray(staffData.staffUsers) ? staffData.staffUsers : [];
+    setStaffUsers(nextStaffUsers);
+    setStaffUsernames(
+      nextStaffUsers.reduce((acc: Record<string, string>, item: StaffUser) => {
+        acc[item.id] = item.username;
+        return acc;
+      }, {})
+    );
     setLoading(false);
   };
 
   useEffect(() => {
-    load().catch((error) => {
-      setStatus(error instanceof Error ? error.message : "Greska.");
-      setLoading(false);
-    });
+    const timer = window.setTimeout(() => {
+      load().catch((error) => {
+        setStatus(error instanceof Error ? error.message : "Greska.");
+        setLoading(false);
+      });
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const workersWithoutAccount = useMemo(() => {
@@ -151,6 +178,30 @@ export default function AdminWorkersPage() {
     setStatus("Status radnika je azuriran.");
   };
 
+  const saveWorkerName = async (worker: Worker) => {
+    setStatus("");
+    const nextName = (workerNames[worker.id] || "").trim();
+    if (!nextName) {
+      setStatus("Ime radnika je obavezno.");
+      return;
+    }
+    const response = await fetch("/api/admin/workers", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: worker.id,
+        name: nextName,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setStatus(data.error || "Ne mogu da sacuvam ime radnika.");
+      return;
+    }
+    await load();
+    setStatus("Ime radnika je azurirano.");
+  };
+
   const createStaffUser = async (event: React.FormEvent) => {
     event.preventDefault();
     setStatus("");
@@ -170,6 +221,7 @@ export default function AdminWorkersPage() {
   };
 
   const toggleStaffActive = async (item: StaffUser) => {
+    setStatus("");
     const response = await fetch("/api/admin/staff-users", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -187,7 +239,32 @@ export default function AdminWorkersPage() {
     setStatus("Staff nalog je azuriran.");
   };
 
+  const saveStaffUsername = async (item: StaffUser) => {
+    setStatus("");
+    const nextUsername = (staffUsernames[item.id] || "").trim();
+    if (!nextUsername) {
+      setStatus("Username je obavezan.");
+      return;
+    }
+    const response = await fetch("/api/admin/staff-users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: item.id,
+        username: nextUsername,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setStatus(data.error || "Ne mogu da sacuvam username.");
+      return;
+    }
+    await load();
+    setStatus("Username je azuriran.");
+  };
+
   const resetStaffPassword = async (item: StaffUser) => {
+    setStatus("");
     const nextPassword = (resetPasswords[item.id] || "").trim();
     if (!nextPassword) {
       setStatus("Unesi novu lozinku.");
@@ -290,16 +367,28 @@ export default function AdminWorkersPage() {
           <div key={worker.id} className="admin-card">
             <strong>{worker.name}</strong>
             <div>
-              Lokacija: {locations.find((item) => item.id === worker.location_id)?.name || worker.location_id}
+              Lokacija:{" "}
+              {locations.find((item) => item.id === worker.location_id)?.name || worker.location_id}
             </div>
             <div>Status: {worker.is_active ? "Aktivan" : "Neaktivan"}</div>
-            <button
-              className="button outline"
-              type="button"
-              onClick={() => toggleWorkerActive(worker)}
-            >
-              {worker.is_active ? "Deaktiviraj" : "Aktiviraj"}
-            </button>
+            <div className="form-row">
+              <label>Ime radnika</label>
+              <input
+                className="input"
+                value={workerNames[worker.id] || ""}
+                onChange={(event) =>
+                  setWorkerNames((prev) => ({ ...prev, [worker.id]: event.target.value }))
+                }
+              />
+            </div>
+            <div className="admin-actions">
+              <button className="button outline" type="button" onClick={() => saveWorkerName(worker)}>
+                Sacuvaj ime
+              </button>
+              <button className="button outline" type="button" onClick={() => toggleWorkerActive(worker)}>
+                {worker.is_active ? "Deaktiviraj" : "Aktiviraj"}
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -312,9 +401,19 @@ export default function AdminWorkersPage() {
             <select
               className="select"
               value={staffForm.workerId}
-              onChange={(event) =>
-                setStaffForm((prev) => ({ ...prev, workerId: event.target.value }))
-              }
+              onChange={(event) => {
+                const selectedWorkerId = event.target.value;
+                const selectedWorker = workersWithoutAccount.find(
+                  (worker) => worker.id === selectedWorkerId
+                );
+                setStaffForm((prev) => ({
+                  ...prev,
+                  workerId: selectedWorkerId,
+                  username:
+                    prev.username.trim() ||
+                    normalizeUsername(selectedWorker?.name || ""),
+                }));
+              }}
               required
             >
               <option value="">Izaberi radnika</option>
@@ -364,6 +463,16 @@ export default function AdminWorkersPage() {
             <div>Radnik: {item.workers?.name || item.worker_id}</div>
             <div>Status: {item.is_active ? "Aktivan" : "Neaktivan"}</div>
             <div className="form-row">
+              <label>Username</label>
+              <input
+                className="input"
+                value={staffUsernames[item.id] || ""}
+                onChange={(event) =>
+                  setStaffUsernames((prev) => ({ ...prev, [item.id]: event.target.value }))
+                }
+              />
+            </div>
+            <div className="form-row">
               <label>Nova lozinka</label>
               <input
                 className="input"
@@ -378,6 +487,9 @@ export default function AdminWorkersPage() {
               <button className="button outline" type="button" onClick={() => toggleStaffActive(item)}>
                 {item.is_active ? "Deaktiviraj" : "Aktiviraj"}
               </button>
+              <button className="button outline" type="button" onClick={() => saveStaffUsername(item)}>
+                Sacuvaj username
+              </button>
               <button className="button outline" type="button" onClick={() => resetStaffPassword(item)}>
                 Sacuvaj novu lozinku
               </button>
@@ -390,4 +502,3 @@ export default function AdminWorkersPage() {
     </AdminShell>
   );
 }
-

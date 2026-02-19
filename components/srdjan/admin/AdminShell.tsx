@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -30,6 +29,7 @@ const navItems = [
   { href: "/admin/clients", label: "Klijenti", ownerOnly: false },
   { href: "/admin/notifications", label: "Notifikacije", ownerOnly: false },
   { href: "/admin/tutorial", label: "Tutorial", ownerOnly: false },
+  { href: "/admin/tutorial-owner", label: "Owner tutorial", ownerOnly: true },
   { href: "/admin/settings", label: "Podesavanja", ownerOnly: true },
 ];
 
@@ -146,7 +146,7 @@ export default function AdminShell({
           <div className="nav-top">
             <Link className="brand" href="/">
               <div className="brand-mark">
-                <Image src="/logo.png" alt="Frizerski salon Srdjan" width={36} height={36} />
+                <span className="brand-mark__text">FS</span>
               </div>
               <div className="brand-title">
                 <span>Frizerski salon Srdjan</span>

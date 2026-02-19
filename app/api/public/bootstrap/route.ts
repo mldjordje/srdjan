@@ -27,11 +27,8 @@ export async function GET() {
     const defaultLocationId =
       env.defaultLocationId() || (locations?.length ? (locations[0].id as string) : "");
 
-    const selectedWorkers = (workers || []).filter(
-      (worker) => worker.location_id === defaultLocationId
-    );
-
-    const workerIds = selectedWorkers.map((worker) => worker.id);
+    const activeWorkers = workers || [];
+    const workerIds = activeWorkers.map((worker) => worker.id);
 
     const [{ data: workerServices, error: workerServicesError }, { data: shifts, error: shiftsError }] =
       await Promise.all([
@@ -65,7 +62,7 @@ export async function GET() {
     return jsonOk({
       defaultLocationId,
       locations: locations || [],
-      workers: selectedWorkers,
+      workers: activeWorkers,
       workerServices: workerServices || [],
       shiftSettings: shifts,
     });

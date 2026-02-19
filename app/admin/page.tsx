@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -62,7 +61,7 @@ export default function AdminLoginPage() {
         <div className="container nav-inner">
           <Link className="brand" href="/">
             <div className="brand-mark">
-              <Image src="/logo.png" alt="Frizerski salon Srdjan" width={36} height={36} />
+              <span className="brand-mark__text">FS</span>
             </div>
             <div className="brand-title">
               <span>Frizerski salon Srdjan</span>
@@ -118,7 +117,7 @@ export default function AdminLoginPage() {
               Owner: <code>owner / owner123!</code>
             </div>
             <div>
-              Staff: <code>staff / staff123!</code>
+              Staff: <code>jasmina, denis, marko, ana / staff123!</code>
             </div>
           </div>
         </div>

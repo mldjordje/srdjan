@@ -305,7 +305,7 @@ export default function AdminServicesPage() {
 
       <div className="admin-card">
         <h3>{isStaff ? "Nova moja usluga" : "Nova usluga za radnika"}</h3>
-        <p>Trajanje usluge biraj iz standardnih opcija: 20, 40 ili 60 minuta.</p>
+        <p>Trajanje usluge unosi se u minutima (primer: 35, 50).</p>
         <form className="form-grid" onSubmit={create}>
           {isStaff ? (
             <div className="form-row">
@@ -342,16 +342,16 @@ export default function AdminServicesPage() {
           </div>
           <div className="form-row">
             <label>Trajanje (min)</label>
-            <select
-              className="select"
+            <input
+              className="input"
+              type="number"
+              min="5"
+              max="240"
+              step="5"
               value={form.durationMin}
               onChange={(event) => setForm((prev) => ({ ...prev, durationMin: event.target.value }))}
               required
-            >
-              <option value="20">20 min</option>
-              <option value="40">40 min</option>
-              <option value="60">60 min</option>
-            </select>
+            />
           </div>
           <div className="form-row">
             <label>Cena (RSD)</label>
@@ -431,17 +431,17 @@ export default function AdminServicesPage() {
             <div className="form-grid">
               <div className="form-row">
                 <label>Trajanje (min)</label>
-                <select
-                  className="select"
+                <input
+                  className="input"
+                  type="number"
+                  min="5"
+                  max="240"
+                  step="5"
                   value={draft.durationMin}
                   onChange={(event) =>
                     updateDraft(item, { durationMin: event.target.value })
                   }
-                >
-                  <option value="20">20 min</option>
-                  <option value="40">40 min</option>
-                  <option value="60">60 min</option>
-                </select>
+                />
               </div>
               <div className="form-row">
                 <label>Cena (RSD)</label>

@@ -117,7 +117,7 @@ h4 {
 .brand-mark {
   width: 54px;
   height: 54px;
-  padding: 6px;
+  padding: 0;
   border-radius: 18px;
   background: linear-gradient(150deg, rgba(255, 255, 255, 0.96), rgba(232, 224, 210, 0.9));
   border: 1px solid rgba(17, 17, 17, 0.18);
@@ -133,6 +133,14 @@ h4 {
   height: 100%;
   object-fit: contain;
   display: block;
+}
+
+.brand-mark__text {
+  font-family: var(--font-display), serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #191919;
 }
 
 .brand-title {
@@ -387,6 +395,13 @@ h4 {
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
 }
 
+.preloader-mark__text {
+  font-family: var(--font-display), serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
 .preloader-title {
   display: grid;
   gap: 4px;
@@ -456,9 +471,13 @@ h4 {
   mix-blend-mode: normal;
 }
 
-.hero-minimal__bg img {
-  object-fit: cover;
-  filter: grayscale(0.25) contrast(1.02) brightness(0.98) saturate(1.1);
+.hero-minimal__bg-art {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 14% 24%, rgba(247, 196, 120, 0.45), transparent 48%),
+    radial-gradient(circle at 80% 20%, rgba(112, 158, 207, 0.36), transparent 45%),
+    linear-gradient(145deg, rgba(13, 13, 13, 0.88), rgba(38, 30, 18, 0.56), rgba(255, 255, 255, 0.22));
 }
 
 .hero-minimal__glow {
@@ -1515,8 +1534,8 @@ h4 {
 }
 
 .calendar-indicator.is-afternoon {
-  background: #7a59c9;
-  box-shadow: 0 0 8px rgba(122, 89, 201, 0.35);
+  background: #d07c2e;
+  box-shadow: 0 0 8px rgba(208, 124, 46, 0.36);
 }
 
 .calendar-indicator.is-none {
@@ -1583,13 +1602,14 @@ h4 {
 
 .slot-button {
   justify-content: center;
-  border-radius: 14px;
+  border-radius: 16px;
   border: 1px solid rgba(17, 17, 17, 0.12);
   background: var(--bg-elevated);
   color: var(--text);
   font-size: 0.9rem;
   width: 100%;
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  min-height: 46px;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .slot-button:hover {
@@ -1598,9 +1618,35 @@ h4 {
 }
 
 .slot-button.is-active {
-  background: var(--accent);
+  background: linear-gradient(135deg, #103a22, #1d6a3c);
   color: #ffffff;
-  border-color: transparent;
+  border-color: rgba(46, 148, 84, 0.8);
+  box-shadow: 0 12px 22px rgba(46, 148, 84, 0.24);
+}
+
+.slot-button.is-selected {
+  transform: translateY(-1px) scale(1.01);
+  animation: bookingConfirmPulse 0.45s ease;
+}
+
+.booking-submit-button {
+  background: linear-gradient(140deg, #1f8f4f, #2daf64);
+  border: 1px solid rgba(47, 155, 95, 0.8);
+  box-shadow: 0 14px 28px rgba(40, 145, 82, 0.28);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.booking-submit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.03);
+  box-shadow: 0 18px 30px rgba(40, 145, 82, 0.34);
+}
+
+.booking-submit-button:disabled {
+  background: #7f8b82;
+  border-color: #7f8b82;
+  box-shadow: none;
+  cursor: not-allowed;
 }
 
 .slot-empty {
@@ -3659,6 +3705,25 @@ h4 {
 .gallery-card img {
   object-fit: cover;
   filter: grayscale(0.1) contrast(1.05);
+}
+
+.gallery-art {
+  position: absolute;
+  inset: 0;
+}
+
+.gallery-art--one {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(248, 205, 142, 0.42), transparent 45%),
+    radial-gradient(circle at 70% 72%, rgba(90, 139, 191, 0.34), transparent 44%),
+    linear-gradient(138deg, #151515 0%, #2c2417 42%, #62553b 100%);
+}
+
+.gallery-art--two {
+  background:
+    radial-gradient(circle at 72% 18%, rgba(255, 180, 116, 0.36), transparent 45%),
+    radial-gradient(circle at 22% 78%, rgba(86, 151, 121, 0.3), transparent 42%),
+    linear-gradient(145deg, #181818 0%, #233331 44%, #4e6356 100%);
 }
 
 .nav-badge {

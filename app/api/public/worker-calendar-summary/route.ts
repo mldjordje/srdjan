@@ -1,7 +1,7 @@
 import { buildAvailability, getWorkerService } from "@/lib/server/scheduling";
 import { jsonError, jsonOk } from "@/lib/server/http";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
-import { isIsoDate, normalizeDurationToStep } from "@/lib/server/time";
+import { isIsoDate } from "@/lib/server/time";
 import type { ShiftType } from "@/lib/server/types";
 
 type ShiftSettings = {
@@ -55,7 +55,10 @@ export async function GET(request: Request) {
   if (!workerService) {
     return jsonError("Service is not available for selected worker.", 404);
   }
-  const durationMin = normalizeDurationToStep(workerService.duration_min);
+  const durationMin = Number(workerService.duration_min);
+  if (!Number.isFinite(durationMin) || durationMin <= 0) {
+    return jsonError("Invalid service duration.", 500);
+  }
 
   const db = getSupabaseAdmin();
   const [

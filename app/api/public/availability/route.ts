@@ -5,7 +5,7 @@ import {
   getShiftWindowForDay,
   getWorkerService,
 } from "@/lib/server/scheduling";
-import { isIsoDate, normalizeDurationToStep } from "@/lib/server/time";
+import { isIsoDate } from "@/lib/server/time";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -36,7 +36,10 @@ export async function GET(request: Request) {
   }
 
   const occupied = await getOccupiedByWorkerAndDate(locationId, workerId, date);
-  const durationMin = normalizeDurationToStep(workerService.duration_min);
+  const durationMin = Number(workerService.duration_min);
+  if (!Number.isFinite(durationMin) || durationMin <= 0) {
+    return jsonError("Invalid service duration.", 500);
+  }
   const slots = buildAvailability({
     shiftStart: shiftWindow.start,
     shiftEnd: shiftWindow.end,
@@ -53,4 +56,3 @@ export async function GET(request: Request) {
     slots,
   });
 }
-

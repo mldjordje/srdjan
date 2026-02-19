@@ -226,7 +226,7 @@ const buildIcs = (booking: CalendarBooking) => {
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//DoctorBarber//Booking//SR",
+    "PRODID:-//SrdjanSalon//Booking//SR",
     "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
     `UID:${uid}`,

@@ -56,6 +56,7 @@ export default function RegisterPage() {
             onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
             required
           />
+          <small>Posle prve registracije sledeci put je dovoljan telefon ili email.</small>
         </div>
         {status && <p className="form-status error">{status}</p>}
         <div className="admin-actions">
@@ -66,4 +67,3 @@ export default function RegisterPage() {
     </main>
   );
 }
-
