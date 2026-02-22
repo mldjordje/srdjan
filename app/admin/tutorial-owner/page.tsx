@@ -6,45 +6,63 @@ export default function OwnerTutorialPage() {
   return (
     <AdminShell
       title="Owner Tutorial"
-      subtitle="Uputstvo za owner funkcije i upravljanje timom"
+      subtitle="Operativno uputstvo za ownera: setup tima, obavestenja i kontrola rada"
     >
       <div className="admin-card">
-        <h3>1. Radnici i staff nalozi</h3>
+        <h3>1. Setup radnika i naloga</h3>
         <p>
-          Otvori <strong>Radnici</strong>. Tu dodajes nove radnike, menjas ime radnika,
-          aktiviras/deaktiviras radnike i kreiras staff naloge vezane za radnika.
+          Na strani <strong>Radnici</strong> dodajes radnika, cuvas ime, aktiviras/deaktiviras
+          i kreiras staff nalog vezan za tog radnika.
         </p>
       </div>
 
       <div className="admin-card">
-        <h3>2. Promena imena i username-a</h3>
+        <h3>2. Email obavestenja po radniku</h3>
         <p>
-          U kartici radnika prvo promeni <strong>ime radnika</strong>, zatim u kartici staff
-          naloga promeni <strong>username</strong> i po potrebi lozinku.
+          Za svakog radnika postavi <strong>Email za obavestenja</strong>. Kada stigne novi
+          online termin, taj radnik dobija email sa detaljima i linkom ka admin kalendaru
+          gde treba da potvrdi termin.
         </p>
       </div>
 
       <div className="admin-card">
-        <h3>3. Usluge po radniku</h3>
+        <h3>3. Kontrola usluga po radniku</h3>
         <p>
-          U sekciji <strong>Usluge</strong> owner moze menjati sve radnike, a staff menja samo
-          svoje usluge (trajanje, cena, aktivnost, boja termina).
+          U sekciji <strong>Usluge</strong> owner kontrolise trajanje, cenu i aktivnost usluga
+          za svakog radnika. Ovo direktno utice na slobodne termine u bookingu.
         </p>
       </div>
 
       <div className="admin-card">
-        <h3>4. Kalendar i potvrde</h3>
+        <h3>4. Pravila za pending termine</h3>
         <p>
-          Novi web termini dolaze kao <strong>pending</strong>. Staff ili owner ih potvrdi iz
-          kalendara/termina pre finalne potvrde.
+          Novi web termini su <strong>pending</strong> dok ih staff/owner ne potvrdi.
+          Dogovor u timu: pending ne sme da ostane neobradjen duze od nekoliko minuta.
         </p>
       </div>
 
       <div className="admin-card">
-        <h3>5. Limit radnika po lokaciji</h3>
+        <h3>5. Delegiranje i zamene</h3>
         <p>
-          Na stranici radnika se vidi odnos <strong>aktivno X / limit Y</strong>. Sistem ne dozvoljava
-          aktivaciju preko limita lokacije.
+          Ako jedan radnik nije prisutan, drugi staff moze otvoriti njegov kalendar i zakazati
+          termin za klijenta koji je zvao lokal. Time se ne gubi nijedan poziv.
+        </p>
+      </div>
+
+      <div className="admin-card">
+        <h3>6. Dnevni owner checklist</h3>
+        <p>
+          1) Proveri da svaki aktivan radnik ima email za obavestenja. 2) Proveri da nema
+          zaostalih pending termina. 3) Proveri raspored i eventualne blokade za naredni dan.
+        </p>
+      </div>
+
+      <div className="admin-card">
+        <h3>7. Tehnicki preduslovi za email notifikacije</h3>
+        <p>
+          U deploy okruzenju postavi: <strong>RESEND_API_KEY</strong>, <strong>EMAIL_FROM</strong>
+          i pozeljno <strong>APP_PUBLIC_URL</strong>. Bez ovoga booking radi, ali mail obavestenja
+          se ne salju.
         </p>
       </div>
     </AdminShell>

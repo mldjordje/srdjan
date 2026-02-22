@@ -6,6 +6,7 @@ type CreateWorkerBody = {
   locationId?: string;
   name?: string;
   isActive?: boolean;
+  notificationEmail?: string;
 };
 
 type PatchWorkerBody = {
@@ -13,6 +14,7 @@ type PatchWorkerBody = {
   locationId?: string;
   name?: string;
   isActive?: boolean;
+  notificationEmail?: string;
 };
 
 type LocationRow = {
@@ -21,6 +23,9 @@ type LocationRow = {
   is_active: boolean;
   max_active_workers: number;
 };
+
+const isValidEmail = (value: string) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((value || "").trim());
 
 const assertWorkerLimit = async ({
   locationId,
@@ -75,7 +80,7 @@ export async function GET(request: Request) {
   const db = getSupabaseAdmin();
   let query = db
     .from("workers")
-    .select("id, location_id, name, is_active")
+    .select("id, location_id, name, is_active, notification_email")
     .order("name");
 
   if (!includeInactive) {
@@ -107,6 +112,7 @@ export async function GET(request: Request) {
     location_id: string;
     name: string;
     is_active: boolean;
+    notification_email?: string | null;
   }>;
   const activeByLocation = workerRows.reduce((acc, row) => {
     if (!row.is_active) {
@@ -141,8 +147,12 @@ export async function POST(request: Request) {
   const locationId = (body.locationId || "").trim();
   const name = (body.name || "").trim();
   const isActive = body.isActive !== false;
+  const notificationEmail = (body.notificationEmail || "").trim().toLowerCase();
   if (!locationId || !name) {
     return jsonError("locationId and name are required.", 422);
+  }
+  if (notificationEmail && !isValidEmail(notificationEmail)) {
+    return jsonError("notificationEmail must be a valid email address.", 422);
   }
 
   if (isActive) {
@@ -160,8 +170,9 @@ export async function POST(request: Request) {
       location_id: locationId,
       name,
       is_active: isActive,
+      notification_email: notificationEmail || null,
     })
-    .select("id, location_id, name, is_active")
+    .select("id, location_id, name, is_active, notification_email")
     .single();
   if (insertError || !data) {
     return jsonError(insertError?.message || "Cannot create worker.", 500);
@@ -188,9 +199,14 @@ export async function PATCH(request: Request) {
   const db = getSupabaseAdmin();
   const { data: existing, error: existingError } = await db
     .from("workers")
-    .select("id, location_id, is_active")
+    .select("id, location_id, is_active, notification_email")
     .eq("id", id)
-    .maybeSingle<{ id: string; location_id: string; is_active: boolean }>();
+    .maybeSingle<{
+      id: string;
+      location_id: string;
+      is_active: boolean;
+      notification_email?: string | null;
+    }>();
   if (existingError) {
     return jsonError(existingError.message, 500);
   }
@@ -201,6 +217,14 @@ export async function PATCH(request: Request) {
   const nextLocationId = (body.locationId || "").trim() || existing.location_id;
   const nextIsActive =
     typeof body.isActive === "boolean" ? body.isActive : existing.is_active;
+  const hasNotificationEmail = Object.prototype.hasOwnProperty.call(
+    body,
+    "notificationEmail"
+  );
+  const nextNotificationEmail = (body.notificationEmail || "").trim().toLowerCase();
+  if (hasNotificationEmail && nextNotificationEmail && !isValidEmail(nextNotificationEmail)) {
+    return jsonError("notificationEmail must be a valid email address.", 422);
+  }
 
   if (nextIsActive) {
     try {
@@ -217,12 +241,15 @@ export async function PATCH(request: Request) {
   if (body.name && body.name.trim()) {
     patch.name = body.name.trim();
   }
+  if (hasNotificationEmail) {
+    patch.notification_email = nextNotificationEmail || null;
+  }
 
   const { data, error: updateError } = await db
     .from("workers")
     .update(patch)
     .eq("id", id)
-    .select("id, location_id, name, is_active")
+    .select("id, location_id, name, is_active, notification_email")
     .single();
   if (updateError || !data) {
     return jsonError(updateError?.message || "Cannot update worker.", 500);

@@ -1,4 +1,5 @@
 import { getClientFromRequest } from "@/lib/server/auth";
+import { sendWorkerNewAppointmentEmail } from "@/lib/server/email";
 import { jsonError, jsonOk, parseJson } from "@/lib/server/http";
 import {
   ensureNoConflict,
@@ -118,6 +119,35 @@ export async function POST(request: Request) {
   }
   if (error || !appointment) {
     return jsonError(error?.message || "Cannot create appointment.", 500);
+  }
+
+  const { data: workerRow } = await db
+    .from("workers")
+    .select("id, name, notification_email")
+    .eq("id", workerId)
+    .maybeSingle<{ id: string; name: string; notification_email?: string | null }>();
+
+  if (workerRow?.notification_email) {
+    const requestOrigin = (() => {
+      try {
+        return new URL(request.url).origin;
+      } catch {
+        return "";
+      }
+    })();
+
+    await sendWorkerNewAppointmentEmail({
+      to: workerRow.notification_email,
+      workerName: workerRow.name || "Radnik",
+      clientName: client.full_name || "Klijent",
+      serviceName: workerService.services.name || "Usluga",
+      date,
+      startTime: time,
+      endTime,
+      workerId,
+      appointmentId: appointment.id as string,
+      origin: requestOrigin,
+    });
   }
 
   return jsonOk({ appointment }, 201);

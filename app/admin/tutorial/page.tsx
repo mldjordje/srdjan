@@ -6,45 +6,54 @@ export default function AdminTutorialPage() {
   return (
     <AdminShell
       title="Staff Tutorial"
-      subtitle="Kratko uputstvo za svakodnevno koriscenje aplikacije"
+      subtitle="Prakticno uputstvo za radnike: od prijema zahteva do potvrde termina"
     >
       <div className="admin-card">
-        <h3>1. Izbor radnika</h3>
+        <h3>1. Pocetak smene (1 minut)</h3>
         <p>
-          Otvori <strong>Staff</strong> pa klikni na Anu, Denisa, Marka ili drugog radnika.
-          Time odmah ulazis u njegov kalendar.
+          Uloguj se na <strong>/admin</strong>, zatim otvori <strong>Staff</strong> i klikni svoje
+          ime. Time ulazis direktno u svoj kalendar.
         </p>
       </div>
 
       <div className="admin-card">
-        <h3>2. Dodavanje termina</h3>
+        <h3>2. Novi online zahtevi (pending)</h3>
         <p>
-          U kalendaru klikni prazno polje. Otvara se modal gde unosis klijenta, uslugu i vreme.
-          Snimi termin na dugme <strong>Sacuvaj termin</strong>.
+          Novi web termini stizu kao <strong>pending</strong>. Klikni termin, proveri detalje
+          i potvrdi ga dugmetom <strong>Potvrdjen</strong>. Ako klijent ne dodje, oznaci
+          <strong> Nije dosao</strong>.
         </p>
       </div>
 
       <div className="admin-card">
-        <h3>3. Blokada vremena</h3>
+        <h3>3. Termini preko telefona lokala</h3>
         <p>
-          Klikni prazno polje, prebaci tab na <strong>Blokiraj</strong>, unesi trajanje i razlog,
-          pa sacuvaj blokadu.
+          Ako klijent zove telefonom, mozes zakazati termin i u kalendaru drugog radnika.
+          Klikni slobodan slot, unesi klijenta i uslugu, pa sacuvaj termin.
         </p>
       </div>
 
       <div className="admin-card">
-        <h3>4. Status termina</h3>
+        <h3>4. Blokada vremena</h3>
         <p>
-          Klik na postojeci termin otvara detalje. Tu mozes da potvrdis dolazak, oznacis
-          <strong> no_show</strong> ili obrises termin.
+          Za pauzu ili zauzece klikni slobodan slot, prebaci na <strong>Blokiraj</strong>,
+          dodaj trajanje i razlog, pa sacuvaj.
         </p>
       </div>
 
       <div className="admin-card">
-        <h3>5. Usluge</h3>
+        <h3>5. Dnevna rutina koja sprecava greske</h3>
         <p>
-          U sekciji <strong>Usluge</strong> dodaj novu uslugu za izabranog radnika. Trajanje moze
-          biti bilo koji broj minuta, npr. <strong>35, 40 ili 50 min</strong>.
+          Na pocetku smene: proveri pending zahteve. Tokom dana: svaku promenu odmah upisi
+          u kalendar. Na kraju smene: proveri sutrasnje termine i da li je sve potvrdeno.
+        </p>
+      </div>
+
+      <div className="admin-card">
+        <h3>6. Brzi podsetnik statusa</h3>
+        <p>
+          <strong>pending</strong> = ceka potvrdu, <strong>confirmed</strong> = potvrdjen,
+          <strong> no_show</strong> = klijent nije dosao, <strong>cancelled</strong> = otkazan termin.
         </p>
       </div>
     </AdminShell>

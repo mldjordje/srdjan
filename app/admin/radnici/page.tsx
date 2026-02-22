@@ -15,6 +15,7 @@ type Worker = {
   location_id: string;
   name: string;
   is_active: boolean;
+  notification_email?: string | null;
 };
 
 type Location = {
@@ -55,6 +56,9 @@ export default function AdminWorkersPage() {
   const [locationStats, setLocationStats] = useState<LocationStat[]>([]);
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
   const [workerNames, setWorkerNames] = useState<Record<string, string>>({});
+  const [workerNotificationEmails, setWorkerNotificationEmails] = useState<Record<string, string>>(
+    {}
+  );
   const [staffUsernames, setStaffUsernames] = useState<Record<string, string>>({});
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
@@ -63,6 +67,7 @@ export default function AdminWorkersPage() {
     locationId: "",
     name: "",
     isActive: true,
+    notificationEmail: "",
   });
   const [staffForm, setStaffForm] = useState({
     workerId: "",
@@ -103,6 +108,12 @@ export default function AdminWorkersPage() {
     setWorkerNames(
       listWorkers.reduce((acc: Record<string, string>, worker: Worker) => {
         acc[worker.id] = worker.name;
+        return acc;
+      }, {})
+    );
+    setWorkerNotificationEmails(
+      listWorkers.reduce((acc: Record<string, string>, worker: Worker) => {
+        acc[worker.id] = worker.notification_email || "";
         return acc;
       }, {})
     );
@@ -154,7 +165,7 @@ export default function AdminWorkersPage() {
       setStatus(data.error || "Ne mogu da kreiram radnika.");
       return;
     }
-    setWorkerForm((prev) => ({ ...prev, name: "" }));
+    setWorkerForm((prev) => ({ ...prev, name: "", notificationEmail: "" }));
     await load();
     setStatus("Radnik je sacuvan.");
   };
@@ -200,6 +211,26 @@ export default function AdminWorkersPage() {
     }
     await load();
     setStatus("Ime radnika je azurirano.");
+  };
+
+  const saveWorkerNotificationEmail = async (worker: Worker) => {
+    setStatus("");
+    const nextNotificationEmail = (workerNotificationEmails[worker.id] || "").trim();
+    const response = await fetch("/api/admin/workers", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: worker.id,
+        notificationEmail: nextNotificationEmail,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setStatus(data.error || "Ne mogu da sacuvam email za obavestenja.");
+      return;
+    }
+    await load();
+    setStatus("Email za obavestenja je azuriran.");
   };
 
   const createStaffUser = async (event: React.FormEvent) => {
@@ -354,6 +385,21 @@ export default function AdminWorkersPage() {
             />
           </div>
           <div className="form-row">
+            <label>Email za obavestenja (opciono)</label>
+            <input
+              className="input"
+              type="email"
+              value={workerForm.notificationEmail}
+              onChange={(event) =>
+                setWorkerForm((prev) => ({
+                  ...prev,
+                  notificationEmail: event.target.value,
+                }))
+              }
+              placeholder="radnik@email.com"
+            />
+          </div>
+          <div className="form-row">
             <button className="button" type="submit">
               Dodaj radnika
             </button>
@@ -371,6 +417,7 @@ export default function AdminWorkersPage() {
               {locations.find((item) => item.id === worker.location_id)?.name || worker.location_id}
             </div>
             <div>Status: {worker.is_active ? "Aktivan" : "Neaktivan"}</div>
+            <div>Email za obavestenja: {worker.notification_email || "-"}</div>
             <div className="form-row">
               <label>Ime radnika</label>
               <input
@@ -381,9 +428,31 @@ export default function AdminWorkersPage() {
                 }
               />
             </div>
+            <div className="form-row">
+              <label>Email za obavestenja</label>
+              <input
+                className="input"
+                type="email"
+                value={workerNotificationEmails[worker.id] || ""}
+                onChange={(event) =>
+                  setWorkerNotificationEmails((prev) => ({
+                    ...prev,
+                    [worker.id]: event.target.value,
+                  }))
+                }
+                placeholder="radnik@email.com"
+              />
+            </div>
             <div className="admin-actions">
               <button className="button outline" type="button" onClick={() => saveWorkerName(worker)}>
                 Sacuvaj ime
+              </button>
+              <button
+                className="button outline"
+                type="button"
+                onClick={() => saveWorkerNotificationEmail(worker)}
+              >
+                Sacuvaj email
               </button>
               <button className="button outline" type="button" onClick={() => toggleWorkerActive(worker)}>
                 {worker.is_active ? "Deaktiviraj" : "Aktiviraj"}
