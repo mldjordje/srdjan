@@ -13,11 +13,12 @@ Next.js 16 + Supabase booking platform for **Frizerski salon Srdjan**.
 - `staff-admin`: operations only (calendar, shifts, appointments, services, clients, notifications)
 
 ## Core rules
-- Slot grid: **5 minutes**
+- Slot grid: **20 minutes**
 - Worker-specific services/duration/price
 - Morning/afternoon shifts
 - Shift swap allowed only if **both workers have 0 appointments** on that date
 - Day cancellation for worker requires reason, writes cancellation reason, sends push + in-app notice
+- Calendar blocks are rounded to the nearest **20-minute** step
 
 ## Local dev
 ```bash

@@ -1,5 +1,5 @@
 import { jsonError, jsonOk, parseJson } from "@/lib/server/http";
-import { ensureNoConflict } from "@/lib/server/scheduling";
+import { ensureNoConflict, isOverlapConflictError } from "@/lib/server/scheduling";
 import { requireAdmin } from "@/lib/server/rbac";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import {
@@ -194,6 +194,9 @@ export async function POST(request: Request) {
     .single();
 
   if (insertError || !data) {
+    if (isOverlapConflictError(insertError)) {
+      return jsonError("Block overlaps with existing appointment or block.", 409);
+    }
     return jsonError(insertError?.message || "Cannot create block.", 500);
   }
 
@@ -252,6 +255,9 @@ export async function PATCH(request: Request) {
     .single();
 
   if (updateError || !data) {
+    if (isOverlapConflictError(updateError)) {
+      return jsonError("Block overlaps with existing appointment or block.", 409);
+    }
     return jsonError(updateError?.message || "Cannot update block.", 500);
   }
 

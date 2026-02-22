@@ -1962,12 +1962,13 @@ export default function AdminCalendarPage() {
                     name="duration"
                     className="input"
                     type="number"
-                    min="10"
-                    step="10"
+                    min="20"
+                    step="20"
                     value={blockForm.duration}
                     onChange={handleBlockChange}
                     required
                   />
+                  <small>Trajanje blokade je u koracima od 20 minuta.</small>
                 </div>
                 <div className="form-row">
                   <label htmlFor="note">Napomena</label>

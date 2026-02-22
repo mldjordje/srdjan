@@ -10,6 +10,58 @@ type PatchBody = {
   afternoonEnd?: string;
 };
 
+type ShiftSettingsRow = {
+  location_id: string;
+  morning_start: string;
+  morning_end: string;
+  afternoon_start: string;
+  afternoon_end: string;
+};
+
+const toMinutes = (value: string) => {
+  const [hoursRaw, minutesRaw] = value.split(":");
+  const hours = Number(hoursRaw);
+  const minutes = Number(minutesRaw);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+    return null;
+  }
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    return null;
+  }
+  return hours * 60 + minutes;
+};
+
+const validateShiftSettings = (settings: {
+  morning_start: string;
+  morning_end: string;
+  afternoon_start: string;
+  afternoon_end: string;
+}) => {
+  const morningStart = toMinutes(settings.morning_start);
+  const morningEnd = toMinutes(settings.morning_end);
+  const afternoonStart = toMinutes(settings.afternoon_start);
+  const afternoonEnd = toMinutes(settings.afternoon_end);
+
+  if (
+    morningStart === null ||
+    morningEnd === null ||
+    afternoonStart === null ||
+    afternoonEnd === null
+  ) {
+    return "Times must be in HH:mm format.";
+  }
+  if (morningStart >= morningEnd) {
+    return "Morning shift must end after it starts.";
+  }
+  if (afternoonStart >= afternoonEnd) {
+    return "Afternoon shift must end after it starts.";
+  }
+  if (morningEnd > afternoonStart) {
+    return "Morning shift must end before or at afternoon shift start.";
+  }
+  return null;
+};
+
 export async function GET(request: Request) {
   const { admin, error } = await requireAdmin(request, ["owner", "staff-admin"]);
   if (error || !admin) {
@@ -49,20 +101,46 @@ export async function PATCH(request: Request) {
     return jsonError("locationId is required.", 422);
   }
 
-  const patch: Record<string, string> = {};
-  if (body.morningStart) patch.morning_start = body.morningStart;
-  if (body.morningEnd) patch.morning_end = body.morningEnd;
-  if (body.afternoonStart) patch.afternoon_start = body.afternoonStart;
-  if (body.afternoonEnd) patch.afternoon_end = body.afternoonEnd;
-
   const db = getSupabaseAdmin();
+  const { data: existing, error: existingError } = await db
+    .from("shift_settings")
+    .select("location_id, morning_start, morning_end, afternoon_start, afternoon_end")
+    .eq("location_id", locationId)
+    .maybeSingle<ShiftSettingsRow>();
+  if (existingError) {
+    return jsonError(existingError.message, 500);
+  }
+
+  const nextSettings = {
+    morning_start: (body.morningStart || "").trim() || existing?.morning_start || "",
+    morning_end: (body.morningEnd || "").trim() || existing?.morning_end || "",
+    afternoon_start: (body.afternoonStart || "").trim() || existing?.afternoon_start || "",
+    afternoon_end: (body.afternoonEnd || "").trim() || existing?.afternoon_end || "",
+  };
+
+  if (
+    !nextSettings.morning_start ||
+    !nextSettings.morning_end ||
+    !nextSettings.afternoon_start ||
+    !nextSettings.afternoon_end
+  ) {
+    return jsonError(
+      "All shift times are required (morningStart, morningEnd, afternoonStart, afternoonEnd).",
+      422
+    );
+  }
+
+  const validationError = validateShiftSettings(nextSettings);
+  if (validationError) {
+    return jsonError(validationError, 422);
+  }
+
   const { error: upsertError } = await db
     .from("shift_settings")
-    .upsert({ location_id: locationId, ...patch }, { onConflict: "location_id" });
+    .upsert({ location_id: locationId, ...nextSettings }, { onConflict: "location_id" });
 
   if (upsertError) {
     return jsonError(upsertError.message, 500);
   }
   return jsonOk({ status: "ok" });
 }
-

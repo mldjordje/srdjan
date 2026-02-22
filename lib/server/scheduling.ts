@@ -43,6 +43,11 @@ type OccupiedItem = {
   end_time: string;
 };
 
+type MaybeDbError = {
+  code?: string;
+  message?: string;
+} | null | undefined;
+
 export const getWorkerService = async (workerId: string, serviceId: string) => {
   const db = getSupabaseAdmin();
   const { data, error } = await db
@@ -219,4 +224,17 @@ export const ensureNoConflict = ({
     }
   }
   return true;
+};
+
+export const isOverlapConflictError = (error: MaybeDbError) => {
+  const code = (error?.code || "").trim();
+  const message = (error?.message || "").toLowerCase();
+  if (code === "23P01") {
+    return true;
+  }
+  return (
+    message.includes("overlap") ||
+    message.includes("selected slot is not available") ||
+    message.includes("block overlaps")
+  );
 };

@@ -4,6 +4,7 @@ import {
   ensureNoConflict,
   getOccupiedByWorkerAndDate,
   getShiftWindowForDay,
+  isOverlapConflictError,
   getWorkerService,
 } from "@/lib/server/scheduling";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
@@ -112,6 +113,9 @@ export async function POST(request: Request) {
     )
     .single();
 
+  if (isOverlapConflictError(error)) {
+    return jsonError("Selected slot is not available.", 409);
+  }
   if (error || !appointment) {
     return jsonError(error?.message || "Cannot create appointment.", 500);
   }

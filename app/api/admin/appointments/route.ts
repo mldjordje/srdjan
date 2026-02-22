@@ -1,5 +1,10 @@
 import { jsonError, jsonOk, parseJson } from "@/lib/server/http";
-import { ensureNoConflict, getOccupiedByWorkerAndDate, getWorkerService } from "@/lib/server/scheduling";
+import {
+  ensureNoConflict,
+  getOccupiedByWorkerAndDate,
+  getWorkerService,
+  isOverlapConflictError,
+} from "@/lib/server/scheduling";
 import { requireAdmin } from "@/lib/server/rbac";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import {
@@ -37,6 +42,7 @@ type ClientLookupRow = {
 };
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
+const normalizePhone = (value: string) => value.replace(/\D+/g, "");
 const trim = (value?: string) => (value || "").trim();
 const parseDurationFromService = (durationValue: number) => Number(durationValue || 0);
 
@@ -218,9 +224,10 @@ export async function POST(request: Request) {
   const locationId = trim(body.locationId);
   const workerId = trim(body.workerId);
   const fullName = trim(body.clientName);
-  const phone = trim(body.phone);
+  const rawPhone = trim(body.phone);
+  const normalizedPhone = normalizePhone(rawPhone);
   const emailInput = normalizeEmail(body.email || "");
-  const fallbackEmail = `${phone.replace(/\D+/g, "") || "client"}@salonsrdjan.local`;
+  const fallbackEmail = `${normalizedPhone || "client"}@salonsrdjan.local`;
   const email = emailInput || fallbackEmail;
   const serviceId = trim(body.serviceId);
   const date = trim(body.date);
@@ -231,7 +238,7 @@ export async function POST(request: Request) {
     !locationId ||
     !workerId ||
     !fullName ||
-    !phone ||
+    !normalizedPhone ||
     !serviceId ||
     !date ||
     !time
@@ -243,6 +250,9 @@ export async function POST(request: Request) {
   }
   if (!isIsoDate(date)) {
     return jsonError("date must be in YYYY-MM-DD format.", 422);
+  }
+  if (normalizedPhone.length < 6) {
+    return jsonError("phone must include at least 6 digits.", 422);
   }
 
   const startMinutes = parseTimeToMinutes(time);
@@ -331,7 +341,7 @@ export async function POST(request: Request) {
   try {
     clientId = await resolveClientId({
       fullName,
-      phone,
+      phone: normalizedPhone,
       email,
     });
   } catch (resolveError) {
@@ -365,6 +375,9 @@ export async function POST(request: Request) {
       .single();
 
     if (createError || !created) {
+      if (isOverlapConflictError(createError)) {
+        return jsonError("Selected slot is not available.", 409);
+      }
       return jsonError(createError?.message || "Cannot create appointment.", 500);
     }
     return jsonOk({ appointment: created }, 201);
@@ -399,6 +412,9 @@ export async function POST(request: Request) {
       .single();
 
     if (updateError || !updated) {
+      if (isOverlapConflictError(updateError)) {
+        return jsonError("Selected slot is not available.", 409);
+      }
       return jsonError(updateError?.message || "Cannot update appointment.", 500);
     }
     return jsonOk({ appointment: updated });
