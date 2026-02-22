@@ -15,6 +15,10 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 };
 
+const GOOGLE_MAPS_SHARE_URL = "https://share.google/CNAYrDQqA8BHnJi36";
+const GOOGLE_MAPS_EMBED_URL =
+  "https://www.google.com/maps?q=Berbernica+Srdjan+Radnih+brigada+8+Beograd&output=embed";
+
 const content: Record<
   Language,
   {
@@ -83,7 +87,7 @@ const content: Record<
     studioSubtitle: "Mirna atmosfera i ogranicen broj termina.",
     hours: "Radno vreme",
     location: "Lokacija",
-    locationText: "Lokacija se salje uz potvrdu.",
+    locationText: "Radnih brigada 8, Beograd.",
     contact: "Kontakt",
     contactFallback: "Kontakt podaci se dodaju nakon aktivacije domena.",
     openMaps: "Otvori u Google Maps",
@@ -125,7 +129,7 @@ const content: Record<
     studioSubtitle: "Calm atmosphere and limited appointment slots.",
     hours: "Working hours",
     location: "Location",
-    locationText: "Location is shared with the confirmation message.",
+    locationText: "Radnih brigada 8, Belgrade.",
     contact: "Contact",
     contactFallback: "Contact details will be added after domain activation.",
     openMaps: "Open in Google Maps",
@@ -166,7 +170,7 @@ const content: Record<
     studioSubtitle: "Atmosfera calma e numero limitato di appuntamenti.",
     hours: "Orari",
     location: "Posizione",
-    locationText: "La posizione viene inviata con la conferma.",
+    locationText: "Radnih brigada 8, Belgrado.",
     contact: "Contatto",
     contactFallback: "I contatti saranno aggiunti dopo l'attivazione del dominio.",
     openMaps: "Apri in Google Maps",
@@ -824,7 +828,7 @@ export default function HomePage() {
             >
               <iframe
                 title="Frizerski salon Srdjan lokacija"
-                src="https://www.google.com/maps?q=Belgrade&output=embed"
+                src={GOOGLE_MAPS_EMBED_URL}
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
@@ -832,7 +836,7 @@ export default function HomePage() {
               <div className="map-actions">
                 <a
                   className="button outline"
-                  href="https://maps.google.com/?q=Belgrade"
+                  href={GOOGLE_MAPS_SHARE_URL}
                   target="_blank"
                   rel="noreferrer"
                 >

@@ -30,8 +30,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
+      icon: "/icons/icon-192-srdjan.png",
+      badge: "/icons/icon-192-srdjan.png",
       data: {
         url: "/moji-termini",
         appointmentId,

@@ -1,6 +1,6 @@
 export const siteConfig = {
   hours: "Pon - Pet: 11:00 - 19:00",
-  locationNote: "Beograd - Lokacija se salje uz potvrdu termina.",
+  locationNote: "Radnih brigada 8, Beograd.",
   city: "Beograd",
   phone: "",
   email: "",

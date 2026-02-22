@@ -83,6 +83,7 @@ const addMonths = (date: Date, months: number) =>
 const WORKING_DAYS = [1, 2, 3, 4, 5];
 const WORKING_DAY_ORDER = [...WORKING_DAYS].sort((a, b) => a - b);
 const getWorkdayColumn = (day: number) => WORKING_DAY_ORDER.indexOf(day);
+const PRIMARY_LOCATION_LABEL = "Radnih brigada 8";
 
 const formatMonthLabel = (date: Date, locale: string) =>
   new Intl.DateTimeFormat(locale, {
@@ -190,6 +191,10 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
     Record<string, { shiftType: ShiftType; availability: "free" | "busy" | "off" }>
   >({});
   const [status, setStatus] = useState("");
+  const [bookingStatus, setBookingStatus] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
   const [appointments, setAppointments] = useState<MyAppointmentsPayload["appointments"]>([]);
   const [subscribingPush, setSubscribingPush] = useState(false);
 
@@ -214,6 +219,7 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
     () => (bootstrap?.workers || []).filter((item) => item.location_id === locationId),
     [bootstrap?.workers, locationId]
   );
+  const locationOptions = bootstrap?.locations || [];
   const canChooseWorker = Boolean(locationId);
   const canChooseDateAndService = Boolean(locationId && workerId);
 
@@ -441,8 +447,9 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
 
   const handleBook = async (event: React.FormEvent) => {
     event.preventDefault();
+    setBookingStatus(null);
     if (!client) {
-      setStatus("Prvo se prijavite.");
+      setBookingStatus({ message: "Prvo se prijavite.", type: "error" });
       return;
     }
     const response = await fetch("/api/public/appointments", {
@@ -459,10 +466,16 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
     });
     const data = await readResponseJsonSafe<{ error?: string }>(response);
     if (!response.ok) {
-      setStatus(data?.error || `Zakazivanje nije uspelo (HTTP ${response.status}).`);
+      setBookingStatus({
+        message: data?.error || `Zakazivanje nije uspelo (HTTP ${response.status}).`,
+        type: "error",
+      });
       return;
     }
-    setStatus("Termin je poslat i ceka potvrdu radnika.");
+    setBookingStatus({
+      message: "Termin je poslat i ceka potvrdu radnika.",
+      type: "success",
+    });
     setTime("");
     setNote("");
     await loadMyAppointments();
@@ -598,9 +611,9 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
               }}
             >
               <option value="">Izaberite radnju</option>
-              {(bootstrap?.locations || []).map((location) => (
+              {locationOptions.map((location) => (
                 <option key={location.id} value={location.id}>
-                  {location.name}
+                  {locationOptions.length === 1 ? PRIMARY_LOCATION_LABEL : location.name}
                 </option>
               ))}
             </select>
@@ -757,7 +770,7 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
                 />
               </div>
 
-              <div className="form-row">
+              <div className="form-row form-row--full" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                 <button
                   className="button booking-submit-button"
                   type="submit"
@@ -765,6 +778,11 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
                 >
                   Posalji zahtev za termin
                 </button>
+                {bookingStatus && (
+                  <p className={`form-status ${bookingStatus.type === "error" ? "error" : "success"}`} style={{ margin: 0 }}>
+                    {bookingStatus.message}
+                  </p>
+                )}
               </div>
             </>
           )}
