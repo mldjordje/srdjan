@@ -2,6 +2,7 @@ import { jsonError, jsonOk, parseJson } from "@/lib/server/http";
 import { sendPushToClient } from "@/lib/server/push";
 import { requireAdmin } from "@/lib/server/rbac";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
+import { formatIsoDateToEuropean } from "@/lib/date";
 
 type CancelWorkerDayBody = {
   locationId?: string;
@@ -81,7 +82,7 @@ export async function POST(request: Request) {
     client_id: item.client_id,
     type: "appointment_cancelled",
     title: "Termin je otkazan",
-    message: `Termin za ${item.service_name_snapshot} ${item.date} u ${item.start_time} je otkazan. Razlog: ${reason}`,
+    message: `Termin za ${item.service_name_snapshot} ${formatIsoDateToEuropean(item.date)} u ${item.start_time} je otkazan. Razlog: ${reason}`,
     appointment_id: item.id,
     is_read: false,
   }));
@@ -98,7 +99,7 @@ export async function POST(request: Request) {
     typedAppointments.map((item) =>
       sendPushToClient(item.client_id, {
         title: "Termin je otkazan",
-        body: `Termin ${item.date} u ${item.start_time} je otkazan. ${reason}`,
+        body: `Termin ${formatIsoDateToEuropean(item.date)} u ${item.start_time} je otkazan. ${reason}`,
         appointmentId: item.id,
         reason,
       })

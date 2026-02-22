@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { formatIsoDateToEuropean } from "@/lib/date";
 
 type Appointment = {
   id: string;
@@ -25,7 +26,7 @@ export default function MyAppointmentsPage() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/public/my-appointments");
+      const response = await fetch("/api/public/my-appointments", { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "Niste prijavljeni.");
@@ -63,7 +64,8 @@ export default function MyAppointmentsPage() {
           <article key={appointment.id} className="admin-card">
             <strong>{appointment.service_name_snapshot}</strong>
             <div>
-              {appointment.date} {appointment.start_time} - {appointment.end_time}
+              {formatIsoDateToEuropean(appointment.date)} {appointment.start_time} -{" "}
+              {appointment.end_time}
             </div>
             <div>Radnik: {appointment.workers?.name || "-"}</div>
             <div>Status: {appointment.status}</div>
@@ -76,4 +78,3 @@ export default function MyAppointmentsPage() {
     </main>
   );
 }
-

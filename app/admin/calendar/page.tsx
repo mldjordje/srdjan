@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import AdminShell from "@/components/srdjan/admin/AdminShell";
+import { formatIsoDateTimeToEuropean, formatIsoDateToEuropean } from "@/lib/date";
 import { services as fallbackServices, type Service } from "@/lib/services";
 import { siteConfig } from "@/lib/site";
 import { useLanguage, type Language } from "@/lib/useLanguage";
@@ -44,11 +45,6 @@ type Block = {
   time: string;
   duration: number;
   note?: string;
-};
-
-type BreakWindow = {
-  start: string;
-  end: string;
 };
 
 type Client = {
@@ -330,26 +326,13 @@ const getWeekStart = (date: Date) => {
 const buildTimeSlots = (
   open: string,
   close: string,
-  stepMinutes: number,
-  breaks: BreakWindow[] = []
+  stepMinutes: number
 ) => {
   const slots: string[] = [];
   const startMinutes = timeToMinutes(open);
   const endMinutes = timeToMinutes(close);
-  const breakWindows = breaks
-    .map((window) => ({
-      start: timeToMinutes(window.start),
-      end: timeToMinutes(window.end),
-    }))
-    .filter((window) => window.end > window.start);
 
   for (let minutes = startMinutes; minutes < endMinutes; minutes += stepMinutes) {
-    const isBreak = breakWindows.some(
-      (window) => minutes >= window.start && minutes < window.end
-    );
-    if (isBreak) {
-      continue;
-    }
     slots.push(minutesToTime(minutes));
   }
 
@@ -514,8 +497,8 @@ export default function AdminCalendarPage() {
   );
 
   const timeSlots = useMemo(
-    () => buildTimeSlots(calendarOpen, calendarClose, slotMinutes, breaks),
-    [calendarOpen, calendarClose, slotMinutes, breaks]
+    () => buildTimeSlots(calendarOpen, calendarClose, slotMinutes),
+    [calendarOpen, calendarClose, slotMinutes]
   );
   const slotCount = timeSlots.length;
   const slotIndexByTime = useMemo(() => {
@@ -778,16 +761,24 @@ export default function AdminCalendarPage() {
   });
 
   const fetchWorkers = async () => {
-    const response = await fetch("/api/admin/workers");
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data?.error || "Ne mogu da ucitam radnike.");
+    const [workersResponse, meResponse] = await Promise.all([
+      fetch("/api/admin/workers", { cache: "no-store" }),
+      fetch("/api/admin/me", { cache: "no-store" }),
+    ]);
+    const workersData = await workersResponse.json();
+    if (!workersResponse.ok) {
+      throw new Error(workersData?.error || "Ne mogu da ucitam radnike.");
     }
+    const meData = meResponse.ok ? await meResponse.json() : null;
+    const ownWorkerId = (meData?.workerId || "").trim();
 
-    const list = (Array.isArray(data.workers) ? data.workers : []) as Worker[];
+    const list = (Array.isArray(workersData.workers) ? workersData.workers : []) as Worker[];
     setWorkers(list);
     const requested =
-      list.find((worker) => worker.id === requestedWorkerId)?.id || list[0]?.id || "";
+      list.find((worker) => worker.id === requestedWorkerId)?.id ||
+      list.find((worker) => worker.id === ownWorkerId)?.id ||
+      list[0]?.id ||
+      "";
     setWorkerId(requested);
     setLocationId(list.find((worker) => worker.id === requested)?.location_id || "");
   };
@@ -800,7 +791,8 @@ export default function AdminCalendarPage() {
     const response = await fetch(
       `/api/admin/appointments?date=${encodeURIComponent(date)}&workerId=${encodeURIComponent(
         workerId
-      )}`
+      )}`,
+      { cache: "no-store" }
     );
     const data = await response.json();
     if (!response.ok) {
@@ -819,7 +811,8 @@ export default function AdminCalendarPage() {
     }
 
     const response = await fetch(
-      `/api/admin/blocks?date=${encodeURIComponent(date)}&workerId=${encodeURIComponent(workerId)}`
+      `/api/admin/blocks?date=${encodeURIComponent(date)}&workerId=${encodeURIComponent(workerId)}`,
+      { cache: "no-store" }
     );
     const data = await response.json();
     if (!response.ok) {
@@ -835,7 +828,7 @@ export default function AdminCalendarPage() {
   const fetchClients = async () => {
     setClientsStatus({ type: "loading" });
     try {
-      const response = await fetch("/api/admin/clients");
+      const response = await fetch("/api/admin/clients", { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data?.error || "Ne mogu da preuzmem klijente.");
@@ -862,7 +855,9 @@ export default function AdminCalendarPage() {
       return;
     }
     try {
-      const response = await fetch(`/api/admin/services?workerId=${encodeURIComponent(workerId)}`);
+      const response = await fetch(`/api/admin/services?workerId=${encodeURIComponent(workerId)}`, {
+        cache: "no-store",
+      });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data?.error || "Ne mogu da ucitam usluge.");
@@ -1739,7 +1734,7 @@ export default function AdminCalendarPage() {
                 </strong>
                 {selectedSlot && (
                   <span>
-                    {selectedSlot.date} | {selectedSlot.time}
+                    {formatIsoDateToEuropean(selectedSlot.date)} | {selectedSlot.time}
                   </span>
                 )}
               </div>
@@ -2019,7 +2014,7 @@ export default function AdminCalendarPage() {
                   {selectedAppointment.clientName}
                 </strong>
                 <span>
-                  {selectedAppointment.date} |{" "}
+                  {formatIsoDateToEuropean(selectedAppointment.date)} |{" "}
                   {normalizeTimeInput(selectedAppointment.time)}
                 </span>
               </div>
@@ -2056,7 +2051,7 @@ export default function AdminCalendarPage() {
                 </span>
               )}
               {selectedAppointment.createdAt && (
-                <span>Kreirano: {selectedAppointment.createdAt}</span>
+                <span>Kreirano: {formatIsoDateTimeToEuropean(selectedAppointment.createdAt)}</span>
               )}
             </div>
 

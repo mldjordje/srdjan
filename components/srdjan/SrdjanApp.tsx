@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { formatIsoDateToEuropean } from "@/lib/date";
 
 type ClientProfile = {
   id: string;
@@ -234,8 +235,8 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
       setError("");
       try {
         const [bootstrapRes, meRes] = await Promise.all([
-          fetch("/api/public/bootstrap"),
-          fetch("/api/public/session/me"),
+          fetch("/api/public/bootstrap", { cache: "no-store" }),
+          fetch("/api/public/session/me", { cache: "no-store" }),
         ]);
 
         const bootstrapData = await readResponseJsonSafe<BootstrapPayload & { error?: string }>(
@@ -270,7 +271,7 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
   }, []);
 
   const loadMyAppointments = async () => {
-    const response = await fetch("/api/public/my-appointments");
+    const response = await fetch("/api/public/my-appointments", { cache: "no-store" });
     const data = await readResponseJsonSafe<MyAppointmentsPayload & { error?: string }>(response);
     if (!response.ok) {
       if (response.status === 401) {
@@ -332,7 +333,7 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
           )}&from=${encodeURIComponent(toDateInput(fromDate))}&to=${encodeURIComponent(
             toDateInput(toDate)
           )}`,
-          { signal: controller.signal }
+          { signal: controller.signal, cache: "no-store" }
         );
         const data = await readResponseJsonSafe<WorkerCalendarSummaryPayload & { error?: string }>(
           response
@@ -376,7 +377,7 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
           `/api/public/availability?locationId=${encodeURIComponent(locationId)}&workerId=${encodeURIComponent(
             workerId
           )}&serviceId=${encodeURIComponent(serviceId)}&date=${encodeURIComponent(date)}`,
-          { signal: controller.signal }
+          { signal: controller.signal, cache: "no-store" }
         );
         const data = await readResponseJsonSafe<{ error?: string; slots?: string[]; shiftType?: string }>(
           response
@@ -802,7 +803,8 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
           <div key={appointment.id} className="admin-card">
             <strong>{appointment.service_name_snapshot}</strong>
             <div>
-              {appointment.date} {appointment.start_time}-{appointment.end_time}
+              {formatIsoDateToEuropean(appointment.date)} {appointment.start_time}-
+              {appointment.end_time}
             </div>
             <div>Radnik: {appointment.workers?.name || "-"}</div>
             <div>Status: {appointment.status}</div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import AdminShell from "@/components/srdjan/admin/AdminShell";
+import { formatIsoDateToEuropean } from "@/lib/date";
 
 type Worker = { id: string; name: string; location_id: string };
 type Appointment = {
@@ -38,16 +39,22 @@ export default function AdminAppointmentsPage() {
   const [status, setStatus] = useState("");
 
   const loadWorkers = async () => {
-    const bootstrapRes = await fetch("/api/public/bootstrap");
+    const [bootstrapRes, meRes] = await Promise.all([
+      fetch("/api/public/bootstrap", { cache: "no-store" }),
+      fetch("/api/admin/me", { cache: "no-store" }),
+    ]);
     const bootstrap = await bootstrapRes.json();
     if (!bootstrapRes.ok) {
       throw new Error(bootstrap.error || "Ne mogu da ucitam radnike.");
     }
+    const meData = meRes.ok ? await meRes.json() : null;
+    const ownWorkerId = (meData?.workerId || "").trim();
     const workerList: Worker[] = bootstrap.workers || [];
     setWorkers(workerList);
-    const firstWorker = workerList[0]?.id || "";
-    setWorkerId(firstWorker);
-    setCancelForm((prev) => ({ ...prev, workerId: firstWorker }));
+    const defaultWorkerId =
+      workerList.find((worker) => worker.id === ownWorkerId)?.id || workerList[0]?.id || "";
+    setWorkerId(defaultWorkerId);
+    setCancelForm((prev) => ({ ...prev, workerId: defaultWorkerId }));
     setLocationId(bootstrap.defaultLocationId || bootstrap.locations?.[0]?.id || "");
   };
 
@@ -59,7 +66,8 @@ export default function AdminAppointmentsPage() {
     const response = await fetch(
       `/api/admin/appointments?date=${encodeURIComponent(date)}&workerId=${encodeURIComponent(
         nextWorkerId
-      )}`
+      )}`,
+      { cache: "no-store" }
     );
     const data = await response.json();
     if (!response.ok) {
@@ -145,7 +153,10 @@ export default function AdminAppointmentsPage() {
         {appointments.length === 0 && <p>Nema termina za izabrani filter.</p>}
         {appointments.map((appointment) => (
           <div key={appointment.id} className="admin-card">
-            <strong>{appointment.date} {appointment.start_time}-{appointment.end_time}</strong>
+            <strong>
+              {formatIsoDateToEuropean(appointment.date)} {appointment.start_time}-
+              {appointment.end_time}
+            </strong>
             <div>{appointment.service_name_snapshot}</div>
             <div>Klijent: {appointment.clients?.full_name || "-"} ({appointment.clients?.phone || "-"})</div>
             <div>Status: {appointment.status}</div>

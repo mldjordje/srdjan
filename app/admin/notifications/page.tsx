@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import AdminShell from "@/components/srdjan/admin/AdminShell";
+import { formatIsoDateTimeToEuropean } from "@/lib/date";
 
 type NotificationItem = {
   id: string;
@@ -23,7 +24,7 @@ export default function AdminNotificationsPage() {
   const load = async (nextWorkerId = workerId) => {
     setStatus("");
     const query = nextWorkerId ? `?workerId=${encodeURIComponent(nextWorkerId)}` : "";
-    const response = await fetch(`/api/admin/notifications${query}`);
+    const response = await fetch(`/api/admin/notifications${query}`, { cache: "no-store" });
     const data = await response.json();
     if (!response.ok) {
       setStatus(data.error || "Ne mogu da ucitam notifikacije.");
@@ -34,14 +35,19 @@ export default function AdminNotificationsPage() {
 
   useEffect(() => {
     const loadWorkers = async () => {
-      const bootstrapRes = await fetch("/api/public/bootstrap");
+      const [bootstrapRes, meRes] = await Promise.all([
+        fetch("/api/public/bootstrap", { cache: "no-store" }),
+        fetch("/api/admin/me", { cache: "no-store" }),
+      ]);
       const bootstrap = await bootstrapRes.json();
       if (!bootstrapRes.ok) {
         throw new Error(bootstrap.error || "Ne mogu da ucitam radnike.");
       }
       const list = Array.isArray(bootstrap.workers) ? bootstrap.workers : [];
+      const meData = meRes.ok ? await meRes.json() : null;
+      const ownWorkerId = (meData?.workerId || "").trim();
       setWorkers(list);
-      setWorkerId(list[0]?.id || "");
+      setWorkerId(list.find((worker: { id: string }) => worker.id === ownWorkerId)?.id || list[0]?.id || "");
     };
     loadWorkers().catch((error) => setStatus(error instanceof Error ? error.message : "Greska."));
   }, []);
@@ -79,7 +85,7 @@ export default function AdminNotificationsPage() {
             <div>
               Klijent: {item.clients?.full_name || "-"} ({item.clients?.phone || "-"})
             </div>
-            <div>Kreirano: {item.created_at}</div>
+            <div>Kreirano: {formatIsoDateTimeToEuropean(item.created_at)}</div>
           </div>
         ))}
       </div>
