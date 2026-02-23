@@ -44,14 +44,23 @@ export default function OwnerTutorialPage() {
       <div className="admin-card">
         <h3>5. Unos smena za narednu nedelju</h3>
         <p>
-          Svake nedelje unapred unesi smene po radniku i danu: <strong>morning</strong>,
-          <strong> afternoon</strong> ili <strong>off</strong>. Tek kada su smene unete,
-          booking tacno prikazuje dostupne termine klijentima.
+          Na strani <strong>Smene</strong> izaberi ponedeljak za narednu nedelju, pa po radniku i
+          danu unesi: <strong>morning</strong>, <strong>afternoon</strong> ili <strong>off</strong>.
+          Tek kada su smene unete, booking tacno prikazuje dostupne termine klijentima.
         </p>
       </div>
 
       <div className="admin-card">
-        <h3>6. Pravila za zamenu smena (swap)</h3>
+        <h3>6. Radno vreme lokala i granice smena</h3>
+        <p>
+          U <strong>Podesavanja</strong> prvo podesi <strong>Lokal radi od/do</strong>, a zatim
+          <strong> Prepodne od/do</strong> i <strong>Popodne od/do</strong>. Pravilo:
+          prepodnevna i popodnevna smena moraju biti unutar radnog vremena lokala.
+        </p>
+      </div>
+
+      <div className="admin-card">
+        <h3>7. Pravila za zamenu smena (swap)</h3>
         <p>
           Zamena radi samo za izabrani datum ako: 1) oba radnika imaju dodeljenu smenu tog dana
           i 2) oba radnika imaju nula aktivnih termina na taj datum. U suprotnom API vraca gresku
@@ -60,7 +69,7 @@ export default function OwnerTutorialPage() {
       </div>
 
       <div className="admin-card">
-        <h3>7. Delegiranje i preuzimanje poziva</h3>
+        <h3>8. Delegiranje i preuzimanje poziva</h3>
         <p>
           Ako jedan radnik nije prisutan, drugi staff moze otvoriti njegov kalendar i zakazati
           termin za klijenta koji je zvao lokal. Time se ne gubi nijedan poziv.
@@ -68,7 +77,7 @@ export default function OwnerTutorialPage() {
       </div>
 
       <div className="admin-card">
-        <h3>8. Dnevni owner checklist</h3>
+        <h3>9. Dnevni owner checklist</h3>
         <p>
           1) Proveri da svaki aktivan radnik ima email za obavestenja. 2) Proveri da nema
           zaostalih pending termina. 3) Proveri raspored i eventualne blokade za naredni dan.
@@ -76,7 +85,7 @@ export default function OwnerTutorialPage() {
       </div>
 
       <div className="admin-card">
-        <h3>9. Tehnicki preduslovi za email notifikacije</h3>
+        <h3>10. Tehnicki preduslovi za email notifikacije</h3>
         <p>
           U deploy okruzenju postavi: <strong>RESEND_API_KEY</strong>, <strong>EMAIL_FROM</strong>
           i pozeljno <strong>APP_PUBLIC_URL</strong>. Bez ovoga booking radi, ali mail obavestenja
