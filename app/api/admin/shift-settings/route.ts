@@ -4,6 +4,8 @@ import { getSupabaseAdmin } from "@/lib/server/supabase";
 
 type PatchBody = {
   locationId?: string;
+  workStart?: string;
+  workEnd?: string;
   morningStart?: string;
   morningEnd?: string;
   afternoonStart?: string;
@@ -12,6 +14,8 @@ type PatchBody = {
 
 type ShiftSettingsRow = {
   location_id: string;
+  work_start: string;
+  work_end: string;
   morning_start: string;
   morning_end: string;
   afternoon_start: string;
@@ -32,23 +36,32 @@ const toMinutes = (value: string) => {
 };
 
 const validateShiftSettings = (settings: {
+  work_start: string;
+  work_end: string;
   morning_start: string;
   morning_end: string;
   afternoon_start: string;
   afternoon_end: string;
 }) => {
+  const workStart = toMinutes(settings.work_start);
+  const workEnd = toMinutes(settings.work_end);
   const morningStart = toMinutes(settings.morning_start);
   const morningEnd = toMinutes(settings.morning_end);
   const afternoonStart = toMinutes(settings.afternoon_start);
   const afternoonEnd = toMinutes(settings.afternoon_end);
 
   if (
+    workStart === null ||
+    workEnd === null ||
     morningStart === null ||
     morningEnd === null ||
     afternoonStart === null ||
     afternoonEnd === null
   ) {
     return "Times must be in HH:mm format.";
+  }
+  if (workStart >= workEnd) {
+    return "Location work hours must end after they start.";
   }
   if (morningStart >= morningEnd) {
     return "Morning shift must end after it starts.";
@@ -59,11 +72,14 @@ const validateShiftSettings = (settings: {
   if (morningEnd > afternoonStart) {
     return "Morning shift must end before or at afternoon shift start.";
   }
+  if (morningStart < workStart || afternoonEnd > workEnd) {
+    return "Shift windows must be within location work hours.";
+  }
   return null;
 };
 
 export async function GET(request: Request) {
-  const { admin, error } = await requireAdmin(request, ["owner", "staff-admin"]);
+  const { admin, error } = await requireAdmin(request, ["owner"]);
   if (error || !admin) {
     return error || jsonError("Unauthorized", 401);
   }
@@ -77,7 +93,7 @@ export async function GET(request: Request) {
   const db = getSupabaseAdmin();
   const { data, error: fetchError } = await db
     .from("shift_settings")
-    .select("location_id, morning_start, morning_end, afternoon_start, afternoon_end")
+    .select("location_id, work_start, work_end, morning_start, morning_end, afternoon_start, afternoon_end")
     .eq("location_id", locationId)
     .maybeSingle();
   if (fetchError) {
@@ -87,7 +103,7 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const { admin, error } = await requireAdmin(request, ["owner", "staff-admin"]);
+  const { admin, error } = await requireAdmin(request, ["owner"]);
   if (error || !admin) {
     return error || jsonError("Unauthorized", 401);
   }
@@ -104,7 +120,7 @@ export async function PATCH(request: Request) {
   const db = getSupabaseAdmin();
   const { data: existing, error: existingError } = await db
     .from("shift_settings")
-    .select("location_id, morning_start, morning_end, afternoon_start, afternoon_end")
+    .select("location_id, work_start, work_end, morning_start, morning_end, afternoon_start, afternoon_end")
     .eq("location_id", locationId)
     .maybeSingle<ShiftSettingsRow>();
   if (existingError) {
@@ -112,6 +128,8 @@ export async function PATCH(request: Request) {
   }
 
   const nextSettings = {
+    work_start: (body.workStart || "").trim() || existing?.work_start || "",
+    work_end: (body.workEnd || "").trim() || existing?.work_end || "",
     morning_start: (body.morningStart || "").trim() || existing?.morning_start || "",
     morning_end: (body.morningEnd || "").trim() || existing?.morning_end || "",
     afternoon_start: (body.afternoonStart || "").trim() || existing?.afternoon_start || "",
@@ -119,13 +137,15 @@ export async function PATCH(request: Request) {
   };
 
   if (
+    !nextSettings.work_start ||
+    !nextSettings.work_end ||
     !nextSettings.morning_start ||
     !nextSettings.morning_end ||
     !nextSettings.afternoon_start ||
     !nextSettings.afternoon_end
   ) {
     return jsonError(
-      "All shift times are required (morningStart, morningEnd, afternoonStart, afternoonEnd).",
+      "All times are required (workStart, workEnd, morningStart, morningEnd, afternoonStart, afternoonEnd).",
       422
     );
   }
