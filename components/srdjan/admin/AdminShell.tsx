@@ -4,6 +4,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
+
 type AdminMe = {
   id: string;
   username: string;
@@ -57,6 +62,16 @@ export default function AdminShell({
   const [error, setError] = useState("");
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    return (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+    );
+  });
 
   useEffect(() => {
     const load = async () => {
@@ -106,6 +121,28 @@ export default function AdminShell({
     loadNotifications().catch(() => setNotificationCount(0));
   }, [admin, pathname]);
 
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    }
+
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+    const handleAppInstalled = () => {
+      setInstallPrompt(null);
+      setIsInstalled(true);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
+  }, []);
+
   const logout = async () => {
     await fetch("/api/admin/auth/logout", { method: "POST" });
     router.push("/admin");
@@ -113,6 +150,24 @@ export default function AdminShell({
 
   const handleNavClose = () => {
     setIsNavOpen(false);
+  };
+
+  const handleInstallClick = async () => {
+    if (installPrompt) {
+      await installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice.outcome === "accepted") {
+        setInstallPrompt(null);
+      }
+      return;
+    }
+
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIos) {
+      window.alert("Na iPhone/iPad: Share -> Add to Home Screen.");
+      return;
+    }
+    window.alert("U browser meniju izaberi Install app ili Add to Home screen.");
   };
 
   if (loading) {
@@ -203,6 +258,18 @@ export default function AdminShell({
             >
               Osvezi
             </button>
+            {!isInstalled && (
+              <button
+                className="button small ghost"
+                type="button"
+                onClick={() => {
+                  handleNavClose();
+                  void handleInstallClick();
+                }}
+              >
+                Install app
+              </button>
+            )}
             <button
               className="button small ghost"
               type="button"
