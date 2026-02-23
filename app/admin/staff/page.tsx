@@ -74,6 +74,9 @@ export default function AdminStaffPage() {
           <Link className="button outline small" href="/admin/calendar">
             Kalendar
           </Link>
+          <Link className="button outline small" href="/admin/smene">
+            Smene
+          </Link>
           <Link className="button outline small" href="/admin/termini">
             Termini
           </Link>

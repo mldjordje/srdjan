@@ -2269,6 +2269,29 @@ h4 {
   font-size: 0.85rem;
 }
 
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+.admin-table th,
+.admin-table td {
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  padding: 8px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.admin-table th {
+  background: rgba(17, 17, 17, 0.06);
+  font-size: 0.85rem;
+}
+
+.admin-table td .select {
+  min-width: 130px;
+}
+
 .calendar-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);

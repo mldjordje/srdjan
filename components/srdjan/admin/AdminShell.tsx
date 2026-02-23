@@ -29,6 +29,7 @@ const navItems = [
   { href: "/admin/radnici", label: "Radnici", ownerOnly: true },
   { href: "/admin/zarada", label: "Zarada", ownerOnly: true },
   { href: "/admin/calendar", label: "Kalendar", ownerOnly: false },
+  { href: "/admin/smene", label: "Smene", ownerOnly: false },
   { href: "/admin/termini", label: "Termini", ownerOnly: false },
   { href: "/admin/usluge", label: "Usluge", ownerOnly: false },
   { href: "/admin/clients", label: "Klijenti", ownerOnly: false },
