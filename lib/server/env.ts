@@ -35,7 +35,11 @@ export const env = {
   webPushContact: () => readEnv("WEB_PUSH_CONTACT", "mailto:admin@example.com"),
   emailProvider: () => readOptionalEnv("EMAIL_PROVIDER", "resend"),
   resendApiKey: () => readOptionalEnv("RESEND_API_KEY", ""),
-  emailFrom: () => readOptionalEnv("EMAIL_FROM", ""),
+  emailFrom: () =>
+    readOptionalEnv(
+      "EMAIL_FROM",
+      process.env.RESEND_FROM?.trim() || process.env.NEXT_PUBLIC_EMAIL_FROM?.trim() || ""
+    ),
   appPublicUrl: () =>
     readOptionalEnv(
       "APP_PUBLIC_URL",

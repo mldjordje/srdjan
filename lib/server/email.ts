@@ -14,6 +14,20 @@ type WorkerAppointmentEmailInput = {
   origin: string;
 };
 
+type ClientAppointmentStatusEmailInput = {
+  to: string;
+  clientName: string;
+  workerName: string;
+  serviceName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: "confirmed" | "cancelled";
+  reason?: string;
+  appointmentId: string;
+  origin: string;
+};
+
 const isValidEmail = (value: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((value || "").trim());
 
@@ -61,9 +75,19 @@ const sendViaResend = async ({
   return response.ok;
 };
 
-export const sendWorkerNewAppointmentEmail = async (input: WorkerAppointmentEmailInput) => {
-  const to = (input.to || "").trim().toLowerCase();
-  if (!isValidEmail(to)) {
+const sendEmail = async ({
+  to,
+  subject,
+  html,
+  text,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}) => {
+  const normalizedTo = (to || "").trim().toLowerCase();
+  if (!isValidEmail(normalizedTo)) {
     return false;
   }
 
@@ -77,6 +101,20 @@ export const sendWorkerNewAppointmentEmail = async (input: WorkerAppointmentEmai
     return false;
   }
 
+  try {
+    return await sendViaResend({
+      from,
+      to: normalizedTo,
+      subject,
+      html,
+      text,
+    });
+  } catch {
+    return false;
+  }
+};
+
+export const sendWorkerNewAppointmentEmail = async (input: WorkerAppointmentEmailInput) => {
   const baseUrl = env.appPublicUrl() || input.origin;
   const adminUrl = `${baseUrl.replace(/\/+$/, "")}/admin/calendar?workerId=${encodeURIComponent(
     input.workerId
@@ -122,15 +160,76 @@ export const sendWorkerNewAppointmentEmail = async (input: WorkerAppointmentEmai
     `Admin: ${adminUrl}`,
   ].join("\n");
 
-  try {
-    return await sendViaResend({
-      from,
-      to,
-      subject,
-      html,
-      text,
-    });
-  } catch {
-    return false;
+  return sendEmail({
+    to: input.to,
+    subject,
+    html,
+    text,
+  });
+};
+
+export const sendClientAppointmentStatusEmail = async (
+  input: ClientAppointmentStatusEmailInput
+) => {
+  const europeanDate = formatIsoDateToEuropean(input.date);
+  const isConfirmed = input.status === "confirmed";
+  const statusLabel = isConfirmed ? "potvrdjen" : "otkazan";
+  const subject = isConfirmed
+    ? `Termin je potvrdjen - ${europeanDate} ${input.startTime}`
+    : `Termin je otkazan - ${europeanDate} ${input.startTime}`;
+
+  const safeClientName = escapeHtml(input.clientName || "Klijent");
+  const safeWorkerName = escapeHtml(input.workerName || "Radnik");
+  const safeServiceName = escapeHtml(input.serviceName || "Usluga");
+  const safeDate = escapeHtml(europeanDate);
+  const safeStart = escapeHtml(input.startTime);
+  const safeEnd = escapeHtml(input.endTime);
+  const safeReason = escapeHtml((input.reason || "").trim());
+  const safeStatusLabel = escapeHtml(statusLabel);
+  const reasonRow = safeReason
+    ? `<li><strong>Razlog:</strong> ${safeReason}</li>`
+    : "";
+
+  const baseUrl = env.appPublicUrl() || input.origin;
+  const myAppointmentsUrl = `${baseUrl.replace(/\/+$/, "")}/moji-termini`;
+  const safeMyAppointmentsUrl = escapeHtml(myAppointmentsUrl);
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.5;color:#1f2937;">
+      <h2 style="margin:0 0 12px;">Status termina je azuriran</h2>
+      <p style="margin:0 0 12px;">Zdravo ${safeClientName}, tvoj termin je <strong>${safeStatusLabel}</strong>.</p>
+      <ul style="margin:0 0 16px;padding-left:18px;">
+        <li><strong>Radnik:</strong> ${safeWorkerName}</li>
+        <li><strong>Usluga:</strong> ${safeServiceName}</li>
+        <li><strong>Datum:</strong> ${safeDate}</li>
+        <li><strong>Vreme:</strong> ${safeStart} - ${safeEnd}</li>
+        <li><strong>ID termina:</strong> ${escapeHtml(input.appointmentId)}</li>
+        ${reasonRow}
+      </ul>
+      <p style="margin:0;">
+        Moji termini:
+        <a href="${safeMyAppointmentsUrl}">${safeMyAppointmentsUrl}</a>
+      </p>
+    </div>
+  `.trim();
+
+  const lines = [
+    `Tvoj termin je ${statusLabel}.`,
+    `Radnik: ${input.workerName || "Radnik"}`,
+    `Usluga: ${input.serviceName || "Usluga"}`,
+    `Datum: ${europeanDate}`,
+    `Vreme: ${input.startTime} - ${input.endTime}`,
+    `ID termina: ${input.appointmentId}`,
+  ];
+  if (input.reason && input.reason.trim()) {
+    lines.push(`Razlog: ${input.reason.trim()}`);
   }
+  lines.push(`Moji termini: ${myAppointmentsUrl}`);
+
+  return sendEmail({
+    to: input.to,
+    subject,
+    html,
+    text: lines.join("\n"),
+  });
 };

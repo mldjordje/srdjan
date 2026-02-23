@@ -268,7 +268,7 @@ export default function AdminShell({
                   void handleInstallClick();
                 }}
               >
-                Install app
+                Install admin app
               </button>
             )}
             <button

@@ -1,4 +1,6 @@
 import { jsonError, jsonOk, parseJson } from "@/lib/server/http";
+import { sendClientAppointmentStatusEmail } from "@/lib/server/email";
+import { sendPushToClient } from "@/lib/server/push";
 import {
   ensureNoConflict,
   getOccupiedByWorkerAndDate,
@@ -12,6 +14,7 @@ import {
   minutesToTime,
   parseTimeToMinutes,
 } from "@/lib/server/time";
+import { formatIsoDateToEuropean } from "@/lib/date";
 
 type UpdateBody = {
   id?: string;
@@ -41,10 +44,105 @@ type ClientLookupRow = {
   email: string;
 };
 
+type AppointmentNotificationRow = {
+  id: string;
+  client_id: string;
+  service_name_snapshot: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  cancellation_reason?: string | null;
+  clients?: {
+    full_name?: string | null;
+    email?: string | null;
+  } | null;
+  workers?: {
+    name?: string | null;
+  } | null;
+};
+
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const normalizePhone = (value: string) => value.replace(/\D+/g, "");
 const trim = (value?: string) => (value || "").trim();
 const parseDurationFromService = (durationValue: number) => Number(durationValue || 0);
+
+const loadAppointmentForNotification = async (
+  id: string
+): Promise<AppointmentNotificationRow | null> => {
+  const db = getSupabaseAdmin();
+  const { data, error } = await db
+    .from("appointments")
+    .select(
+      "id, client_id, service_name_snapshot, date, start_time, end_time, cancellation_reason, clients(full_name, email), workers(name)"
+    )
+    .eq("id", id)
+    .maybeSingle<AppointmentNotificationRow>();
+  if (error || !data) {
+    return null;
+  }
+  return data;
+};
+
+const notifyClientOnStatusChange = async ({
+  appointmentId,
+  status,
+  origin,
+}: {
+  appointmentId: string;
+  status: "confirmed" | "cancelled";
+  origin: string;
+}) => {
+  const item = await loadAppointmentForNotification(appointmentId);
+  if (!item) {
+    return;
+  }
+
+  const isConfirmed = status === "confirmed";
+  const title = isConfirmed ? "Termin je potvrdjen" : "Termin je otkazan";
+  const reasonPart =
+    !isConfirmed && item.cancellation_reason
+      ? ` Razlog: ${item.cancellation_reason}`
+      : "";
+  const message = isConfirmed
+    ? `Termin za ${item.service_name_snapshot} ${formatIsoDateToEuropean(item.date)} u ${item.start_time} je potvrdjen.`
+    : `Termin za ${item.service_name_snapshot} ${formatIsoDateToEuropean(item.date)} u ${item.start_time} je otkazan.${reasonPart}`;
+
+  const db = getSupabaseAdmin();
+  await db.from("client_notifications").insert({
+    client_id: item.client_id,
+    type: isConfirmed ? "appointment_confirmed" : "appointment_cancelled",
+    title,
+    message,
+    appointment_id: item.id,
+    is_read: false,
+  });
+
+  await sendPushToClient(item.client_id, {
+    title,
+    body: message,
+    appointmentId: item.id,
+    reason: item.cancellation_reason || undefined,
+  });
+
+  const clientEmail = (item.clients?.email || "").trim().toLowerCase();
+  if (!clientEmail) {
+    return;
+  }
+
+  await sendClientAppointmentStatusEmail({
+    to: clientEmail,
+    clientName: item.clients?.full_name || "Klijent",
+    workerName: item.workers?.name || "Radnik",
+    serviceName: item.service_name_snapshot || "Usluga",
+    date: item.date,
+    startTime: item.start_time,
+    endTime: item.end_time,
+    status,
+    reason: item.cancellation_reason || undefined,
+    appointmentId: item.id,
+    origin,
+  });
+};
 
 const resolveClientId = async ({
   fullName,
@@ -167,6 +265,21 @@ export async function PATCH(request: Request) {
     return jsonError(updateError.message, 500);
   }
 
+  const requestOrigin = (() => {
+    try {
+      return new URL(request.url).origin;
+    } catch {
+      return "";
+    }
+  })();
+  if (status === "confirmed" || status === "cancelled") {
+    await notifyClientOnStatusChange({
+      appointmentId: id,
+      status,
+      origin: requestOrigin,
+    });
+  }
+
   return jsonOk({ status: "ok" });
 }
 
@@ -195,7 +308,24 @@ export async function POST(request: Request) {
     }
     const { error: deleteError } = await db.from("appointments").delete().eq("id", id);
     if (deleteError) {
-      return jsonError(deleteError.message, 500);
+      const isFkViolation = (deleteError.code || "").toUpperCase() === "23503";
+      if (!isFkViolation) {
+        return jsonError(deleteError.message, 500);
+      }
+
+      const now = new Date().toISOString();
+      const { error: fallbackError } = await db
+        .from("appointments")
+        .update({
+          status: "cancelled",
+          cancelled_by: "admin",
+          cancelled_at: now,
+          updated_at: now,
+        })
+        .eq("id", id);
+      if (fallbackError) {
+        return jsonError(fallbackError.message, 500);
+      }
     }
     return jsonOk({ status: "ok" });
   }
@@ -217,6 +347,21 @@ export async function POST(request: Request) {
     const { error: statusError } = await db.from("appointments").update(patch).eq("id", id);
     if (statusError) {
       return jsonError(statusError.message, 500);
+    }
+
+    const requestOrigin = (() => {
+      try {
+        return new URL(request.url).origin;
+      } catch {
+        return "";
+      }
+    })();
+    if (status === "confirmed" || status === "cancelled") {
+      await notifyClientOnStatusChange({
+        appointmentId: id,
+        status,
+        origin: requestOrigin,
+      });
     }
     return jsonOk({ status: "ok" });
   }

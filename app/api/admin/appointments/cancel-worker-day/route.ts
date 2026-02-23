@@ -1,4 +1,5 @@
 import { jsonError, jsonOk, parseJson } from "@/lib/server/http";
+import { sendClientAppointmentStatusEmail } from "@/lib/server/email";
 import { sendPushToClient } from "@/lib/server/push";
 import { requireAdmin } from "@/lib/server/rbac";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
@@ -17,6 +18,15 @@ type AppointmentRow = {
   service_name_snapshot: string;
   date: string;
   start_time: string;
+  end_time: string;
+  cancellation_reason?: string | null;
+  clients?: {
+    full_name?: string | null;
+    email?: string | null;
+  } | null;
+  workers?: {
+    name?: string | null;
+  } | null;
 };
 
 const isIsoDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -47,7 +57,9 @@ export async function POST(request: Request) {
   const db = getSupabaseAdmin();
   const { data: appointments, error: fetchError } = await db
     .from("appointments")
-    .select("id, client_id, service_name_snapshot, date, start_time")
+    .select(
+      "id, client_id, service_name_snapshot, date, start_time, end_time, cancellation_reason, clients(full_name, email), workers(name)"
+    )
     .eq("location_id", locationId)
     .eq("worker_id", workerId)
     .eq("date", date)
@@ -104,6 +116,36 @@ export async function POST(request: Request) {
         reason,
       })
     )
+  );
+
+  const requestOrigin = (() => {
+    try {
+      return new URL(request.url).origin;
+    } catch {
+      return "";
+    }
+  })();
+
+  await Promise.all(
+    typedAppointments.map((item) => {
+      const email = (item.clients?.email || "").trim().toLowerCase();
+      if (!email) {
+        return Promise.resolve(false);
+      }
+      return sendClientAppointmentStatusEmail({
+        to: email,
+        clientName: item.clients?.full_name || "Klijent",
+        workerName: item.workers?.name || "Radnik",
+        serviceName: item.service_name_snapshot || "Usluga",
+        date: item.date,
+        startTime: item.start_time,
+        endTime: item.end_time,
+        status: "cancelled",
+        reason,
+        appointmentId: item.id,
+        origin: requestOrigin,
+      });
+    })
   );
 
   return jsonOk({ status: "ok", cancelled: typedAppointments.length });

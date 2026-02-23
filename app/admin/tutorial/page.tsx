@@ -83,6 +83,39 @@ export default function AdminTutorialPage() {
           u kalendaru.
         </p>
       </div>
+
+      <div className="admin-card">
+        <h3>10. Tekst za stampu u salonu: instalacija klijentske aplikacije</h3>
+        <p>
+          <strong>INSTALIRAJ APLIKACIJU SALON SRDJAN</strong>
+          <br />
+          Zakazivanje je brze preko aplikacije. Instalacija traje 10 sekundi.
+        </p>
+        <p>
+          <strong>ANDROID</strong>
+          <br />
+          1) Otvori sajt salona.
+          <br />
+          2) Klikni dugme <strong>Install app</strong>.
+          <br />
+          3) Potvrdi instalaciju.
+          <br />
+          4) Ikonica aplikacije ce se pojaviti na telefonu.
+        </p>
+        <p>
+          <strong>IPHONE (iOS)</strong>
+          <br />
+          1) Otvori sajt u Safari browser-u.
+          <br />
+          2) Klikni <strong>Share</strong> (kvadrat sa strelicom nagore).
+          <br />
+          3) Izaberi <strong>Add to Home Screen</strong>.
+          <br />
+          4) Klikni <strong>Add</strong>.
+          <br />
+          5) Ikonica aplikacije ce biti na pocetnom ekranu.
+        </p>
+      </div>
     </AdminShell>
   );
 }

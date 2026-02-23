@@ -24,6 +24,8 @@ type WorkerService = {
 
 type ShiftSettings = {
   location_id: string;
+  work_start: string;
+  work_end: string;
   morning_start: string;
   morning_end: string;
   afternoon_start: string;
@@ -80,7 +82,7 @@ export const getShiftWindowForDay = async (
       db
         .from("shift_settings")
         .select(
-          "location_id, morning_start, morning_end, afternoon_start, afternoon_end"
+          "location_id, work_start, work_end, morning_start, morning_end, afternoon_start, afternoon_end"
         )
         .eq("location_id", locationId)
         .maybeSingle<ShiftSettings>(),

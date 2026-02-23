@@ -79,7 +79,7 @@ const validateShiftSettings = (settings: {
 };
 
 export async function GET(request: Request) {
-  const { admin, error } = await requireAdmin(request, ["owner"]);
+  const { admin, error } = await requireAdmin(request, ["owner", "staff-admin"]);
   if (error || !admin) {
     return error || jsonError("Unauthorized", 401);
   }

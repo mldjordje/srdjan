@@ -45,7 +45,7 @@ export async function GET() {
           ? db
               .from("shift_settings")
               .select(
-                "location_id, morning_start, morning_end, afternoon_start, afternoon_end"
+                "location_id, work_start, work_end, morning_start, morning_end, afternoon_start, afternoon_end"
               )
               .eq("location_id", defaultLocationId)
               .maybeSingle()

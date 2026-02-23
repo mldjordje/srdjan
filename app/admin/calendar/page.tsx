@@ -60,6 +60,11 @@ type Worker = {
   location_id: string;
 };
 
+type ShiftSettings = {
+  work_start?: string;
+  work_end?: string;
+};
+
 type AppointmentRow = {
   id: string;
   location_id: string;
@@ -419,19 +424,12 @@ export default function AdminCalendarPage() {
   const firstWorkingDay = useMemo(() => getNextWorkingDay(today), [today]);
   const lastDay = useMemo(() => addMonthsClamped(today, MONTHS_AHEAD), [today]);
   const { open, close, slotMinutes, breaks = [] } = siteConfig.schedule;
-  const calendarOpen = useMemo(
-    () => minutesToTime(Math.max(0, timeToMinutes(open) - 60)),
-    [open]
-  );
-  const calendarClose = useMemo(
-    () => minutesToTime(Math.min(24 * 60, timeToMinutes(close) + 60)),
-    [close]
-  );
 
   const [selectedDate, setSelectedDate] = useState(formatDate(firstWorkingDay));
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [workerId, setWorkerId] = useState("");
   const [locationId, setLocationId] = useState("");
+  const [shiftSettings, setShiftSettings] = useState<ShiftSettings | null>(null);
   const [calendarMonth, setCalendarMonth] = useState(
     new Date(firstWorkingDay.getFullYear(), firstWorkingDay.getMonth(), 1)
   );
@@ -477,6 +475,14 @@ export default function AdminCalendarPage() {
   const weekSwipeStart = useRef<{ x: number; y: number } | null>(null);
   const swipeAnimationTimeout = useRef<number | null>(null);
   const [weekTransition, setWeekTransition] = useState<"next" | "prev" | null>(null);
+  const calendarOpen = useMemo(
+    () => normalizeTimeInput(shiftSettings?.work_start || open),
+    [open, shiftSettings?.work_start]
+  );
+  const calendarClose = useMemo(
+    () => normalizeTimeInput(shiftSettings?.work_end || close),
+    [close, shiftSettings?.work_end]
+  );
 
   const selectedDateObj = useMemo(
     () => new Date(`${selectedDate}T00:00:00`),
@@ -886,6 +892,30 @@ export default function AdminCalendarPage() {
     }
   };
 
+  const fetchShiftSettings = async (targetLocationId: string) => {
+    if (!targetLocationId) {
+      setShiftSettings(null);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/admin/shift-settings?locationId=${encodeURIComponent(targetLocationId)}`,
+        { cache: "no-store" }
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        setShiftSettings(null);
+        return;
+      }
+
+      const settings = data?.settings as ShiftSettings | null;
+      setShiftSettings(settings || null);
+    } catch {
+      setShiftSettings(null);
+    }
+  };
+
   const refreshData = async (dates: string[]) => {
     if (!workerId) {
       return;
@@ -953,6 +983,10 @@ export default function AdminCalendarPage() {
     }
     fetchServiceItems();
   }, [workerId]);
+
+  useEffect(() => {
+    fetchShiftSettings(locationId);
+  }, [locationId]);
 
   useEffect(() => {
     return () => {
@@ -2103,9 +2137,3 @@ export default function AdminCalendarPage() {
     </AdminShell>
   );
 }
-
-
-
-
-
-
