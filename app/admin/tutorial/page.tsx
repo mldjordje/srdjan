@@ -56,6 +56,24 @@ export default function AdminTutorialPage() {
           <strong> no_show</strong> = klijent nije dosao, <strong>cancelled</strong> = otkazan termin.
         </p>
       </div>
+
+      <div className="admin-card">
+        <h3>7. Unos smena za narednu nedelju</h3>
+        <p>
+          Smenu za narednu nedelju unosi owner/staff-admin za svakog radnika po danu:
+          <strong> prepodne</strong>, <strong>popodne</strong> ili <strong>slobodan dan</strong>.
+          Pravilo je da raspored za sledecu nedelju bude unet unapred, pre prvog termina.
+        </p>
+      </div>
+
+      <div className="admin-card">
+        <h3>8. Kada radi zamena smene sa kolegom</h3>
+        <p>
+          Zamena smene radi samo ako za taj datum oba radnika vec imaju dodeljenu smenu
+          i nijedan od njih nema aktivne termine tog dana. Ako postoji makar jedan termin,
+          prvo prebaci/otkazi termin pa tek onda uradi zamenu.
+        </p>
+      </div>
     </AdminShell>
   );
 }
