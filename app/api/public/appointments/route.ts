@@ -136,7 +136,7 @@ export async function POST(request: Request) {
       }
     })();
 
-    await sendWorkerNewAppointmentEmail({
+    const emailSent = await sendWorkerNewAppointmentEmail({
       to: workerRow.notification_email,
       workerName: workerRow.name || "Radnik",
       clientName: client.full_name || "Klijent",
@@ -148,6 +148,11 @@ export async function POST(request: Request) {
       appointmentId: appointment.id as string,
       origin: requestOrigin,
     });
+    if (!emailSent) {
+      console.warn(
+        "[appointments] Worker notification email was not sent. Check server logs for RESEND_API_KEY, EMAIL_FROM, and Resend API errors."
+      );
+    }
   }
 
   return jsonOk({ appointment }, 201);

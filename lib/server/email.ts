@@ -54,6 +54,7 @@ const sendViaResend = async ({
 }) => {
   const apiKey = env.resendApiKey();
   if (!apiKey) {
+    console.warn("[email] Staff notification skipped: RESEND_API_KEY is not set.");
     return false;
   }
 
@@ -72,7 +73,12 @@ const sendViaResend = async ({
     }),
   });
 
-  return response.ok;
+  if (!response.ok) {
+    const body = await response.text();
+    console.error("[email] Resend API error:", response.status, body);
+    return false;
+  }
+  return true;
 };
 
 const sendEmail = async ({
@@ -88,16 +94,19 @@ const sendEmail = async ({
 }) => {
   const normalizedTo = (to || "").trim().toLowerCase();
   if (!isValidEmail(normalizedTo)) {
+    console.warn("[email] Staff notification skipped: invalid 'to' address.");
     return false;
   }
 
   const from = env.emailFrom();
   if (!from || !isValidEmail(from)) {
+    console.warn("[email] Staff notification skipped: EMAIL_FROM (or RESEND_FROM) is not set or invalid.");
     return false;
   }
 
   const provider = env.emailProvider().toLowerCase();
   if (provider !== "resend") {
+    console.warn("[email] Staff notification skipped: EMAIL_PROVIDER is not 'resend'.");
     return false;
   }
 
