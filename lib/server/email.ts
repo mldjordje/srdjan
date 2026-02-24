@@ -31,6 +31,13 @@ type ClientAppointmentStatusEmailInput = {
 const isValidEmail = (value: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((value || "").trim());
 
+const isValidFromAddress = (value: string) => {
+  const trimmed = (value || "").trim();
+  if (isValidEmail(trimmed)) return true;
+  const match = trimmed.match(/<([^>]+)>/);
+  return match ? isValidEmail(match[1]) : false;
+};
+
 const escapeHtml = (value: string) =>
   value
     .replace(/&/g, "&amp;")
@@ -99,8 +106,8 @@ const sendEmail = async ({
   }
 
   const from = env.emailFrom();
-  if (!from || !isValidEmail(from)) {
-    console.warn("[email] Staff notification skipped: EMAIL_FROM (or RESEND_FROM) is not set or invalid.");
+  if (!from || !isValidFromAddress(from)) {
+    console.warn("[email] Staff notification skipped: EMAIL_FROM (or RESEND_FROM) is not set or invalid. Current value:", from || "(empty)");
     return false;
   }
 
