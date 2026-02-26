@@ -135,7 +135,8 @@ type ScheduleItem = {
   time: string;
   dayIndex: number;
   startRow: number;
-  span: number;
+  busySpan: number;
+  visualSpan: number;
   title: string;
   subtitle?: string;
   duration?: number;
@@ -652,9 +653,11 @@ export default function AdminCalendarPage() {
           return;
         }
         const rowStart = startIndex + 3;
-        const rawSpan = Math.ceil(durationMinutes / slotMinutes);
+        const rawBusySpan = Math.ceil(durationMinutes / slotMinutes);
         const maxSpan = slotCount - startIndex;
-        const span = Math.max(1, Math.min(rawSpan, maxSpan));
+        const busySpan = Math.max(1, Math.min(rawBusySpan, maxSpan));
+        const rawVisualSpan = durationMinutes / slotMinutes;
+        const visualSpan = Math.max(1, Math.min(rawVisualSpan, maxSpan));
 
         const serviceColor =
           (appointment.serviceId && serviceColorLookup.byId[appointment.serviceId]) ||
@@ -668,9 +671,10 @@ export default function AdminCalendarPage() {
           time: appointment.time,
           dayIndex,
           startRow: rowStart,
-          span,
+          busySpan,
+          visualSpan,
           title: appointment.clientName,
-          subtitle: appointment.serviceName,
+          subtitle: `${appointment.serviceName} · ${durationMinutes} min`,
           duration: durationMinutes,
           type: "appointment",
           status: appointment.status || "pending",
@@ -693,9 +697,11 @@ export default function AdminCalendarPage() {
           return;
         }
         const rowStart = startIndex + 3;
-        const rawSpan = Math.ceil(durationMinutes / slotMinutes);
+        const rawBusySpan = Math.ceil(durationMinutes / slotMinutes);
         const maxSpan = slotCount - startIndex;
-        const span = Math.max(1, Math.min(rawSpan, maxSpan));
+        const busySpan = Math.max(1, Math.min(rawBusySpan, maxSpan));
+        const rawVisualSpan = durationMinutes / slotMinutes;
+        const visualSpan = Math.max(1, Math.min(rawVisualSpan, maxSpan));
 
         items.push({
           id: `block-${block.id}`,
@@ -704,7 +710,8 @@ export default function AdminCalendarPage() {
           time: block.time,
           dayIndex,
           startRow: rowStart,
-          span,
+          busySpan,
+          visualSpan,
           title: "Blokada",
           subtitle: block.note || `${block.duration} min`,
           duration: block.duration,
@@ -732,7 +739,7 @@ export default function AdminCalendarPage() {
   const busySlots = useMemo(() => {
     const map = new Set<string>();
     scheduleItems.forEach((item) => {
-      for (let row = item.startRow; row < item.startRow + item.span; row += 1) {
+      for (let row = item.startRow; row < item.startRow + item.busySpan; row += 1) {
         map.add(`${item.dayIndex}-${row}`);
       }
     });
@@ -1713,7 +1720,9 @@ export default function AdminCalendarPage() {
                       style={
                         {
                           gridColumn: item.dayIndex + 1,
-                          gridRow: `${item.startRow} / span ${item.span}`,
+                          gridRow: `${item.startRow} / span ${item.busySpan}`,
+                          alignSelf: "start",
+                          "--calendar-item-height": `calc(var(--calendar-slot-height) * ${item.visualSpan})`,
                           ...(item.serviceColor
                             ? { ["--service-color"]: item.serviceColor }
                             : {}),

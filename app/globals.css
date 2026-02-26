@@ -1404,7 +1404,7 @@ h4 {
 
 .calendar-weekdays {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--calendar-columns, 5), minmax(0, 1fr));
   gap: 6px;
   font-size: 0.75rem;
   color: var(--text-muted);
@@ -1414,7 +1414,7 @@ h4 {
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--calendar-columns, 5), minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -1608,7 +1608,10 @@ h4 {
 }
 
 .slot-button {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  gap: 8px;
   border-radius: 16px;
   border: 1px solid rgba(17, 17, 17, 0.12);
   background: var(--bg-elevated);
@@ -1627,13 +1630,56 @@ h4 {
 .slot-button.is-active {
   background: linear-gradient(135deg, #103a22, #1d6a3c);
   color: #ffffff;
-  border-color: rgba(46, 148, 84, 0.8);
-  box-shadow: 0 12px 22px rgba(46, 148, 84, 0.24);
+  border-color: rgba(46, 148, 84, 0.95);
+  box-shadow: 0 12px 22px rgba(46, 148, 84, 0.28), 0 0 0 2px rgba(46, 148, 84, 0.28);
 }
 
 .slot-button.is-selected {
   transform: translateY(-1px) scale(1.01);
   animation: bookingConfirmPulse 0.45s ease;
+}
+
+.slot-button:focus-visible {
+  outline: 2px solid rgba(17, 17, 17, 0.55);
+  outline-offset: 2px;
+}
+
+.slot-button__time {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.slot-button__badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+.slot-selection {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(17, 17, 17, 0.22);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--text-muted);
+}
+
+.slot-selection p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.slot-selection.is-selected {
+  border-style: solid;
+  border-color: rgba(46, 148, 84, 0.72);
+  background: rgba(46, 148, 84, 0.12);
+  color: #114a2c;
 }
 
 .booking-submit-button {
@@ -2835,7 +2881,7 @@ h4 {
 .calendar-item {
   margin: 0;
   width: 100%;
-  height: 100%;
+  height: var(--calendar-item-height, 100%);
   padding: 7px 8px 7px 12px;
   border-radius: 10px;
   border: 2px solid rgba(255, 255, 255, 0.7);

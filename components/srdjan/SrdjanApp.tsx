@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { formatIsoDateToEuropean } from "@/lib/date";
+import { siteConfig } from "@/lib/site";
 
 type ClientProfile = {
   id: string;
@@ -66,12 +67,6 @@ const toDateInput = (date: Date) => {
   return `${y}-${m}-${d}`;
 };
 
-const dateAfter = (days: number) => {
-  const now = new Date();
-  now.setDate(now.getDate() + days);
-  return toDateInput(now);
-};
-
 const addDays = (date: Date, days: number) => {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
@@ -81,9 +76,32 @@ const addDays = (date: Date, days: number) => {
 const addMonths = (date: Date, months: number) =>
   new Date(date.getFullYear(), date.getMonth() + months, 1);
 
-const WORKING_DAYS = [1, 2, 3, 4, 5];
+const WORKING_DAYS = siteConfig.schedule.workingDays ?? [1, 2, 3, 4, 5];
 const WORKING_DAY_ORDER = [...WORKING_DAYS].sort((a, b) => a - b);
 const getWorkdayColumn = (day: number) => WORKING_DAY_ORDER.indexOf(day);
+const isWorkingDay = (date: Date) => WORKING_DAYS.includes(date.getDay());
+const getNextWorkingDay = (date: Date) => {
+  let cursor = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  while (!isWorkingDay(cursor)) {
+    cursor = addDays(cursor, 1);
+  }
+  return cursor;
+};
+const toWeekdayLabel = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\./g, "");
+const getWorkdayLabel = (dayIndex: number, locale: string) => {
+  const baseMonday = new Date(2024, 0, 1);
+  const offset = dayIndex === 0 ? -1 : dayIndex - 1;
+  return toWeekdayLabel(
+    new Intl.DateTimeFormat(locale, { weekday: "short" }).format(
+      addDays(baseMonday, offset)
+    )
+  );
+};
 const PRIMARY_LOCATION_LABEL = "Radnih brigada 8";
 
 const formatMonthLabel = (date: Date, locale: string) =>
@@ -179,9 +197,9 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
   const [locationId, setLocationId] = useState("");
   const [workerId, setWorkerId] = useState("");
   const [serviceId, setServiceId] = useState("");
-  const [date, setDate] = useState(dateAfter(1));
+  const [date, setDate] = useState(() => toDateInput(getNextWorkingDay(new Date())));
   const [calendarMonth, setCalendarMonth] = useState(() => {
-    const base = new Date();
+    const base = getNextWorkingDay(new Date());
     return new Date(base.getFullYear(), base.getMonth(), 1);
   });
   const [time, setTime] = useState("");
@@ -204,10 +222,20 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
   const locale = "sr-RS";
 
   const minDate = useMemo(() => {
-    const tomorrow = addDays(new Date(), 1);
-    return new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
+    return getNextWorkingDay(new Date());
   }, []);
   const maxDate = useMemo(() => addDays(minDate, 30), [minDate]);
+  const weekdayLabels = useMemo(
+    () => WORKING_DAY_ORDER.map((dayIndex) => getWorkdayLabel(dayIndex, locale)),
+    [locale]
+  );
+  const calendarColumnsStyle = useMemo(
+    () =>
+      ({
+        ["--calendar-columns" as string]: WORKING_DAY_ORDER.length,
+      }) as CSSProperties,
+    []
+  );
   const monthDays = useMemo(
     () => buildCalendarDays(calendarMonth, minDate, maxDate),
     [calendarMonth, minDate, maxDate]
@@ -672,12 +700,12 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
                       Sledeci
                     </button>
                   </div>
-                  <div className="calendar-weekdays">
-                    {["pon", "uto", "sre", "cet", "pet"].map((day) => (
+                  <div className="calendar-weekdays" style={calendarColumnsStyle}>
+                    {weekdayLabels.map((day) => (
                       <span key={day}>{day}</span>
                     ))}
                   </div>
-                  <div className="calendar-grid">
+                  <div className="calendar-grid" style={calendarColumnsStyle}>
                     {monthDays.map((day, index) => {
                       if (!day.inMonth || !day.value) {
                         return <div key={`empty-${index}`} className="calendar-cell" />;
@@ -754,10 +782,24 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
                       key={slot}
                       className={`slot-button ${time === slot ? "is-active is-selected" : ""}`}
                       onClick={() => setTime(slot)}
+                      aria-pressed={time === slot}
                     >
-                      {slot}
+                      <span className="slot-button__time">{slot}</span>
+                      {time === slot && <span className="slot-button__badge">Izabrano</span>}
                     </button>
                   ))}
+                </div>
+                <div
+                  className={`slot-selection ${time ? "is-selected" : ""}`}
+                  aria-live="polite"
+                >
+                  {time ? (
+                    <p>
+                      Selektovan termin: <strong>{time}</strong>
+                    </p>
+                  ) : (
+                    <p>Izaberite slobodan termin da nastavite sa zakazivanjem.</p>
+                  )}
                 </div>
               </div>
 
