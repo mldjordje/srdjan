@@ -61,7 +61,7 @@ export default function AdminLoginPage() {
         <div className="container nav-inner">
           <Link className="brand" href="/">
             <div className="brand-mark">
-              <span className="brand-mark__text">FS</span>
+              <img src="/novilogo.png" alt="Salon Srdjan logo" />
             </div>
             <div className="brand-title">
               <span>Frizerski salon Srdjan</span>

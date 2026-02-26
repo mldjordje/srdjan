@@ -493,7 +493,7 @@ export default function HomePage() {
             >
               <div className="preloader-brand">
                 <div className="preloader-mark">
-                  <span className="preloader-mark__text">FS</span>
+                  <img src="/novilogo.png" alt="Salon Srdjan logo" />
                 </div>
                 <div className="preloader-title">
                   <span>Frizerski salon</span>

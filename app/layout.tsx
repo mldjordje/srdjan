@@ -35,8 +35,8 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/favicon-srdjan.ico",
-    apple: "/apple-touch-icon-srdjan.png",
+    icon: "/icons/icon-512-novilogo.png",
+    apple: "/apple-touch-icon-novilogo.png",
   },
 };
 

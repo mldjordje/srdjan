@@ -128,7 +128,7 @@ h4 {
 }
 
 .brand-mark img {
-  filter: grayscale(0.9) contrast(1.05);
+  filter: none;
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -393,6 +393,13 @@ h4 {
   display: grid;
   place-items: center;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+}
+
+.preloader-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .preloader-mark__text {
