@@ -13,7 +13,7 @@ import {
 
 import AdminShell from "@/components/srdjan/admin/AdminShell";
 import { formatIsoDateTimeToEuropean, formatIsoDateToEuropean } from "@/lib/date";
-import { services as fallbackServices, type Service } from "@/lib/services";
+import { type Service } from "@/lib/services";
 import { siteConfig } from "@/lib/site";
 import { useLanguage, type Language } from "@/lib/useLanguage";
 
@@ -367,6 +367,9 @@ export default function AdminCalendarPage() {
       cannotSaveStatus: "Ne mogu da sacuvam status.",
       statusSaved: "Status je sacuvan.",
       cannotSaveBlock: "Ne mogu da sacuvam blokadu.",
+      cannotLoadServices: "Ne mogu da ucitam usluge za izabranog radnika.",
+      workerHasNoServices:
+        "Izabrani radnik nema aktivne usluge; zakazivanje nije moguce dok owner ne aktivira uslugu.",
       cannotSaveAppointment: "Ne mogu da sacuvam termin.",
       appointmentUpdated: "Termin je izmenjen.",
       appointmentSaved: "Termin je sacuvan.",
@@ -388,6 +391,9 @@ export default function AdminCalendarPage() {
       cannotSaveStatus: "Unable to save status.",
       statusSaved: "Status saved.",
       cannotSaveBlock: "Unable to save block.",
+      cannotLoadServices: "Unable to load services for the selected worker.",
+      workerHasNoServices:
+        "Selected worker has no active services; booking is blocked until owner activates a service.",
       cannotSaveAppointment: "Unable to save appointment.",
       appointmentUpdated: "Appointment updated.",
       appointmentSaved: "Appointment saved.",
@@ -409,6 +415,9 @@ export default function AdminCalendarPage() {
       cannotSaveStatus: "Impossibile salvare lo stato.",
       statusSaved: "Stato salvato.",
       cannotSaveBlock: "Impossibile salvare il blocco.",
+      cannotLoadServices: "Impossibile caricare i servizi per il lavoratore selezionato.",
+      workerHasNoServices:
+        "Il lavoratore selezionato non ha servizi attivi; la prenotazione e bloccata finche il proprietario non attiva un servizio.",
       cannotSaveAppointment: "Impossibile salvare l'appuntamento.",
       appointmentUpdated: "Appuntamento aggiornato.",
       appointmentSaved: "Appuntamento salvato.",
@@ -462,13 +471,15 @@ export default function AdminCalendarPage() {
   const [appointmentForm, setAppointmentForm] = useState<AppointmentFormState>({
     date: formatDate(firstWorkingDay),
     time: "",
-    serviceId: fallbackServices[0]?.id ?? "",
+    serviceId: "",
     clientName: "",
     phone: "",
     email: "",
     notes: "",
   });
-  const [serviceItems, setServiceItems] = useState<Service[]>(fallbackServices);
+  const [serviceItems, setServiceItems] = useState<Service[]>([]);
+  const [isLoadingServices, setIsLoadingServices] = useState(false);
+  const [serviceLoadError, setServiceLoadError] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsStatus, setClientsStatus] = useState<StatusState>({ type: "idle" });
   const [selectedClientId, setSelectedClientId] = useState("");
@@ -623,6 +634,11 @@ export default function AdminCalendarPage() {
   const hasUnknownService =
     appointmentForm.serviceId !== "" &&
     !serviceItems.some((service) => service.id === appointmentForm.serviceId);
+  const hasBookableServices = serviceItems.length > 0;
+  const serviceGuardMessage =
+    !workerId || isLoadingServices
+      ? ""
+      : serviceLoadError || (!hasBookableServices ? t.workerHasNoServices : "");
 
   const canGoPrev = weekStart > firstWorkingDay;
   const canGoNext = addDays(weekStart, 7) <= lastDay;
@@ -864,16 +880,23 @@ export default function AdminCalendarPage() {
 
   const fetchServiceItems = async () => {
     if (!workerId) {
-      setServiceItems(fallbackServices);
+      setServiceItems([]);
+      setServiceLoadError("");
+      setIsLoadingServices(false);
+      setAppointmentForm((prev) => ({ ...prev, serviceId: "" }));
       return;
     }
+    setIsLoadingServices(true);
+    setServiceLoadError("");
+    setServiceItems([]);
+    setAppointmentForm((prev) => ({ ...prev, serviceId: "" }));
     try {
       const response = await fetch(`/api/admin/services?workerId=${encodeURIComponent(workerId)}`, {
         cache: "no-store",
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data?.error || "Ne mogu da ucitam usluge.");
+        throw new Error(data?.error || t.cannotLoadServices);
       }
       const items = (Array.isArray(data.services) ? data.services : [])
         .filter((item: ServiceRow) => item.is_active !== false)
@@ -885,17 +908,19 @@ export default function AdminCalendarPage() {
           color: item.color || null,
           isActive: item.is_active,
         }));
-      setServiceItems(items.length > 0 ? items : fallbackServices);
-      if (items.length > 0) {
-        setAppointmentForm((prev) => {
-          if (items.some((service: Service) => service.id === prev.serviceId)) {
-            return prev;
-          }
-          return { ...prev, serviceId: items[0].id };
-        });
-      }
-    } catch {
-      setServiceItems(fallbackServices);
+      setServiceItems(items);
+      setAppointmentForm((prev) => {
+        if (items.some((service: Service) => service.id === prev.serviceId)) {
+          return prev;
+        }
+        return { ...prev, serviceId: items[0]?.id || "" };
+      });
+    } catch (error) {
+      setServiceItems([]);
+      setAppointmentForm((prev) => ({ ...prev, serviceId: "" }));
+      setServiceLoadError(error instanceof Error ? error.message : t.cannotLoadServices);
+    } finally {
+      setIsLoadingServices(false);
     }
   };
 
@@ -985,9 +1010,6 @@ export default function AdminCalendarPage() {
   }, [requestedWorkerId]);
 
   useEffect(() => {
-    if (!workerId) {
-      return;
-    }
     fetchServiceItems();
   }, [workerId]);
 
@@ -1253,7 +1275,7 @@ export default function AdminCalendarPage() {
     setAppointmentForm({
       date: appointment.date,
       time: normalizedTime,
-      serviceId: resolvedServiceId || serviceItems[0]?.id || fallbackServices[0]?.id || "",
+      serviceId: resolvedServiceId || serviceItems[0]?.id || "",
       clientName: appointment.clientName ?? "",
       phone: appointment.phone ?? "",
       email: appointment.email ?? "",
@@ -1412,6 +1434,13 @@ export default function AdminCalendarPage() {
       setAppointmentStatus({
         type: "error",
         message: "Prvo izaberi radnika.",
+      });
+      return;
+    }
+    if (!hasBookableServices) {
+      setAppointmentStatus({
+        type: "error",
+        message: serviceGuardMessage || t.workerHasNoServices,
       });
       return;
     }
@@ -1848,10 +1877,11 @@ export default function AdminCalendarPage() {
                     className="select"
                     value={appointmentForm.serviceId}
                     onChange={handleAppointmentChange}
+                    disabled={isLoadingServices || !hasBookableServices}
                     required
                   >
                     <option value="" disabled>
-                      Izaberi uslugu
+                      {isLoadingServices ? "Ucitavanje usluga..." : "Izaberi uslugu"}
                     </option>
                     {hasUnknownService && (
                       <option value={appointmentForm.serviceId}>
@@ -1864,6 +1894,9 @@ export default function AdminCalendarPage() {
                       </option>
                     ))}
                   </select>
+                  {serviceGuardMessage && (
+                    <div className="form-status error">{serviceGuardMessage}</div>
+                  )}
                 </div>
                 <div className="form-row">
                   <label htmlFor="appointment-client-search">Pretrazi klijente</label>
@@ -1959,7 +1992,11 @@ export default function AdminCalendarPage() {
                   </div>
                 )}
                 <div className="calendar-form__actions">
-                  <button className="button" type="submit">
+                  <button
+                    className="button"
+                    type="submit"
+                    disabled={isLoadingServices || !hasBookableServices}
+                  >
                     {isEditingAppointment ? "Sacuvaj izmene" : "Sacuvaj termin"}
                   </button>
                 </div>

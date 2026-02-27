@@ -55,12 +55,13 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const requestedWorkerId = (searchParams.get("workerId") || "").trim();
+  const ownWorkerId = (admin.worker_id || "").trim();
   const workerId =
     admin.role === "staff-admin"
-      ? (admin.worker_id || "").trim()
+      ? requestedWorkerId || ownWorkerId
       : requestedWorkerId;
 
-  if (admin.role === "staff-admin" && !workerId) {
+  if (admin.role === "staff-admin" && !ownWorkerId) {
     return jsonError("Staff account is not linked to a worker.", 422);
   }
 
