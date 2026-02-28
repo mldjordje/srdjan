@@ -651,10 +651,10 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
           <div className="form-row">
             <label htmlFor="worker">Radnik</label>
             <select
+              key={`worker-select-${locationId || "none"}`}
               id="worker"
               className="select"
               value={workerId}
-              disabled={!canChooseWorker}
               onChange={(event) => {
                 setWorkerId(event.target.value);
                 setServiceId("");
