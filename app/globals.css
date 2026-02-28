@@ -2693,9 +2693,37 @@ h4 {
   max-height: calc(100svh - 150px);
   height: auto;
   padding-bottom: 10px;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: auto;
   touch-action: pan-y;
   align-items: stretch;
+}
+
+.calendar-toolbar--static {
+  position: static;
+}
+
+.calendar-schedule--page-scroll {
+  overflow: visible;
+}
+
+.calendar-schedule--page-scroll .calendar-schedule__scroll {
+  overflow: visible;
+  max-height: none;
+  height: auto;
+  padding-bottom: 0;
+}
+
+.calendar-schedule--page-scroll .calendar-schedule__times {
+  position: static;
+}
+
+.calendar-schedule--page-scroll .calendar-time-header,
+.calendar-schedule--page-scroll .calendar-header-shield,
+.calendar-schedule--page-scroll .calendar-day-header {
+  position: static;
 }
 
 .calendar-schedule__times {

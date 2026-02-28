@@ -1599,7 +1599,7 @@ export default function AdminCalendarPage() {
       fullWidth
     >
       <div className="admin-grid">
-        <div className="calendar-toolbar">
+        <div className="calendar-toolbar calendar-toolbar--static">
           <div className="calendar-toolbar__title">
             <h2>{selectedDateLabel}</h2>
             <span>{weekRangeLabel}</span>
@@ -1658,7 +1658,7 @@ export default function AdminCalendarPage() {
         </div>
           <div className="calendar-layout">
             <div className="calendar-main">
-              <div className="calendar-schedule">
+              <div className="calendar-schedule calendar-schedule--page-scroll">
                 <div
                   className="calendar-schedule__scroll"
                   onTouchStart={handleWeekSwipeStart}
