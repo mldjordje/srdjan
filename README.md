@@ -28,6 +28,7 @@ npm run dev
 
 ## Environment
 Copy `.env.example` to `.env.local` and fill values:
+- `NEXT_PUBLIC_SITE_URL`
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `SESSION_SECRET`

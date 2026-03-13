@@ -4,6 +4,9 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import Providers from "./providers";
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.frizerskisalonsrdjan.com";
+
 const displayFont = Cinzel({
   subsets: ["latin"],
   weight: ["400", "600", "700"],
@@ -17,18 +20,18 @@ const bodyFont = Manrope({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.salonsrdjan.rs"),
+  metadataBase: new URL(siteUrl),
   title: "Frizerski salon Srdjan | Zakazivanje",
   description:
     "Online zakazivanje termina za Frizerski salon Srdjan, sa kalendarima po radniku i upravljanjem smenama.",
   keywords: ["frizerski salon", "zakazivanje", "srdjan", "sisanje", "fade", "brada", "termini"],
   alternates: {
-    canonical: "https://www.salonsrdjan.rs/",
+    canonical: siteUrl,
   },
   openGraph: {
     title: "Frizerski salon Srdjan | Zakazivanje",
     description: "Aplikacija za zakazivanje termina sa smenama i kalendarima po radniku.",
-    url: "https://www.salonsrdjan.rs/",
+    url: siteUrl,
     siteName: "Salon Srdjan",
     locale: "sr_RS",
     type: "website",
