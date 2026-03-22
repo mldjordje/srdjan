@@ -58,7 +58,7 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     const load = async () => {
-      const bootstrapRes = await fetch("/api/public/bootstrap", { cache: "no-store" });
+      const bootstrapRes = await fetch("/api/public/bootstrap");
       const bootstrap = await bootstrapRes.json();
       if (!bootstrapRes.ok) {
         throw new Error(bootstrap.error || "Ne mogu da ucitam lokaciju.");

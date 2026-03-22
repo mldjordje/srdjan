@@ -74,7 +74,7 @@ export default function AdminShiftsPage() {
   const weekDates = useMemo(() => dateRange(weekStart, 7), [weekStart]);
 
   const loadWorkers = async () => {
-    const response = await fetch("/api/public/bootstrap", { cache: "no-store" });
+    const response = await fetch("/api/public/bootstrap");
     const payload = await response.json();
     if (!response.ok) {
       throw new Error(payload.error || "Ne mogu da ucitam radnike.");

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-export const jsonOk = <T>(payload: T, status = 200) =>
-  NextResponse.json(payload, { status });
+export const jsonOk = <T>(payload: T, init: number | ResponseInit = 200) =>
+  NextResponse.json(payload, typeof init === "number" ? { status: init } : init);
 
 export const jsonError = (message: string, status = 400) =>
   NextResponse.json({ error: message }, { status });
@@ -13,4 +13,3 @@ export const parseJson = async <T>(request: Request): Promise<T | null> => {
     return null;
   }
 };
-

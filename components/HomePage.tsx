@@ -7,6 +7,7 @@ import { Card, CardBody, Button as HeroButton } from "@heroui/react";
 
 import SrdjanApp from "@/components/srdjan/SrdjanApp";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { dispatchClientAuthChange, subscribeClientAuthChange } from "@/lib/client/clientAuth";
 import { useLanguage, type Language } from "@/lib/useLanguage";
 import { siteConfig } from "@/lib/site";
 
@@ -210,17 +211,7 @@ export default function HomePage() {
     return () => window.clearTimeout(timeout);
   }, []);
 
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const response = await fetch("/api/public/session/me");
-        setIsClientLoggedIn(response.ok);
-      } catch {
-        setIsClientLoggedIn(false);
-      }
-    };
-    checkSession().catch(() => setIsClientLoggedIn(false));
-  }, []);
+  useEffect(() => subscribeClientAuthChange(setIsClientLoggedIn), []);
 
   useEffect(() => {
     document.body.style.overflow = showLoader ? "hidden" : "";
@@ -300,6 +291,7 @@ export default function HomePage() {
   const handleClientLogout = async () => {
     await fetch("/api/public/session/logout", { method: "POST" });
     setIsClientLoggedIn(false);
+    dispatchClientAuthChange(false);
     handleNavClose();
   };
 

@@ -2,6 +2,10 @@ import { env } from "@/lib/server/env";
 import { jsonError, jsonOk } from "@/lib/server/http";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 
+const BOOTSTRAP_CACHE_HEADERS = {
+  "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=86400",
+};
+
 export async function GET() {
   try {
     const db = getSupabaseAdmin();
@@ -59,13 +63,16 @@ export async function GET() {
       );
     }
 
-    return jsonOk({
-      defaultLocationId,
-      locations: locations || [],
-      workers: activeWorkers,
-      workerServices: workerServices || [],
-      shiftSettings: shifts,
-    });
+    return jsonOk(
+      {
+        defaultLocationId,
+        locations: locations || [],
+        workers: activeWorkers,
+        workerServices: workerServices || [],
+        shiftSettings: shifts,
+      },
+      { headers: BOOTSTRAP_CACHE_HEADERS }
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Bootstrap failed.";
     return jsonError(message, 500);

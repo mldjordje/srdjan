@@ -40,7 +40,7 @@ export default function AdminAppointmentsPage() {
 
   const loadWorkers = async () => {
     const [bootstrapRes, meRes] = await Promise.all([
-      fetch("/api/public/bootstrap", { cache: "no-store" }),
+      fetch("/api/public/bootstrap"),
       fetch("/api/admin/me", { cache: "no-store" }),
     ]);
     const bootstrap = await bootstrapRes.json();

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
+import { dispatchClientAuthChange } from "@/lib/client/clientAuth";
 import { formatIsoDateToEuropean } from "@/lib/date";
 import { siteConfig } from "@/lib/site";
 
@@ -263,7 +264,7 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
       setError("");
       try {
         const [bootstrapRes, meRes] = await Promise.all([
-          fetch("/api/public/bootstrap", { cache: "no-store" }),
+          fetch("/api/public/bootstrap"),
           fetch("/api/public/session/me", { cache: "no-store" }),
         ]);
 
@@ -286,10 +287,17 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
 
         if (meRes.ok) {
           const me = await readResponseJsonSafe<{ client?: ClientProfile }>(meRes);
-          setClient(me?.client || null);
+          const nextClient = me?.client || null;
+          setClient(nextClient);
+          dispatchClientAuthChange(Boolean(nextClient));
+        } else {
+          setClient(null);
+          dispatchClientAuthChange(false);
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Neuspesno ucitavanje.";
+        setClient(null);
+        dispatchClientAuthChange(false);
         setError(message);
       } finally {
         setLoading(false);
@@ -457,6 +465,7 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
       return;
     }
     setClient(data?.client || null);
+    dispatchClientAuthChange(Boolean(data?.client));
     if (data?.client) {
       setAuthForm({
         fullName: data.client.fullName || "",
@@ -470,6 +479,7 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
   const handleLogout = async () => {
     await fetch("/api/public/session/logout", { method: "POST" });
     setClient(null);
+    dispatchClientAuthChange(false);
     setAppointments([]);
     setStatus("");
   };
