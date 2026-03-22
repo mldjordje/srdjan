@@ -1,3 +1,4 @@
+import { PRIVATE_ADMIN_CACHE_HEADERS } from "@/lib/server/cache";
 import { jsonError, jsonOk } from "@/lib/server/http";
 import { requireAdmin } from "@/lib/server/rbac";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
@@ -35,11 +36,13 @@ export async function GET(request: Request) {
     }, {} as Record<string, number>);
   }
 
-  return jsonOk({
-    clients: (clients || []).map((client) => ({
-      ...client,
-      appointmentsCount: byClient[client.id as string] || 0,
-    })),
-  });
+  return jsonOk(
+    {
+      clients: (clients || []).map((client) => ({
+        ...client,
+        appointmentsCount: byClient[client.id as string] || 0,
+      })),
+    },
+    { headers: PRIVATE_ADMIN_CACHE_HEADERS }
+  );
 }
-

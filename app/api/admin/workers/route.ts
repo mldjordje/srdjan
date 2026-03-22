@@ -1,3 +1,4 @@
+import { PRIVATE_ADMIN_CACHE_HEADERS } from "@/lib/server/cache";
 import { jsonError, jsonOk, parseJson } from "@/lib/server/http";
 import { requireAdmin } from "@/lib/server/rbac";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
@@ -96,7 +97,7 @@ export async function GET(request: Request) {
   }
 
   if (!includeLocations) {
-    return jsonOk({ workers: data || [] });
+    return jsonOk({ workers: data || [] }, { headers: PRIVATE_ADMIN_CACHE_HEADERS });
   }
 
   const { data: locations, error: locationsError } = await db
@@ -122,15 +123,18 @@ export async function GET(request: Request) {
     return acc;
   }, {} as Record<string, number>);
 
-  return jsonOk({
-    workers: workerRows,
-    locations: locationRows,
-    locationStats: locationRows.map((location) => ({
-      locationId: location.id,
-      activeWorkers: activeByLocation[location.id] || 0,
-      maxActiveWorkers: location.max_active_workers,
-    })),
-  });
+  return jsonOk(
+    {
+      workers: workerRows,
+      locations: locationRows,
+      locationStats: locationRows.map((location) => ({
+        locationId: location.id,
+        activeWorkers: activeByLocation[location.id] || 0,
+        maxActiveWorkers: location.max_active_workers,
+      })),
+    },
+    { headers: PRIVATE_ADMIN_CACHE_HEADERS }
+  );
 }
 
 export async function POST(request: Request) {

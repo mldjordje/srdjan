@@ -114,8 +114,7 @@ export default function AdminShiftsPage() {
             targetLocationId
           )}&workerId=${encodeURIComponent(worker.id)}&from=${encodeURIComponent(
             from
-          )}&to=${encodeURIComponent(to)}`,
-          { cache: "no-store" }
+          )}&to=${encodeURIComponent(to)}`
         );
         const payload = await response.json();
         if (!response.ok) {

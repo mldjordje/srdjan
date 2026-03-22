@@ -37,7 +37,7 @@ export default function AdminNotificationsPage() {
     const loadWorkers = async () => {
       const [bootstrapRes, meRes] = await Promise.all([
         fetch("/api/public/bootstrap"),
-        fetch("/api/admin/me", { cache: "no-store" }),
+        fetch("/api/admin/me"),
       ]);
       const bootstrap = await bootstrapRes.json();
       if (!bootstrapRes.ok) {

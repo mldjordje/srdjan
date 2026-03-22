@@ -1,3 +1,4 @@
+import { PRIVATE_DASHBOARD_CACHE_HEADERS } from "@/lib/server/cache";
 import { jsonError, jsonOk } from "@/lib/server/http";
 import { requireAdmin } from "@/lib/server/rbac";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
@@ -59,13 +60,16 @@ export async function GET(request: Request) {
     return sum + (item.price_snapshot || 0);
   }, 0);
 
-  return jsonOk({
-    kpi: {
-      totalAppointments: totalAppointments || 0,
-      upcomingAppointments: upcomingAppointments || 0,
-      cancelledAppointments: cancelledAppointments || 0,
-      monthlyRevenue,
-      totalClients: totalClients || 0,
+  return jsonOk(
+    {
+      kpi: {
+        totalAppointments: totalAppointments || 0,
+        upcomingAppointments: upcomingAppointments || 0,
+        cancelledAppointments: cancelledAppointments || 0,
+        monthlyRevenue,
+        totalClients: totalClients || 0,
+      },
     },
-  });
+    { headers: PRIVATE_DASHBOARD_CACHE_HEADERS }
+  );
 }

@@ -1,4 +1,5 @@
 import { buildAvailability, getWorkerService } from "@/lib/server/scheduling";
+import { SHARED_LIVE_CACHE_HEADERS } from "@/lib/server/cache";
 import { jsonError, jsonOk } from "@/lib/server/http";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { isIsoDate } from "@/lib/server/time";
@@ -104,7 +105,7 @@ export async function GET(request: Request) {
     return jsonError(firstError.message, 500);
   }
   if (!settings) {
-    return jsonOk({ summaries: [] });
+    return jsonOk({ summaries: [] }, { headers: SHARED_LIVE_CACHE_HEADERS });
   }
 
   const shiftByDate = new Map((shifts || []).map((item) => [item.date, item.shift_type]));
@@ -139,5 +140,5 @@ export async function GET(request: Request) {
     };
   });
 
-  return jsonOk({ summaries });
+  return jsonOk({ summaries }, { headers: SHARED_LIVE_CACHE_HEADERS });
 }

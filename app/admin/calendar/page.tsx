@@ -791,8 +791,8 @@ export default function AdminCalendarPage() {
 
   const fetchWorkers = async () => {
     const [workersResponse, meResponse] = await Promise.all([
-      fetch("/api/admin/workers", { cache: "no-store" }),
-      fetch("/api/admin/me", { cache: "no-store" }),
+      fetch("/api/admin/workers"),
+      fetch("/api/admin/me"),
     ]);
     const workersData = await workersResponse.json();
     if (!workersResponse.ok) {
@@ -857,7 +857,7 @@ export default function AdminCalendarPage() {
   const fetchClients = async () => {
     setClientsStatus({ type: "loading" });
     try {
-      const response = await fetch("/api/admin/clients", { cache: "no-store" });
+      const response = await fetch("/api/admin/clients");
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data?.error || "Ne mogu da preuzmem klijente.");
@@ -891,9 +891,7 @@ export default function AdminCalendarPage() {
     setServiceItems([]);
     setAppointmentForm((prev) => ({ ...prev, serviceId: "" }));
     try {
-      const response = await fetch(`/api/admin/services?workerId=${encodeURIComponent(workerId)}`, {
-        cache: "no-store",
-      });
+      const response = await fetch(`/api/admin/services?workerId=${encodeURIComponent(workerId)}`);
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data?.error || t.cannotLoadServices);
@@ -932,8 +930,7 @@ export default function AdminCalendarPage() {
 
     try {
       const response = await fetch(
-        `/api/admin/shift-settings?locationId=${encodeURIComponent(targetLocationId)}`,
-        { cache: "no-store" }
+        `/api/admin/shift-settings?locationId=${encodeURIComponent(targetLocationId)}`
       );
       const data = await response.json();
       if (!response.ok) {

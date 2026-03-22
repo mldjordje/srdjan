@@ -1,3 +1,4 @@
+import { SHARED_LIVE_CACHE_HEADERS } from "@/lib/server/cache";
 import { jsonError, jsonOk } from "@/lib/server/http";
 import {
   buildAvailability,
@@ -28,11 +29,14 @@ export async function GET(request: Request) {
 
   const shiftWindow = await getShiftWindowForDay(locationId, workerId, date);
   if (!shiftWindow) {
-    return jsonOk({
-      date,
-      shiftType: "off",
-      slots: [],
-    });
+    return jsonOk(
+      {
+        date,
+        shiftType: "off",
+        slots: [],
+      },
+      { headers: SHARED_LIVE_CACHE_HEADERS }
+    );
   }
 
   const occupied = await getOccupiedByWorkerAndDate(locationId, workerId, date);
@@ -47,12 +51,15 @@ export async function GET(request: Request) {
     occupied,
   });
 
-  return jsonOk({
-    date,
-    shiftType: shiftWindow.shiftType,
-    shiftStart: shiftWindow.start,
-    shiftEnd: shiftWindow.end,
-    durationMin,
-    slots,
-  });
+  return jsonOk(
+    {
+      date,
+      shiftType: shiftWindow.shiftType,
+      shiftStart: shiftWindow.start,
+      shiftEnd: shiftWindow.end,
+      durationMin,
+      slots,
+    },
+    { headers: SHARED_LIVE_CACHE_HEADERS }
+  );
 }

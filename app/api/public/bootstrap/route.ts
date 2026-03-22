@@ -1,10 +1,7 @@
+import { SHARED_BOOTSTRAP_CACHE_HEADERS } from "@/lib/server/cache";
 import { env } from "@/lib/server/env";
 import { jsonError, jsonOk } from "@/lib/server/http";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
-
-const BOOTSTRAP_CACHE_HEADERS = {
-  "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=86400",
-};
 
 export async function GET() {
   try {
@@ -71,7 +68,7 @@ export async function GET() {
         workerServices: workerServices || [],
         shiftSettings: shifts,
       },
-      { headers: BOOTSTRAP_CACHE_HEADERS }
+      { headers: SHARED_BOOTSTRAP_CACHE_HEADERS }
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Bootstrap failed.";

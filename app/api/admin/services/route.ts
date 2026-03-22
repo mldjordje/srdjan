@@ -1,3 +1,4 @@
+import { PRIVATE_ADMIN_CACHE_HEADERS } from "@/lib/server/cache";
 import { jsonError, jsonOk, parseJson } from "@/lib/server/http";
 import { requireAdmin } from "@/lib/server/rbac";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
@@ -82,7 +83,7 @@ export async function GET(request: Request) {
     return jsonError(fetchError.message, 500);
   }
 
-  return jsonOk({ services: data || [] });
+  return jsonOk({ services: data || [] }, { headers: PRIVATE_ADMIN_CACHE_HEADERS });
 }
 
 export async function POST(request: Request) {

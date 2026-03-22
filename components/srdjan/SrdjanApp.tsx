@@ -369,7 +369,7 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
           )}&from=${encodeURIComponent(toDateInput(fromDate))}&to=${encodeURIComponent(
             toDateInput(toDate)
           )}`,
-          { signal: controller.signal, cache: "no-store" }
+          { signal: controller.signal }
         );
         const data = await readResponseJsonSafe<WorkerCalendarSummaryPayload & { error?: string }>(
           response
@@ -413,7 +413,7 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
           `/api/public/availability?locationId=${encodeURIComponent(locationId)}&workerId=${encodeURIComponent(
             workerId
           )}&serviceId=${encodeURIComponent(serviceId)}&date=${encodeURIComponent(date)}`,
-          { signal: controller.signal, cache: "no-store" }
+          { signal: controller.signal }
         );
         const data = await readResponseJsonSafe<{ error?: string; slots?: string[]; shiftType?: string }>(
           response

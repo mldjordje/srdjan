@@ -1,3 +1,4 @@
+import { SHARED_LIVE_CACHE_HEADERS } from "@/lib/server/cache";
 import { jsonError, jsonOk } from "@/lib/server/http";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 
@@ -30,6 +31,5 @@ export async function GET(request: Request) {
     return jsonError(error.message, 500);
   }
 
-  return jsonOk({ shifts: data || [] });
+  return jsonOk({ shifts: data || [] }, { headers: SHARED_LIVE_CACHE_HEADERS });
 }
-

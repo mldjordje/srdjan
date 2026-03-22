@@ -28,8 +28,7 @@ export default function AdminSettingsPage() {
       return;
     }
     const settingsRes = await fetch(
-      `/api/admin/shift-settings?locationId=${encodeURIComponent(targetLocationId)}`,
-      { cache: "no-store" }
+      `/api/admin/shift-settings?locationId=${encodeURIComponent(targetLocationId)}`
     );
     const settings = await settingsRes.json();
     if (!settingsRes.ok) {
