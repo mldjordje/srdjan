@@ -196,6 +196,7 @@ export default function AdminWorkersPage() {
     setStatus("");
     const response = await fetch("/api/admin/workers", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(workerForm),
     });
@@ -213,6 +214,7 @@ export default function AdminWorkersPage() {
     setStatus("");
     const response = await fetch("/api/admin/workers", {
       method: "PATCH",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: worker.id,
@@ -237,6 +239,7 @@ export default function AdminWorkersPage() {
     }
     const response = await fetch("/api/admin/workers", {
       method: "PATCH",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: worker.id,
@@ -257,6 +260,7 @@ export default function AdminWorkersPage() {
     const nextNotificationEmail = (workerNotificationEmails[worker.id] || "").trim();
     const response = await fetch("/api/admin/workers", {
       method: "PATCH",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: worker.id,
@@ -277,6 +281,7 @@ export default function AdminWorkersPage() {
     setStatus("");
     const response = await fetch("/api/admin/staff-users", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(staffForm),
     });
@@ -339,6 +344,7 @@ export default function AdminWorkersPage() {
       body.append("file", draft.file);
       const response = await fetch(`/api/admin/workers/${encodeURIComponent(worker.id)}/avatar`, {
         method: "POST",
+        credentials: "include",
         body,
       });
       const data = await response.json();
@@ -361,6 +367,7 @@ export default function AdminWorkersPage() {
     try {
       const response = await fetch(`/api/admin/workers/${encodeURIComponent(worker.id)}/avatar`, {
         method: "DELETE",
+        credentials: "include",
       });
       const data = await response.json();
       if (!response.ok) {
@@ -380,6 +387,7 @@ export default function AdminWorkersPage() {
     setStatus("");
     const response = await fetch("/api/admin/staff-users", {
       method: "PATCH",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: item.id,
@@ -404,6 +412,7 @@ export default function AdminWorkersPage() {
     }
     const response = await fetch("/api/admin/staff-users", {
       method: "PATCH",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: item.id,
@@ -428,6 +437,7 @@ export default function AdminWorkersPage() {
     }
     const response = await fetch("/api/admin/staff-users", {
       method: "PATCH",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: item.id,
