@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
+import LocationPicker, { type LocationPickerOption } from "@/components/admin/LocationPicker";
 import WorkerPicker, { type WorkerPickerOption } from "@/components/admin/WorkerPicker";
 import { dispatchClientAuthChange } from "@/lib/client/clientAuth";
 import { formatIsoDateToEuropean } from "@/lib/date";
@@ -256,7 +257,17 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
     () => (bootstrap?.workers || []).filter((item) => item.location_id === locationId),
     [bootstrap?.workers, locationId]
   );
-  const locationOptions = bootstrap?.locations || [];
+  const locationOptions = useMemo(() => bootstrap?.locations || [], [bootstrap?.locations]);
+  const locationPickerOptions = useMemo<LocationPickerOption[]>(
+    () =>
+      locationOptions.map((location, index) => ({
+        id: location.id,
+        name:
+          locationOptions.length === 1 && index === 0 ? PRIMARY_LOCATION_LABEL : location.name,
+        subtitle: locationOptions.length > 1 ? "Izaberite radnju za termin" : "Glavna radnja",
+      })),
+    [locationOptions]
+  );
   const canChooseWorker = Boolean(locationId);
   const canChooseServices = Boolean(locationId && workerId);
   const canChooseCalendarAndTime = Boolean(locationId && workerId && serviceId);
@@ -655,25 +666,18 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
         <form className="form-grid" onSubmit={handleBook}>
           <div className="form-row">
             <label htmlFor="location">Radnja</label>
-            <select
-              id="location"
-              className="select"
+            <LocationPicker
+              locations={locationPickerOptions}
               value={locationId}
-              onChange={(event) => {
-                const nextLocation = event.target.value;
+              onChange={(nextLocation) => {
                 setLocationId(nextLocation);
                 setWorkerId("");
                 setServiceId("");
                 setTime("");
               }}
-            >
-              <option value="">Izaberite radnju</option>
-              {locationOptions.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {locationOptions.length === 1 ? PRIMARY_LOCATION_LABEL : location.name}
-                </option>
-              ))}
-            </select>
+              placeholder="Izaberite radnju"
+              emptyLabel="Trenutno nema aktivnih radnji."
+            />
           </div>
 
           <div className="form-row">

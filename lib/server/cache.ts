@@ -7,9 +7,9 @@ export const SHARED_LIVE_CACHE_HEADERS = {
 };
 
 export const PRIVATE_ADMIN_CACHE_HEADERS = {
-  "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
+  "Cache-Control": "private, no-store, max-age=0, must-revalidate",
 };
 
 export const PRIVATE_DASHBOARD_CACHE_HEADERS = {
-  "Cache-Control": "private, max-age=30, stale-while-revalidate=120",
+  "Cache-Control": "private, no-store, max-age=0, must-revalidate",
 };

@@ -12,7 +12,10 @@ export default function AdminLoginPage() {
 
   useEffect(() => {
     const check = async () => {
-      const response = await fetch("/api/admin/me");
+      const response = await fetch("/api/admin/me", {
+        cache: "no-store",
+        credentials: "include",
+      });
       if (response.ok) {
         const data = await response.json();
         if (data.role === "staff-admin") {
@@ -32,6 +35,8 @@ export default function AdminLoginPage() {
     setStatus("");
     const response = await fetch("/api/admin/auth/login", {
       method: "POST",
+      cache: "no-store",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });

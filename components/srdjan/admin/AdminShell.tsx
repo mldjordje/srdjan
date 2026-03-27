@@ -77,7 +77,10 @@ export default function AdminShell({
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const response = await fetch("/api/admin/me");
+      const response = await fetch("/api/admin/me", {
+        cache: "no-store",
+        credentials: "include",
+      });
       const data = await response.json();
       if (!response.ok) {
         setError(data.error || "Niste prijavljeni.");
@@ -108,7 +111,10 @@ export default function AdminShell({
       return;
     }
     const loadNotifications = async () => {
-      const response = await fetch("/api/admin/notifications");
+      const response = await fetch("/api/admin/notifications", {
+        cache: "no-store",
+        credentials: "include",
+      });
       const payload = await response.json();
       if (!response.ok) {
         setNotificationCount(0);
@@ -145,7 +151,11 @@ export default function AdminShell({
   }, []);
 
   const logout = async () => {
-    await fetch("/api/admin/auth/logout", { method: "POST" });
+    await fetch("/api/admin/auth/logout", {
+      method: "POST",
+      cache: "no-store",
+      credentials: "include",
+    });
     router.push("/admin");
   };
 

@@ -91,9 +91,18 @@ export default function AdminWorkersPage() {
     setLoading(true);
     setStatus("");
     const [meRes, workersRes, staffRes] = await Promise.all([
-      fetch("/api/admin/me"),
-      fetch("/api/admin/workers?includeInactive=1&includeLocations=1"),
-      fetch("/api/admin/staff-users"),
+      fetch("/api/admin/me", {
+        cache: "no-store",
+        credentials: "include",
+      }),
+      fetch("/api/admin/workers?includeInactive=1&includeLocations=1", {
+        cache: "no-store",
+        credentials: "include",
+      }),
+      fetch("/api/admin/staff-users", {
+        cache: "no-store",
+        credentials: "include",
+      }),
     ]);
 
     const meData = await meRes.json();

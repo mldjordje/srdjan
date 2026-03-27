@@ -5,6 +5,7 @@ import {
   createAdminSessionToken,
   verifyAdminCredentials,
 } from "@/lib/server/auth";
+import { PRIVATE_ADMIN_CACHE_HEADERS } from "@/lib/server/cache";
 import { jsonError, parseJson } from "@/lib/server/http";
 
 type LoginBody = {
@@ -35,8 +36,9 @@ export async function POST(request: Request) {
       username: user.username,
       role: user.role,
     },
+  }, {
+    headers: PRIVATE_ADMIN_CACHE_HEADERS,
   });
   attachAdminSessionCookie(response, token);
   return response;
 }
-
