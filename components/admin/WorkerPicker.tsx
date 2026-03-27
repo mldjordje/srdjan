@@ -105,7 +105,7 @@ export default function WorkerPicker({
           <span className="worker-picker__placeholder">{placeholder}</span>
         )}
         <span className="worker-picker__chevron" aria-hidden="true">
-          {isOpen ? "▴" : "▾"}
+          {isOpen ? "^" : "v"}
         </span>
       </button>
 

@@ -258,7 +258,8 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
   );
   const locationOptions = bootstrap?.locations || [];
   const canChooseWorker = Boolean(locationId);
-  const canChooseDateAndService = Boolean(locationId && workerId);
+  const canChooseServices = Boolean(locationId && workerId);
+  const canChooseCalendarAndTime = Boolean(locationId && workerId && serviceId);
   const workerOptions = useMemo<WorkerPickerOption[]>(
     () =>
       workersForLocation.map((worker) => ({
@@ -280,7 +281,7 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
       setError("");
       try {
         const [bootstrapRes, meRes] = await Promise.all([
-          fetch("/api/public/bootstrap"),
+          fetch("/api/public/bootstrap", { cache: "no-store" }),
           fetch("/api/public/session/me", { cache: "no-store" }),
         ]);
 
@@ -344,12 +345,13 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
   }, [client]);
 
   useEffect(() => {
-    const next = workerServices[0]?.service_id || "";
     if (serviceId && workerServices.some((item) => item.service_id === serviceId)) {
       return;
     }
-    setServiceId(next);
-    setTime("");
+    if (serviceId) {
+      setServiceId("");
+      setTime("");
+    }
   }, [workerServices, serviceId]);
 
   useEffect(() => {
@@ -691,14 +693,54 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
             />
           </div>
 
-          {!canChooseDateAndService && (
+          {!canChooseServices && (
             <div className="form-row form-row--full">
               <p className="form-status">Izaberite radnju i radnika da se prikazu kalendar, usluge i termini.</p>
             </div>
           )}
 
-          {canChooseDateAndService && (
+          {canChooseServices && (
             <>
+              <div className="form-row form-row--full">
+                <label>Usluga</label>
+                {workerServices.length === 0 ? (
+                  <p className="form-status">Za izabranog radnika trenutno nema dostupnih usluga.</p>
+                ) : (
+                  <div className="service-list">
+                    {workerServices.map((item) => {
+                      const isActive = serviceId === item.service_id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={`service-option ${isActive ? "is-active" : ""}`}
+                          onClick={() => {
+                            setServiceId(item.service_id);
+                            setTime("");
+                          }}
+                        >
+                          <div className="service-info">
+                            <strong>{item.services?.name || "Usluga"}</strong>
+                            <span>
+                              {item.duration_min} min | {item.price} RSD
+                            </span>
+                          </div>
+                          <span className="service-action">{isActive ? "Izabrano" : "Izaberi"}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {!canChooseCalendarAndTime && workerServices.length > 0 && (
+                <div className="form-row form-row--full">
+                  <p className="form-status">Izaberite uslugu da se prikazu kalendar i slobodni termini.</p>
+                </div>
+              )}
+
+              {canChooseCalendarAndTime && (
+                <>
               <div className="form-row">
                 <label htmlFor="date">Datum</label>
                 <div className="calendar">
@@ -773,27 +815,6 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
                 </small>
               </div>
 
-              <div className="form-row">
-                <label htmlFor="service">Usluga</label>
-                <select
-                  id="service"
-                  className="select"
-                  value={serviceId}
-                  onChange={(event) => {
-                    setServiceId(event.target.value);
-                    setTime("");
-                  }}
-                  required
-                >
-                  <option value="">Izaberite uslugu</option>
-                  {workerServices.map((item) => (
-                    <option key={item.id} value={item.service_id}>
-                      {item.services?.name || "Usluga"} ({item.duration_min} min / {item.price} RSD)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               <div className="form-row form-row--full">
                 <label>Termin</label>
                 <div className="slot-items slot-items--single">
@@ -848,6 +869,8 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
                   </p>
                 )}
               </div>
+                </>
+              )}
             </>
           )}
         </form>

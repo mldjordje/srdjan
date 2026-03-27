@@ -43,6 +43,11 @@ type StaffUser = {
   workers?: { id: string; name: string; location_id: string; profile_image_url?: string | null } | null;
 };
 
+type AvatarDraft = {
+  file: File;
+  previewUrl: string;
+};
+
 const normalizeUsername = (value: string) =>
   value
     .trim()
@@ -67,6 +72,7 @@ export default function AdminWorkersPage() {
   const [loading, setLoading] = useState(true);
   const [uploadingWorkerId, setUploadingWorkerId] = useState("");
   const [removingWorkerId, setRemovingWorkerId] = useState("");
+  const [avatarDrafts, setAvatarDrafts] = useState<Record<string, AvatarDraft>>({});
 
   const [workerForm, setWorkerForm] = useState({
     locationId: "",
@@ -151,6 +157,14 @@ export default function AdminWorkersPage() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      Object.values(avatarDrafts).forEach((draft) => {
+        URL.revokeObjectURL(draft.previewUrl);
+      });
+    };
+  }, [avatarDrafts]);
 
   const workersWithoutAccount = useMemo(() => {
     const assigned = new Set(staffUsers.map((item) => item.worker_id));
@@ -276,10 +290,45 @@ export default function AdminWorkersPage() {
     setStatus("Staff nalog je kreiran.");
   };
 
-  const uploadWorkerAvatar = async (worker: Worker, event: ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarFileChange = (worker: Worker, event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    event.target.value = "";
     if (!file) {
+      return;
+    }
+
+    setAvatarDrafts((prev) => {
+      const currentDraft = prev[worker.id];
+      if (currentDraft) {
+        URL.revokeObjectURL(currentDraft.previewUrl);
+      }
+      return {
+        ...prev,
+        [worker.id]: {
+          file,
+          previewUrl: URL.createObjectURL(file),
+        },
+      };
+    });
+    setStatus("");
+    event.target.value = "";
+  };
+
+  const clearAvatarDraft = (workerId: string) => {
+    setAvatarDrafts((prev) => {
+      const currentDraft = prev[workerId];
+      if (currentDraft) {
+        URL.revokeObjectURL(currentDraft.previewUrl);
+      }
+      const next = { ...prev };
+      delete next[workerId];
+      return next;
+    });
+  };
+
+  const uploadWorkerAvatar = async (worker: Worker) => {
+    const draft = avatarDrafts[worker.id];
+    if (!draft) {
+      setStatus("Prvo izaberi fajl za profilnu sliku.");
       return;
     }
 
@@ -287,7 +336,7 @@ export default function AdminWorkersPage() {
     setStatus("");
     try {
       const body = new FormData();
-      body.append("file", file);
+      body.append("file", draft.file);
       const response = await fetch(`/api/admin/workers/${encodeURIComponent(worker.id)}/avatar`, {
         method: "POST",
         body,
@@ -296,6 +345,7 @@ export default function AdminWorkersPage() {
       if (!response.ok) {
         throw new Error(data.error || "Ne mogu da uploadujem profilnu sliku.");
       }
+      clearAvatarDraft(worker.id);
       await load();
       setStatus("Profilna slika radnika je sacuvana.");
     } catch (error) {
@@ -316,6 +366,7 @@ export default function AdminWorkersPage() {
       if (!response.ok) {
         throw new Error(data.error || "Ne mogu da obrisem profilnu sliku.");
       }
+      clearAvatarDraft(worker.id);
       await load();
       setStatus("Profilna slika radnika je obrisana.");
     } catch (error) {
@@ -485,9 +536,14 @@ export default function AdminWorkersPage() {
         <h3>Radnici ({workers.length})</h3>
         {workers.map((worker) => (
           <div key={worker.id} className="admin-card">
+            {(() => {
+              const draft = avatarDrafts[worker.id];
+              const avatarImage = draft?.previewUrl || worker.profile_image_url;
+              return (
+                <>
             <div className="worker-card__header">
               <div className="worker-card__identity">
-                <WorkerAvatar name={worker.name} imageUrl={worker.profile_image_url} size="lg" />
+                <WorkerAvatar name={worker.name} imageUrl={avatarImage} size="lg" />
                 <div className="worker-card__meta">
                   <strong>{worker.name}</strong>
                   <span>
@@ -504,17 +560,32 @@ export default function AdminWorkersPage() {
             <div className="form-row">
               <label>Profilna slika</label>
               <div className="worker-card__upload">
-                <label className="button outline small worker-card__upload-button">
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={(event) => uploadWorkerAvatar(worker, event)}
+                <input
+                  className="input"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(event) => handleAvatarFileChange(worker, event)}
+                  disabled={uploadingWorkerId === worker.id}
+                />
+                <button
+                  className="button outline small"
+                  type="button"
+                  onClick={() => uploadWorkerAvatar(worker)}
+                  disabled={!draft || uploadingWorkerId === worker.id}
+                >
+                  {uploadingWorkerId === worker.id ? "Cuvanje..." : "Sacuvaj sliku"}
+                </button>
+                {draft && (
+                  <button
+                    className="button outline small"
+                    type="button"
+                    onClick={() => clearAvatarDraft(worker.id)}
                     disabled={uploadingWorkerId === worker.id}
-                    hidden
-                  />
-                  {uploadingWorkerId === worker.id ? "Upload..." : "Uploaduj sliku"}
-                </label>
-                {worker.profile_image_url && (
+                  >
+                    Otkazi izbor
+                  </button>
+                )}
+                {(worker.profile_image_url || draft) && (
                   <button
                     className="button outline small"
                     type="button"
@@ -525,7 +596,11 @@ export default function AdminWorkersPage() {
                   </button>
                 )}
               </div>
-              <small>JPG, PNG ili WEBP do 2 MB.</small>
+              {draft ? (
+                <small>Spremno za cuvanje: {draft.file.name}</small>
+              ) : (
+                <small>JPG, PNG ili WEBP do 2 MB.</small>
+              )}
             </div>
             <div className="form-row">
               <label>Ime radnika</label>
@@ -567,6 +642,9 @@ export default function AdminWorkersPage() {
                 {worker.is_active ? "Deaktiviraj" : "Aktiviraj"}
               </button>
             </div>
+                </>
+              );
+            })()}
           </div>
         ))}
       </div>
