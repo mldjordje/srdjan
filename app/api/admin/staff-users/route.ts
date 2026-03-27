@@ -28,7 +28,9 @@ export async function GET(request: Request) {
   const db = getSupabaseAdmin();
   const { data, error: fetchError } = await db
     .from("admin_users")
-    .select("id, username, role, is_active, worker_id, workers(id, name, location_id)")
+    .select(
+      "id, username, role, is_active, worker_id, workers(id, name, location_id, profile_image_url)"
+    )
     .eq("role", "staff-admin")
     .order("username");
 

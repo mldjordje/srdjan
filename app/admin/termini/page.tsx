@@ -2,10 +2,16 @@
 
 import { useEffect, useState } from "react";
 
+import WorkerPicker, { type WorkerPickerOption } from "@/components/admin/WorkerPicker";
 import AdminShell from "@/components/srdjan/admin/AdminShell";
 import { formatIsoDateToEuropean } from "@/lib/date";
 
-type Worker = { id: string; name: string; location_id: string };
+type Worker = {
+  id: string;
+  name: string;
+  location_id: string;
+  profile_image_url?: string | null;
+};
 type Appointment = {
   id: string;
   date: string;
@@ -37,6 +43,11 @@ export default function AdminAppointmentsPage() {
     reason: "",
   });
   const [status, setStatus] = useState("");
+  const workerOptions: WorkerPickerOption[] = workers.map((worker) => ({
+    id: worker.id,
+    name: worker.name,
+    profile_image_url: worker.profile_image_url,
+  }));
 
   const loadWorkers = async () => {
     const [bootstrapRes, meRes] = await Promise.all([
@@ -182,15 +193,11 @@ export default function AdminAppointmentsPage() {
         <form className="form-grid" onSubmit={cancelWorkerDay}>
           <div className="form-row">
             <label>Radnik</label>
-            <select
-              className="select"
+            <WorkerPicker
+              workers={workerOptions}
               value={cancelForm.workerId}
-              onChange={(event) => setCancelForm((prev) => ({ ...prev, workerId: event.target.value }))}
-            >
-              {workers.map((worker) => (
-                <option key={worker.id} value={worker.id}>{worker.name}</option>
-              ))}
-            </select>
+              onChange={(workerId) => setCancelForm((prev) => ({ ...prev, workerId }))}
+            />
           </div>
           <div className="form-row">
             <label>Datum</label>

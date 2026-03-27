@@ -8,6 +8,7 @@ type CreateWorkerBody = {
   name?: string;
   isActive?: boolean;
   notificationEmail?: string;
+  profileImageUrl?: string;
 };
 
 type PatchWorkerBody = {
@@ -16,6 +17,7 @@ type PatchWorkerBody = {
   name?: string;
   isActive?: boolean;
   notificationEmail?: string;
+  profileImageUrl?: string | null;
 };
 
 type LocationRow = {
@@ -81,7 +83,7 @@ export async function GET(request: Request) {
   const db = getSupabaseAdmin();
   let query = db
     .from("workers")
-    .select("id, location_id, name, is_active, notification_email")
+    .select("id, location_id, name, is_active, notification_email, profile_image_url")
     .order("name");
 
   if (!includeInactive) {
@@ -114,6 +116,7 @@ export async function GET(request: Request) {
     name: string;
     is_active: boolean;
     notification_email?: string | null;
+    profile_image_url?: string | null;
   }>;
   const activeByLocation = workerRows.reduce((acc, row) => {
     if (!row.is_active) {
@@ -175,8 +178,9 @@ export async function POST(request: Request) {
       name,
       is_active: isActive,
       notification_email: notificationEmail || null,
+      profile_image_url: (body.profileImageUrl || "").trim() || null,
     })
-    .select("id, location_id, name, is_active, notification_email")
+    .select("id, location_id, name, is_active, notification_email, profile_image_url")
     .single();
   if (insertError || !data) {
     return jsonError(insertError?.message || "Cannot create worker.", 500);
@@ -203,13 +207,14 @@ export async function PATCH(request: Request) {
   const db = getSupabaseAdmin();
   const { data: existing, error: existingError } = await db
     .from("workers")
-    .select("id, location_id, is_active, notification_email")
+    .select("id, location_id, is_active, notification_email, profile_image_url")
     .eq("id", id)
     .maybeSingle<{
       id: string;
       location_id: string;
       is_active: boolean;
       notification_email?: string | null;
+      profile_image_url?: string | null;
     }>();
   if (existingError) {
     return jsonError(existingError.message, 500);
@@ -248,12 +253,15 @@ export async function PATCH(request: Request) {
   if (hasNotificationEmail) {
     patch.notification_email = nextNotificationEmail || null;
   }
+  if (Object.prototype.hasOwnProperty.call(body, "profileImageUrl")) {
+    patch.profile_image_url = (body.profileImageUrl || "").trim() || null;
+  }
 
   const { data, error: updateError } = await db
     .from("workers")
     .update(patch)
     .eq("id", id)
-    .select("id, location_id, name, is_active, notification_email")
+    .select("id, location_id, name, is_active, notification_email, profile_image_url")
     .single();
   if (updateError || !data) {
     return jsonError(updateError?.message || "Cannot update worker.", 500);

@@ -16,7 +16,7 @@ export async function GET() {
           .order("name"),
         db
           .from("workers")
-          .select("id, location_id, name, is_active")
+          .select("id, location_id, name, is_active, profile_image_url")
           .eq("is_active", true)
           .order("name"),
       ]);

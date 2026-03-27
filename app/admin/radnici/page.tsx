@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 
+import WorkerAvatar from "@/components/admin/WorkerAvatar";
+import WorkerPicker, { type WorkerPickerOption } from "@/components/admin/WorkerPicker";
 import AdminShell from "@/components/srdjan/admin/AdminShell";
 
 type AdminMe = {
@@ -16,6 +18,7 @@ type Worker = {
   name: string;
   is_active: boolean;
   notification_email?: string | null;
+  profile_image_url?: string | null;
 };
 
 type Location = {
@@ -37,7 +40,7 @@ type StaffUser = {
   role: "staff-admin";
   is_active: boolean;
   worker_id: string;
-  workers?: { id: string; name: string; location_id: string } | null;
+  workers?: { id: string; name: string; location_id: string; profile_image_url?: string | null } | null;
 };
 
 const normalizeUsername = (value: string) =>
@@ -62,6 +65,8 @@ export default function AdminWorkersPage() {
   const [staffUsernames, setStaffUsernames] = useState<Record<string, string>>({});
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
+  const [uploadingWorkerId, setUploadingWorkerId] = useState("");
+  const [removingWorkerId, setRemovingWorkerId] = useState("");
 
   const [workerForm, setWorkerForm] = useState({
     locationId: "",
@@ -151,6 +156,26 @@ export default function AdminWorkersPage() {
     const assigned = new Set(staffUsers.map((item) => item.worker_id));
     return workers.filter((worker) => !assigned.has(worker.id));
   }, [staffUsers, workers]);
+
+  const locationNameById = useMemo(
+    () =>
+      locations.reduce((acc: Record<string, string>, location) => {
+        acc[location.id] = location.name;
+        return acc;
+      }, {}),
+    [locations]
+  );
+
+  const staffWorkerOptions = useMemo<WorkerPickerOption[]>(
+    () =>
+      workersWithoutAccount.map((worker) => ({
+        id: worker.id,
+        name: worker.name,
+        profile_image_url: worker.profile_image_url,
+        subtitle: locationNameById[worker.location_id] || "Bez lokacije",
+      })),
+    [locationNameById, workersWithoutAccount]
+  );
 
   const createWorker = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -249,6 +274,55 @@ export default function AdminWorkersPage() {
     setStaffForm({ workerId: "", username: "", password: "" });
     await load();
     setStatus("Staff nalog je kreiran.");
+  };
+
+  const uploadWorkerAvatar = async (worker: Worker, event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
+      return;
+    }
+
+    setUploadingWorkerId(worker.id);
+    setStatus("");
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const response = await fetch(`/api/admin/workers/${encodeURIComponent(worker.id)}/avatar`, {
+        method: "POST",
+        body,
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Ne mogu da uploadujem profilnu sliku.");
+      }
+      await load();
+      setStatus("Profilna slika radnika je sacuvana.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Greska pri uploadu slike.");
+    } finally {
+      setUploadingWorkerId("");
+    }
+  };
+
+  const removeWorkerAvatar = async (worker: Worker) => {
+    setRemovingWorkerId(worker.id);
+    setStatus("");
+    try {
+      const response = await fetch(`/api/admin/workers/${encodeURIComponent(worker.id)}/avatar`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Ne mogu da obrisem profilnu sliku.");
+      }
+      await load();
+      setStatus("Profilna slika radnika je obrisana.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Greska pri brisanju slike.");
+    } finally {
+      setRemovingWorkerId("");
+    }
   };
 
   const toggleStaffActive = async (item: StaffUser) => {
@@ -411,13 +485,48 @@ export default function AdminWorkersPage() {
         <h3>Radnici ({workers.length})</h3>
         {workers.map((worker) => (
           <div key={worker.id} className="admin-card">
-            <strong>{worker.name}</strong>
-            <div>
-              Lokacija:{" "}
-              {locations.find((item) => item.id === worker.location_id)?.name || worker.location_id}
+            <div className="worker-card__header">
+              <div className="worker-card__identity">
+                <WorkerAvatar name={worker.name} imageUrl={worker.profile_image_url} size="lg" />
+                <div className="worker-card__meta">
+                  <strong>{worker.name}</strong>
+                  <span>
+                    Lokacija: {locationNameById[worker.location_id] || worker.location_id}
+                  </span>
+                </div>
+              </div>
+              <div className={`status-pill ${worker.is_active ? "confirmed" : "cancelled"}`}>
+                {worker.is_active ? "Aktivan" : "Neaktivan"}
+              </div>
             </div>
             <div>Status: {worker.is_active ? "Aktivan" : "Neaktivan"}</div>
             <div>Email za obavestenja: {worker.notification_email || "-"}</div>
+            <div className="form-row">
+              <label>Profilna slika</label>
+              <div className="worker-card__upload">
+                <label className="button outline small worker-card__upload-button">
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(event) => uploadWorkerAvatar(worker, event)}
+                    disabled={uploadingWorkerId === worker.id}
+                    hidden
+                  />
+                  {uploadingWorkerId === worker.id ? "Upload..." : "Uploaduj sliku"}
+                </label>
+                {worker.profile_image_url && (
+                  <button
+                    className="button outline small"
+                    type="button"
+                    onClick={() => removeWorkerAvatar(worker)}
+                    disabled={removingWorkerId === worker.id}
+                  >
+                    {removingWorkerId === worker.id ? "Brisanje..." : "Obrisi sliku"}
+                  </button>
+                )}
+              </div>
+              <small>JPG, PNG ili WEBP do 2 MB.</small>
+            </div>
             <div className="form-row">
               <label>Ime radnika</label>
               <input
@@ -467,31 +576,23 @@ export default function AdminWorkersPage() {
         <form className="form-grid" onSubmit={createStaffUser}>
           <div className="form-row">
             <label>Radnik</label>
-            <select
-              className="select"
+            <WorkerPicker
+              workers={staffWorkerOptions}
               value={staffForm.workerId}
-              onChange={(event) => {
-                const selectedWorkerId = event.target.value;
+              onChange={(selectedWorkerId) => {
                 const selectedWorker = workersWithoutAccount.find(
                   (worker) => worker.id === selectedWorkerId
                 );
                 setStaffForm((prev) => ({
                   ...prev,
                   workerId: selectedWorkerId,
-                  username:
-                    prev.username.trim() ||
-                    normalizeUsername(selectedWorker?.name || ""),
+                  username: prev.username.trim() || normalizeUsername(selectedWorker?.name || ""),
                 }));
               }}
-              required
-            >
-              <option value="">Izaberi radnika</option>
-              {workersWithoutAccount.map((worker) => (
-                <option key={worker.id} value={worker.id}>
-                  {worker.name}
-                </option>
-              ))}
-            </select>
+              placeholder="Izaberi radnika"
+              searchPlaceholder="Pretrazi radnika"
+              emptyLabel="Svi radnici vec imaju staff nalog."
+            />
           </div>
           <div className="form-row">
             <label>Username</label>
@@ -528,8 +629,22 @@ export default function AdminWorkersPage() {
         <h3>Staff nalozi ({staffUsers.length})</h3>
         {staffUsers.map((item) => (
           <div key={item.id} className="admin-card">
-            <strong>{item.username}</strong>
-            <div>Radnik: {item.workers?.name || item.worker_id}</div>
+            <div className="worker-card__header">
+              <div className="worker-card__identity">
+                <WorkerAvatar
+                  name={item.workers?.name || item.username}
+                  imageUrl={item.workers?.profile_image_url}
+                  size="md"
+                />
+                <div className="worker-card__meta">
+                  <strong>{item.username}</strong>
+                  <span>Radnik: {item.workers?.name || item.worker_id}</span>
+                </div>
+              </div>
+              <div className={`status-pill ${item.is_active ? "confirmed" : "cancelled"}`}>
+                {item.is_active ? "Aktivan" : "Neaktivan"}
+              </div>
+            </div>
             <div>Status: {item.is_active ? "Aktivan" : "Neaktivan"}</div>
             <div className="form-row">
               <label>Username</label>
