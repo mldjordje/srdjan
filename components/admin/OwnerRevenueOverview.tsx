@@ -32,7 +32,17 @@ export type MonthRevenueSummary = {
   savedAt: string | null;
 };
 
+export type RevenueMonthOption = {
+  value: string;
+  label: string;
+  isCurrent: boolean;
+};
+
 type OwnerRevenueOverviewProps = {
+  selectedMonth: MonthRevenueSummary;
+  selectedMonthValue: string;
+  monthOptions: RevenueMonthOption[];
+  onMonthChange: (value: string) => void;
   currentMonth: MonthRevenueSummary;
   savedMonths: MonthRevenueSummary[];
   historyStorageEnabled: boolean;
@@ -129,6 +139,10 @@ function RevenueHistoryMonthCard({ month, titleBadge, isLive = false }: MonthCar
 }
 
 export default function OwnerRevenueOverview({
+  selectedMonth,
+  selectedMonthValue,
+  monthOptions,
+  onMonthChange,
   currentMonth,
   savedMonths,
   historyStorageEnabled,
@@ -139,24 +153,44 @@ export default function OwnerRevenueOverview({
         <section className="admin-card dashboard-card">
           <div className="dashboard-section-header">
             <div>
-              <h3>Tekuci mesec</h3>
-              <p>{currentMonth.monthLabel}</p>
+              <h3>Izabrani mesec</h3>
+              <p>{selectedMonth.monthLabel}</p>
             </div>
-            <div className="status-pill confirmed">Live pregled</div>
+            <div className={`status-pill ${selectedMonth.isSnapshot ? "pending" : "confirmed"}`}>
+              {selectedMonth.isSnapshot ? "Arhiva" : "Live pregled"}
+            </div>
+          </div>
+
+          <div className="revenue-month-filter">
+            <label className="form-row">
+              <span>Pregled za mesec</span>
+              <select
+                className="select"
+                value={selectedMonthValue}
+                onChange={(event) => onMonthChange(event.target.value)}
+              >
+                {monthOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                    {option.isCurrent ? " (tekuci)" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
 
           <div className="revenue-metrics">
             <div className="revenue-metric-card">
               <span>Ukupna zarada</span>
-              <strong>{formatCurrency(currentMonth.totalRevenue)}</strong>
+              <strong>{formatCurrency(selectedMonth.totalRevenue)}</strong>
             </div>
             <div className="revenue-metric-card">
               <span>Ukupno termina</span>
-              <strong>{currentMonth.totalAppointments}</strong>
+              <strong>{selectedMonth.totalAppointments}</strong>
             </div>
             <div className="revenue-metric-card">
-              <span>Aktivni radnici u pregledu</span>
-              <strong>{currentMonth.workers.length}</strong>
+              <span>Radnici u pregledu</span>
+              <strong>{selectedMonth.workers.length}</strong>
             </div>
           </div>
         </section>
@@ -165,12 +199,12 @@ export default function OwnerRevenueOverview({
           <div className="dashboard-section-header">
             <div>
               <h3>Zarada po radnji</h3>
-              <p>Ukupno za mesec po lokaciji.</p>
+              <p>Ukupno za izabrani mesec po lokaciji.</p>
             </div>
           </div>
 
           <div className="dashboard-list">
-            {currentMonth.locations.map((location) => (
+            {selectedMonth.locations.map((location) => (
               <div key={location.locationId} className="dashboard-list-item revenue-list-item">
                 <div>
                   <strong>{location.locationName}</strong>
@@ -188,13 +222,13 @@ export default function OwnerRevenueOverview({
       <section className="admin-card dashboard-card">
         <div className="dashboard-section-header">
           <div>
-            <h3>Radnici u ovom mesecu</h3>
-            <p>Zarada i broj termina po radniku.</p>
+            <h3>Radnici u izabranom mesecu</h3>
+            <p>Zarada i broj termina po radniku za {selectedMonth.monthLabel}.</p>
           </div>
         </div>
 
         <div className="revenue-worker-grid">
-          {currentMonth.workers.map((worker) => (
+          {selectedMonth.workers.map((worker) => (
             <article key={worker.workerId} className="revenue-worker-card">
               <div className="revenue-worker-card__header">
                 <div className="revenue-worker-card__identity">

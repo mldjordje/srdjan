@@ -62,12 +62,25 @@ type SnapshotRow = {
   updated_at: string;
 };
 
+type MonthOption = {
+  value: string;
+  label: string;
+  isCurrent: boolean;
+};
+
 const REVENUE_STATUSES = new Set(["confirmed", "completed", "no_show"]);
 const APPOINTMENT_COUNT_STATUSES = new Set(["pending", "confirmed", "completed", "no_show"]);
 const SNAPSHOT_TABLE_NAME = "monthly_revenue_snapshots";
 const HISTORY_LIMIT = 6;
 
 const toIsoDate = (value: Date) => value.toISOString().slice(0, 10);
+const toMonthValue = (value: Date) =>
+  `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}`;
+const isSameMonth = (left: Date, right: Date) =>
+  left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth();
+const isPastMonth = (target: Date, now: Date) =>
+  target.getFullYear() < now.getFullYear() ||
+  (target.getFullYear() === now.getFullYear() && target.getMonth() < now.getMonth());
 
 const getMonthRange = (baseDate: Date) => {
   const monthStart = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
@@ -85,6 +98,32 @@ const formatMonthLabel = (date: Date) =>
     month: "long",
     year: "numeric",
   }).format(date);
+
+const parseMonthParam = (value: string | null) => {
+  const normalized = (value || "").trim();
+  if (!/^\d{4}-\d{2}$/.test(normalized)) {
+    return null;
+  }
+
+  const [yearPart, monthPart] = normalized.split("-");
+  const year = Number(yearPart);
+  const monthIndex = Number(monthPart) - 1;
+  if (!Number.isInteger(year) || !Number.isInteger(monthIndex) || monthIndex < 0 || monthIndex > 11) {
+    return null;
+  }
+
+  return new Date(year, monthIndex, 1);
+};
+
+const buildMonthOptions = (now: Date, count = 12): MonthOption[] =>
+  Array.from({ length: count }, (_, index) => {
+    const monthDate = new Date(now.getFullYear(), now.getMonth() - index, 1);
+    return {
+      value: toMonthValue(monthDate),
+      label: formatMonthLabel(monthDate),
+      isCurrent: index === 0,
+    };
+  });
 
 const isMissingSnapshotTableError = (message?: string | null) =>
   (message || "").toLowerCase().includes(SNAPSHOT_TABLE_NAME);
@@ -234,10 +273,9 @@ const calculateMonthSummary = async (
   };
 };
 
-const ensurePreviousMonthSnapshot = async (now: Date) => {
+const ensureMonthSnapshot = async (monthDate: Date) => {
   const db = getSupabaseAdmin();
-  const previousMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const { monthStartIso } = getMonthRange(previousMonthDate);
+  const { monthStartIso } = getMonthRange(monthDate);
 
   const { data: existing, error: existingError } = await db
     .from(SNAPSHOT_TABLE_NAME)
@@ -255,7 +293,7 @@ const ensurePreviousMonthSnapshot = async (now: Date) => {
     return true;
   }
 
-  const summary = await calculateMonthSummary(previousMonthDate, true, new Date().toISOString());
+  const summary = await calculateMonthSummary(monthDate, true, new Date().toISOString());
   const { error: insertError } = await db.from(SNAPSHOT_TABLE_NAME).upsert({
     month_start: summary.monthStart,
     month_end: summary.monthEnd,
@@ -271,6 +309,38 @@ const ensurePreviousMonthSnapshot = async (now: Date) => {
   }
 
   return true;
+};
+
+const loadSnapshotForMonth = async (monthDate: Date) => {
+  const db = getSupabaseAdmin();
+  const { monthStartIso } = getMonthRange(monthDate);
+  const { data, error } = await db
+    .from(SNAPSHOT_TABLE_NAME)
+    .select("month_start, month_end, month_label, summary, updated_at")
+    .eq("month_start", monthStartIso)
+    .maybeSingle<SnapshotRow>();
+
+  if (error) {
+    if (isMissingSnapshotTableError(error.message)) {
+      return { historyStorageEnabled: false, snapshot: null as MonthRevenueSummary | null };
+    }
+    throw new Error(error.message);
+  }
+  if (!data) {
+    return { historyStorageEnabled: true, snapshot: null as MonthRevenueSummary | null };
+  }
+
+  return {
+    historyStorageEnabled: true,
+    snapshot: {
+      ...data.summary,
+      isSnapshot: true,
+      savedAt: data.updated_at,
+      monthStart: data.month_start,
+      monthEnd: data.month_end,
+      monthLabel: data.month_label || data.summary.monthLabel,
+    },
+  };
 };
 
 const loadSavedSnapshots = async () => {
@@ -308,17 +378,25 @@ export async function GET(request: Request) {
     return error || jsonError("Unauthorized", 401);
   }
 
+  const { searchParams } = new URL(request.url);
   const db = getSupabaseAdmin();
   const now = new Date();
+  const requestedMonthDate = parseMonthParam(searchParams.get("month"));
+  const selectedMonthDate =
+    requestedMonthDate && requestedMonthDate <= now
+      ? requestedMonthDate
+      : new Date(now.getFullYear(), now.getMonth(), 1);
   const today = now.toISOString().slice(0, 10);
   const { monthStartIso, monthEndIso } = getMonthRange(now);
+  const selectedMonthValue = toMonthValue(selectedMonthDate);
+  const monthOptions = buildMonthOptions(now);
 
   const [
     { count: totalAppointments, error: totalError },
     { count: upcomingAppointments, error: upcomingError },
     { count: cancelledAppointments, error: cancelledError },
     { count: totalClients, error: clientsError },
-    currentMonthSummary,
+    liveCurrentMonthSummary,
   ] = await Promise.all([
     db.from("appointments").select("id", { count: "exact", head: true }),
     db
@@ -341,14 +419,29 @@ export async function GET(request: Request) {
 
   let historyStorageEnabled = false;
   let savedMonths: MonthRevenueSummary[] = [];
+  let selectedMonthSummary = liveCurrentMonthSummary;
 
   try {
-    historyStorageEnabled = await ensurePreviousMonthSnapshot(now);
+    historyStorageEnabled = await ensureMonthSnapshot(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+    if (isPastMonth(selectedMonthDate, now)) {
+      const targetSnapshotEnabled = await ensureMonthSnapshot(selectedMonthDate);
+      historyStorageEnabled = historyStorageEnabled && targetSnapshotEnabled;
+    }
+
     const snapshotsPayload = await loadSavedSnapshots();
     historyStorageEnabled = snapshotsPayload.historyStorageEnabled;
     savedMonths = snapshotsPayload.savedMonths.filter(
       (item) => item.monthStart !== monthStartIso && item.monthEnd !== monthEndIso
     );
+
+    if (!isSameMonth(selectedMonthDate, now)) {
+      const selectedSnapshotPayload = await loadSnapshotForMonth(selectedMonthDate);
+      historyStorageEnabled =
+        historyStorageEnabled && selectedSnapshotPayload.historyStorageEnabled;
+      selectedMonthSummary =
+        selectedSnapshotPayload.snapshot ||
+        (await calculateMonthSummary(selectedMonthDate, false, null));
+    }
   } catch (snapshotError) {
     return jsonError(
       snapshotError instanceof Error ? snapshotError.message : "Ne mogu da ucitam istoriju zarade.",
@@ -362,11 +455,14 @@ export async function GET(request: Request) {
         totalAppointments: totalAppointments || 0,
         upcomingAppointments: upcomingAppointments || 0,
         cancelledAppointments: cancelledAppointments || 0,
-        monthlyRevenue: currentMonthSummary.totalRevenue,
+        monthlyRevenue: selectedMonthSummary.totalRevenue,
         totalClients: totalClients || 0,
       },
       revenue: {
-        currentMonth: currentMonthSummary,
+        currentMonth: liveCurrentMonthSummary,
+        selectedMonth: selectedMonthSummary,
+        selectedMonthValue,
+        monthOptions,
         savedMonths,
         historyStorageEnabled,
       },

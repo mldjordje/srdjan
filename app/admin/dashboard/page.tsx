@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import OwnerRevenueOverview, {
   type MonthRevenueSummary,
+  type RevenueMonthOption,
 } from "@/components/admin/OwnerRevenueOverview";
 import AdminShell from "@/components/srdjan/admin/AdminShell";
 
@@ -17,6 +18,9 @@ type Dashboard = {
   };
   revenue: {
     currentMonth: MonthRevenueSummary;
+    selectedMonth: MonthRevenueSummary;
+    selectedMonthValue: string;
+    monthOptions: RevenueMonthOption[];
     savedMonths: MonthRevenueSummary[];
     historyStorageEnabled: boolean;
   };
@@ -26,11 +30,13 @@ export default function AdminDashboardPage() {
   const [data, setData] = useState<Dashboard | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState("");
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const response = await fetch("/api/admin/dashboard", {
+      const query = selectedMonth ? `?month=${encodeURIComponent(selectedMonth)}` : "";
+      const response = await fetch(`/api/admin/dashboard${query}`, {
         cache: "no-store",
         credentials: "include",
       });
@@ -41,6 +47,7 @@ export default function AdminDashboardPage() {
         return;
       }
       setData(payload);
+      setSelectedMonth(payload.revenue?.selectedMonthValue || "");
       setError("");
       setLoading(false);
     };
@@ -48,7 +55,7 @@ export default function AdminDashboardPage() {
       setError("Ne mogu da ucitam dashboard.");
       setLoading(false);
     });
-  }, []);
+  }, [selectedMonth]);
 
   return (
     <AdminShell title="Dashboard">
@@ -80,6 +87,10 @@ export default function AdminDashboardPage() {
           </div>
 
           <OwnerRevenueOverview
+            selectedMonth={data.revenue.selectedMonth}
+            selectedMonthValue={data.revenue.selectedMonthValue}
+            monthOptions={data.revenue.monthOptions}
+            onMonthChange={setSelectedMonth}
             currentMonth={data.revenue.currentMonth}
             savedMonths={data.revenue.savedMonths}
             historyStorageEnabled={data.revenue.historyStorageEnabled}

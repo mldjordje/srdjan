@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import OwnerRevenueOverview, {
   type MonthRevenueSummary,
+  type RevenueMonthOption,
 } from "@/components/admin/OwnerRevenueOverview";
 import AdminShell from "@/components/srdjan/admin/AdminShell";
 
@@ -16,6 +17,9 @@ type Dashboard = {
   };
   revenue: {
     currentMonth: MonthRevenueSummary;
+    selectedMonth: MonthRevenueSummary;
+    selectedMonthValue: string;
+    monthOptions: RevenueMonthOption[];
     savedMonths: MonthRevenueSummary[];
     historyStorageEnabled: boolean;
   };
@@ -24,10 +28,12 @@ type Dashboard = {
 export default function AdminRevenuePage() {
   const [data, setData] = useState<Dashboard | null>(null);
   const [status, setStatus] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
 
   useEffect(() => {
     const load = async () => {
-      const response = await fetch("/api/admin/dashboard", {
+      const query = selectedMonth ? `?month=${encodeURIComponent(selectedMonth)}` : "";
+      const response = await fetch(`/api/admin/dashboard${query}`, {
         cache: "no-store",
         credentials: "include",
       });
@@ -37,9 +43,10 @@ export default function AdminRevenuePage() {
         return;
       }
       setData(payload);
+      setSelectedMonth(payload.revenue?.selectedMonthValue || "");
     };
     load().catch((error) => setStatus(error instanceof Error ? error.message : "Greska."));
-  }, []);
+  }, [selectedMonth]);
 
   return (
     <AdminShell title="Zarada">
@@ -66,6 +73,10 @@ export default function AdminRevenuePage() {
           </div>
 
           <OwnerRevenueOverview
+            selectedMonth={data.revenue.selectedMonth}
+            selectedMonthValue={data.revenue.selectedMonthValue}
+            monthOptions={data.revenue.monthOptions}
+            onMonthChange={setSelectedMonth}
             currentMonth={data.revenue.currentMonth}
             savedMonths={data.revenue.savedMonths}
             historyStorageEnabled={data.revenue.historyStorageEnabled}
