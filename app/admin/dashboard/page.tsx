@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 
+import OwnerRevenueOverview, {
+  type MonthRevenueSummary,
+} from "@/components/admin/OwnerRevenueOverview";
 import AdminShell from "@/components/srdjan/admin/AdminShell";
 
 type Dashboard = {
@@ -11,6 +14,11 @@ type Dashboard = {
     cancelledAppointments: number;
     monthlyRevenue: number;
     totalClients: number;
+  };
+  revenue: {
+    currentMonth: MonthRevenueSummary;
+    savedMonths: MonthRevenueSummary[];
+    historyStorageEnabled: boolean;
   };
 };
 
@@ -22,7 +30,10 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const response = await fetch("/api/admin/dashboard");
+      const response = await fetch("/api/admin/dashboard", {
+        cache: "no-store",
+        credentials: "include",
+      });
       const payload = await response.json();
       if (!response.ok) {
         setError(payload.error || "Nemate pristup dashboard-u.");
@@ -44,30 +55,37 @@ export default function AdminDashboardPage() {
       {loading && <p>Ucitavanje...</p>}
       {!loading && error && <p className="form-status error">{error}</p>}
       {!loading && data && (
-        <div className="admin-grid">
-          <div className="admin-card">
-            <strong>Ukupno termina</strong>
-            <div>{data.kpi.totalAppointments}</div>
+        <>
+          <div className="dashboard-overview">
+            <div className="admin-card">
+              <strong>Ukupno termina</strong>
+              <div>{data.kpi.totalAppointments}</div>
+            </div>
+            <div className="admin-card">
+              <strong>Predstojeci termini</strong>
+              <div>{data.kpi.upcomingAppointments}</div>
+            </div>
+            <div className="admin-card">
+              <strong>Otkazani termini</strong>
+              <div>{data.kpi.cancelledAppointments}</div>
+            </div>
+            <div className="admin-card">
+              <strong>Prihod (mesec)</strong>
+              <div>{data.kpi.monthlyRevenue.toLocaleString("sr-RS")} RSD</div>
+            </div>
+            <div className="admin-card">
+              <strong>Ukupno klijenata</strong>
+              <div>{data.kpi.totalClients}</div>
+            </div>
           </div>
-          <div className="admin-card">
-            <strong>Predstojeci termini</strong>
-            <div>{data.kpi.upcomingAppointments}</div>
-          </div>
-          <div className="admin-card">
-            <strong>Otkazani termini</strong>
-            <div>{data.kpi.cancelledAppointments}</div>
-          </div>
-          <div className="admin-card">
-            <strong>Prihod (mesec)</strong>
-            <div>{data.kpi.monthlyRevenue} RSD</div>
-          </div>
-          <div className="admin-card">
-            <strong>Ukupno klijenata</strong>
-            <div>{data.kpi.totalClients}</div>
-          </div>
-        </div>
+
+          <OwnerRevenueOverview
+            currentMonth={data.revenue.currentMonth}
+            savedMonths={data.revenue.savedMonths}
+            historyStorageEnabled={data.revenue.historyStorageEnabled}
+          />
+        </>
       )}
     </AdminShell>
   );
 }
-

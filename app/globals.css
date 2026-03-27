@@ -2448,6 +2448,144 @@ h4 {
   font-size: 0.88rem;
 }
 
+.dashboard-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dashboard-section-header p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+}
+
+.revenue-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.revenue-metric-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.revenue-metric-card span {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.revenue-metric-card strong {
+  font-size: 1.25rem;
+}
+
+.revenue-list-item strong:last-child {
+  font-size: 1rem;
+}
+
+.revenue-worker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.revenue-worker-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.revenue-worker-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.revenue-worker-card__identity,
+.revenue-history-worker__identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.revenue-worker-card__identity div,
+.revenue-history-worker__identity div {
+  display: grid;
+  gap: 3px;
+}
+
+.revenue-worker-card__identity span,
+.revenue-history-worker__identity span,
+.revenue-history-card__saved {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.revenue-worker-card__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.revenue-worker-card__stats > div {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(17, 17, 17, 0.04);
+}
+
+.revenue-worker-card__stats span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.revenue-history-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.revenue-history-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.revenue-history-card__header,
+.revenue-history-worker {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.revenue-history-card__header > div {
+  display: grid;
+  gap: 4px;
+}
+
+.revenue-history-card__header span {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.revenue-history-card__workers {
+  display: grid;
+  gap: 8px;
+}
+
 .admin-card {
   padding: 18px;
   border-radius: var(--radius-md);
