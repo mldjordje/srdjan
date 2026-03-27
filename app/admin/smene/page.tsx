@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import WorkerPicker, { type WorkerPickerOption } from "@/components/admin/WorkerPicker";
 import AdminShell from "@/components/srdjan/admin/AdminShell";
 import { formatIsoDateToEuropean } from "@/lib/date";
 
@@ -11,7 +10,6 @@ type Worker = {
   name: string;
   location_id: string;
   is_active?: boolean;
-  profile_image_url?: string | null;
 };
 
 type ShiftType = "morning" | "afternoon" | "off";
@@ -74,15 +72,6 @@ export default function AdminShiftsPage() {
   });
 
   const weekDates = useMemo(() => dateRange(weekStart, 7), [weekStart]);
-  const workerOptions = useMemo<WorkerPickerOption[]>(
-    () =>
-      workers.map((worker) => ({
-        id: worker.id,
-        name: worker.name,
-        profile_image_url: worker.profile_image_url,
-      })),
-    [workers]
-  );
 
   const loadWorkers = async () => {
     const response = await fetch("/api/public/bootstrap");
@@ -339,19 +328,37 @@ export default function AdminShiftsPage() {
           </div>
           <div className="form-row">
             <label htmlFor="workerA">Radnik A</label>
-            <WorkerPicker
-              workers={workerOptions}
+            <select
+              id="workerA"
+              className="select"
               value={swapForm.workerAId}
-              onChange={(workerAId) => setSwapForm((prev) => ({ ...prev, workerAId }))}
-            />
+              onChange={(event) =>
+                setSwapForm((prev) => ({ ...prev, workerAId: event.target.value }))
+              }
+            >
+              {workers.map((worker) => (
+                <option key={worker.id} value={worker.id}>
+                  {worker.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="form-row">
             <label htmlFor="workerB">Radnik B</label>
-            <WorkerPicker
-              workers={workerOptions}
+            <select
+              id="workerB"
+              className="select"
               value={swapForm.workerBId}
-              onChange={(workerBId) => setSwapForm((prev) => ({ ...prev, workerBId }))}
-            />
+              onChange={(event) =>
+                setSwapForm((prev) => ({ ...prev, workerBId: event.target.value }))
+              }
+            >
+              {workers.map((worker) => (
+                <option key={worker.id} value={worker.id}>
+                  {worker.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="form-row">
             <button className="button outline" type="submit" disabled={swapping}>

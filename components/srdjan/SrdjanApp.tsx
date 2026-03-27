@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
+import WorkerPicker, { type WorkerPickerOption } from "@/components/admin/WorkerPicker";
 import { dispatchClientAuthChange } from "@/lib/client/clientAuth";
 import { formatIsoDateToEuropean } from "@/lib/date";
 import { siteConfig } from "@/lib/site";
@@ -16,7 +17,13 @@ type ClientProfile = {
 type BootstrapPayload = {
   defaultLocationId: string;
   locations: { id: string; name: string; is_active: boolean }[];
-  workers: { id: string; location_id: string; name: string; is_active: boolean }[];
+  workers: {
+    id: string;
+    location_id: string;
+    name: string;
+    is_active: boolean;
+    profile_image_url?: string | null;
+  }[];
   workerServices: {
     id: string;
     worker_id: string;
@@ -252,6 +259,15 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
   const locationOptions = bootstrap?.locations || [];
   const canChooseWorker = Boolean(locationId);
   const canChooseDateAndService = Boolean(locationId && workerId);
+  const workerOptions = useMemo<WorkerPickerOption[]>(
+    () =>
+      workersForLocation.map((worker) => ({
+        id: worker.id,
+        name: worker.name,
+        profile_image_url: worker.profile_image_url,
+      })),
+    [workersForLocation]
+  );
 
   const workerServices = useMemo(
     () => (bootstrap?.workerServices || []).filter((item) => item.worker_id === workerId),
@@ -660,24 +676,19 @@ export default function SrdjanApp({ embedded = false }: SrdjanAppProps) {
 
           <div className="form-row">
             <label htmlFor="worker">Radnik</label>
-            <select
-              key={`worker-select-${locationId || "none"}`}
-              id="worker"
-              className="select"
+            <WorkerPicker
+              workers={workerOptions}
               value={workerId}
-              onChange={(event) => {
-                setWorkerId(event.target.value);
+              onChange={(nextWorkerId) => {
+                setWorkerId(nextWorkerId);
                 setServiceId("");
                 setTime("");
               }}
-            >
-              <option value="">{canChooseWorker ? "Izaberite radnika" : "Prvo izaberite radnju"}</option>
-              {workersForLocation.map((worker) => (
-                <option key={worker.id} value={worker.id}>
-                  {worker.name}
-                </option>
-              ))}
-            </select>
+              placeholder={canChooseWorker ? "Izaberite radnika" : "Prvo izaberite radnju"}
+              searchPlaceholder="Pretrazi radnika"
+              emptyLabel="Nema radnika za ovu radnju."
+              disabled={!canChooseWorker}
+            />
           </div>
 
           {!canChooseDateAndService && (

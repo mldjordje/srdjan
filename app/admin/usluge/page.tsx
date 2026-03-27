@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import WorkerPicker, { type WorkerPickerOption } from "@/components/admin/WorkerPicker";
 import AdminShell from "@/components/srdjan/admin/AdminShell";
 
 type AdminMe = {
@@ -12,13 +11,7 @@ type AdminMe = {
   workerId?: string | null;
 };
 
-type Worker = {
-  id: string;
-  name: string;
-  location_id: string;
-  is_active: boolean;
-  profile_image_url?: string | null;
-};
+type Worker = { id: string; name: string; location_id: string; is_active: boolean };
 
 type WorkerService = {
   id: string;
@@ -179,15 +172,6 @@ export default function AdminServicesPage() {
     () => (isStaff ? services : services.filter((service) => service.worker_id === workerId)),
     [isStaff, services, workerId]
   );
-  const workerOptions = useMemo<WorkerPickerOption[]>(
-    () =>
-      workers.map((worker) => ({
-        id: worker.id,
-        name: worker.name,
-        profile_image_url: worker.profile_image_url,
-      })),
-    [workers]
-  );
 
   const create = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -331,13 +315,20 @@ export default function AdminServicesPage() {
           ) : (
             <div className="form-row">
               <label>Radnik</label>
-              <WorkerPicker
-                workers={workerOptions}
+              <select
+                className="select"
                 value={form.workerId}
-                onChange={(nextWorkerId) =>
-                  setForm((prev) => ({ ...prev, workerId: nextWorkerId }))
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, workerId: event.target.value }))
                 }
-              />
+                required
+              >
+                {workers.map((worker) => (
+                  <option key={worker.id} value={worker.id}>
+                    {worker.name}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
           <div className="form-row">
