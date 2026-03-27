@@ -2563,6 +2563,11 @@ h4 {
   background: rgba(255, 255, 255, 0.72);
 }
 
+.revenue-history-card--live {
+  border-color: rgba(27, 88, 71, 0.22);
+  background: linear-gradient(145deg, rgba(27, 88, 71, 0.08), rgba(255, 255, 255, 0.9));
+}
+
 .revenue-history-card__header,
 .revenue-history-worker {
   display: flex;
@@ -2581,9 +2586,19 @@ h4 {
   font-size: 0.88rem;
 }
 
+.revenue-history-card__meta {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
 .revenue-history-card__workers {
   display: grid;
   gap: 8px;
+}
+
+.revenue-history-grid--archived {
+  margin-top: 4px;
 }
 
 .admin-card {

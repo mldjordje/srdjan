@@ -38,6 +38,12 @@ type OwnerRevenueOverviewProps = {
   historyStorageEnabled: boolean;
 };
 
+type MonthCardProps = {
+  month: MonthRevenueSummary;
+  titleBadge: string;
+  isLive?: boolean;
+};
+
 const formatCurrency = (value: number) => `${value.toLocaleString("sr-RS")} RSD`;
 
 const formatSavedAt = (value: string | null) => {
@@ -70,6 +76,57 @@ const pluralizeAppointments = (count: number) => {
   }
   return "termina";
 };
+
+function RevenueHistoryMonthCard({ month, titleBadge, isLive = false }: MonthCardProps) {
+  return (
+    <article
+      className={`revenue-history-card ${isLive ? "revenue-history-card--live" : ""}`.trim()}
+    >
+      <div className="revenue-history-card__header">
+        <div>
+          <strong>{month.monthLabel}</strong>
+          <span>
+            {month.totalAppointments} {pluralizeAppointments(month.totalAppointments)}
+          </span>
+        </div>
+        <div className="revenue-history-card__meta">
+          <strong>{formatCurrency(month.totalRevenue)}</strong>
+          <span className={`status-pill ${isLive ? "confirmed" : "pending"}`}>{titleBadge}</span>
+        </div>
+      </div>
+
+      {month.savedAt && !isLive && (
+        <div className="revenue-history-card__saved">Sacuvano: {formatSavedAt(month.savedAt)}</div>
+      )}
+      {isLive && (
+        <div className="revenue-history-card__saved">
+          Tekuci mesec se racuna uzivo i jos nije zatvoren snapshot.
+        </div>
+      )}
+
+      <div className="revenue-history-card__workers">
+        {month.workers.map((worker) => (
+          <div key={`${month.monthStart}-${worker.workerId}`} className="revenue-history-worker">
+            <div className="revenue-history-worker__identity">
+              <WorkerAvatar
+                name={worker.workerName}
+                imageUrl={worker.profileImageUrl}
+                size="sm"
+              />
+              <div>
+                <strong>{worker.workerName}</strong>
+                <span>
+                  {worker.appointments} {pluralizeAppointments(worker.appointments)}
+                </span>
+              </div>
+            </div>
+            <strong>{formatCurrency(worker.revenue)}</strong>
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+}
 
 export default function OwnerRevenueOverview({
   currentMonth,
@@ -178,14 +235,24 @@ export default function OwnerRevenueOverview({
       <section className="admin-card dashboard-card">
         <div className="dashboard-section-header">
           <div>
-            <h3>Istorija meseci</h3>
-            <p>Sacuvani pregledi zarade i broja termina po radniku.</p>
+            <h3>Tekuci i zatvoreni meseci</h3>
+            <p>
+              {currentMonth.monthLabel} je live pregled, a ispod su sacuvani zatvoreni meseci.
+            </p>
           </div>
           {historyStorageEnabled ? (
-            <div className="status-pill confirmed">Snapshot aktivan</div>
+            <div className="status-pill confirmed">Arhiva aktivna</div>
           ) : (
             <div className="status-pill pending">Migracija potrebna</div>
           )}
+        </div>
+
+        <div className="revenue-history-grid">
+          <RevenueHistoryMonthCard
+            month={currentMonth}
+            titleBadge="Tekuci mesec"
+            isLive
+          />
         </div>
 
         {!historyStorageEnabled && (
@@ -195,50 +262,17 @@ export default function OwnerRevenueOverview({
         )}
 
         {historyStorageEnabled && savedMonths.length === 0 && (
-          <p className="form-status">Istorija ce se pojaviti kada se zatvori prvi mesec.</p>
+          <p className="form-status">Prvi zatvoren snapshot ce se pojaviti po zavrsetku ovog meseca.</p>
         )}
 
         {historyStorageEnabled && savedMonths.length > 0 && (
-          <div className="revenue-history-grid">
+          <div className="revenue-history-grid revenue-history-grid--archived">
             {savedMonths.map((month) => (
-              <article key={month.monthStart} className="revenue-history-card">
-                <div className="revenue-history-card__header">
-                  <div>
-                    <strong>{month.monthLabel}</strong>
-                    <span>
-                      {month.totalAppointments} {pluralizeAppointments(month.totalAppointments)}
-                    </span>
-                  </div>
-                  <strong>{formatCurrency(month.totalRevenue)}</strong>
-                </div>
-
-                {month.savedAt && (
-                  <div className="revenue-history-card__saved">
-                    Sacuvano: {formatSavedAt(month.savedAt)}
-                  </div>
-                )}
-
-                <div className="revenue-history-card__workers">
-                  {month.workers.map((worker) => (
-                    <div key={`${month.monthStart}-${worker.workerId}`} className="revenue-history-worker">
-                      <div className="revenue-history-worker__identity">
-                        <WorkerAvatar
-                          name={worker.workerName}
-                          imageUrl={worker.profileImageUrl}
-                          size="sm"
-                        />
-                        <div>
-                          <strong>{worker.workerName}</strong>
-                          <span>
-                            {worker.appointments} {pluralizeAppointments(worker.appointments)}
-                          </span>
-                        </div>
-                      </div>
-                      <strong>{formatCurrency(worker.revenue)}</strong>
-                    </div>
-                  ))}
-                </div>
-              </article>
+              <RevenueHistoryMonthCard
+                key={month.monthStart}
+                month={month}
+                titleBadge="Zatvoren mesec"
+              />
             ))}
           </div>
         )}
