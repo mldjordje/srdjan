@@ -11,12 +11,8 @@ import { dispatchClientAuthChange, subscribeClientAuthChange } from "@/lib/clien
 import { useLanguage, type Language } from "@/lib/useLanguage";
 import { siteConfig } from "@/lib/site";
 
-type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
-};
-
-const GOOGLE_MAPS_SHARE_URL = "https://share.google/CNAYrDQqA8BHnJi36";
+const GOOGLE_MAPS_SHARE_URL =
+  "https://www.google.com/maps/search/?api=1&query=Berbernica+Srdjan+Radnih+brigada+8+Beograd";
 const GOOGLE_MAPS_EMBED_URL =
   "https://www.google.com/maps?q=Berbernica+Srdjan+Radnih+brigada+8+Beograd&output=embed";
 
@@ -196,15 +192,11 @@ export default function HomePage() {
   const [showLoader, setShowLoader] = useState(true);
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isClientLoggedIn, setIsClientLoggedIn] = useState(false);
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
-  const [installModalOpen, setInstallModalOpen] = useState(false);
-  const [installPlatform, setInstallPlatform] = useState<"ios" | "android" | "desktop" | "other">("other");
-  const [homepageNotice, setHomepageNotice] = useState("");
   const prefersReducedMotion = useReducedMotion();
   const year = new Date().getFullYear();
   const easeOut: [number, number, number, number] = [0.16, 1, 0.3, 1];
   const easeSmooth: [number, number, number, number] = [0.2, 0.9, 0.3, 1];
+  const homepageNotice = copy.homepageNoticeDefault;
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setShowLoader(false), 1400);
@@ -220,72 +212,6 @@ export default function HomePage() {
     };
   }, [showLoader]);
 
-  useEffect(() => {
-    const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      Boolean(navigatorWithStandalone.standalone);
-    const ua = navigator.userAgent.toLowerCase();
-    const isIos = /iphone|ipad|ipod/.test(ua);
-    const isAndroid = /android/.test(ua);
-
-    setIsInstalled(standalone);
-    if (isIos) {
-      setInstallPlatform("ios");
-    } else if (isAndroid) {
-      setInstallPlatform("android");
-    } else if (ua.includes("windows") || ua.includes("macintosh") || ua.includes("linux")) {
-      setInstallPlatform("desktop");
-    } else {
-      setInstallPlatform("other");
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!("serviceWorker" in navigator)) {
-      return;
-    }
-
-    const register = () => {
-      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
-    };
-
-    if (document.readyState === "complete") {
-      register();
-      return;
-    }
-
-    window.addEventListener("load", register);
-    return () => {
-      window.removeEventListener("load", register);
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (event: Event) => {
-      event.preventDefault();
-      setInstallPrompt(event as BeforeInstallPromptEvent);
-    };
-
-    const handleAppInstalled = () => {
-      setInstallPrompt(null);
-      setIsInstalled(true);
-      setInstallModalOpen(false);
-    };
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    window.addEventListener("appinstalled", handleAppInstalled);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-      window.removeEventListener("appinstalled", handleAppInstalled);
-    };
-  }, []);
-
-  useEffect(() => {
-    setHomepageNotice(copy.homepageNoticeDefault);
-  }, [copy.homepageNoticeDefault]);
-
   const handleNavToggle = () => setIsNavOpen((prev) => !prev);
   const handleNavClose = () => setIsNavOpen(false);
   const handleClientLogout = async () => {
@@ -293,24 +219,6 @@ export default function HomePage() {
     setIsClientLoggedIn(false);
     dispatchClientAuthChange(false);
     handleNavClose();
-  };
-
-  const handleInstallModalClose = () => {
-    setInstallModalOpen(false);
-  };
-
-  const handleInstallClick = async () => {
-    if (!installPrompt) {
-      setInstallModalOpen(true);
-      return;
-    }
-
-    try {
-      await installPrompt.prompt();
-      await installPrompt.userChoice;
-    } finally {
-      setInstallPrompt(null);
-    }
   };
 
   const sectionVariants = {
@@ -383,69 +291,6 @@ export default function HomePage() {
 
   const cardHover = prefersReducedMotion ? {} : { y: -8, scale: 1.02 };
   const cardTap = prefersReducedMotion ? {} : { scale: 0.98 };
-  const showInstallButton = !isInstalled;
-  const installSteps = {
-    ios: [
-      language === "sr"
-        ? { title: "Otvori Share meni", body: "U Safari klikni Share ikonicu." }
-        : language === "en"
-          ? { title: "Open Share menu", body: "In Safari, tap the Share icon." }
-          : { title: "Apri menu Share", body: "In Safari tocca l'icona Share." },
-      language === "sr"
-        ? { title: "Izaberi Add to Home Screen", body: "Skroluj meni i tapni Add to Home Screen." }
-        : language === "en"
-          ? { title: "Choose Add to Home Screen", body: "Scroll and tap Add to Home Screen." }
-          : { title: "Scegli Add to Home Screen", body: "Scorri il menu e tocca Add to Home Screen." },
-      language === "sr"
-        ? { title: "Potvrdi instalaciju", body: "Tapni Add i aplikacija ce biti na ekranu." }
-        : language === "en"
-          ? { title: "Confirm install", body: "Tap Add and the app will appear on your screen." }
-          : { title: "Conferma installazione", body: "Tocca Add e l'app apparira sullo schermo." },
-    ],
-    android: [
-      language === "sr"
-        ? { title: "Otvori browser meni", body: "Klikni na tri tacke u Chrome-u." }
-        : language === "en"
-          ? { title: "Open browser menu", body: "Tap the three dots in Chrome." }
-          : { title: "Apri menu browser", body: "Tocca i tre puntini in Chrome." },
-      language === "sr"
-        ? { title: "Izaberi Install app", body: "Opcija je Install app ili Add to Home screen." }
-        : language === "en"
-          ? { title: "Choose Install app", body: "Option is Install app or Add to Home screen." }
-          : { title: "Scegli Install app", body: "L'opzione e Install app o Add to Home screen." },
-      language === "sr"
-        ? { title: "Potvrdi instalaciju", body: "Potvrdi i aplikacija je na pocetnom ekranu." }
-        : language === "en"
-          ? { title: "Confirm install", body: "Confirm and the app is added to home screen." }
-          : { title: "Conferma installazione", body: "Conferma e l'app sara nella schermata iniziale." },
-    ],
-    desktop: [
-      language === "sr"
-        ? { title: "Nadji install ikonu", body: "U Chrome/Edge klikni ikonu pored adrese." }
-        : language === "en"
-          ? { title: "Find install icon", body: "In Chrome/Edge click the icon near address bar." }
-          : { title: "Trova icona installazione", body: "In Chrome/Edge clicca l'icona vicino alla barra indirizzi." },
-      language === "sr"
-        ? { title: "Potvrdi instalaciju", body: "Izaberi Install i aplikacija se otvara kao app." }
-        : language === "en"
-          ? { title: "Confirm install", body: "Click Install and app opens like a desktop app." }
-          : { title: "Conferma installazione", body: "Scegli Install e l'app si apre come app desktop." },
-    ],
-    other: [
-      language === "sr"
-        ? { title: "Proveri browser meni", body: "Potrazi opciju Install app ili Add to Home screen." }
-        : language === "en"
-          ? { title: "Check browser menu", body: "Find Install app or Add to Home screen option." }
-          : { title: "Controlla menu browser", body: "Cerca Install app o Add to Home screen." },
-      language === "sr"
-        ? { title: "Potvrdi instalaciju", body: "Potvrdi i ikonica se pojavi na ekranu." }
-        : language === "en"
-          ? { title: "Confirm install", body: "Confirm and icon will show on your screen." }
-          : { title: "Conferma installazione", body: "Conferma e l'icona apparira sullo schermo." },
-    ],
-  };
-  const steps = installSteps[installPlatform];
-
   return (
     <div className="page">
       <AnimatePresence>
@@ -579,49 +424,6 @@ export default function HomePage() {
         </div>
       </header>
 
-      {installModalOpen && (
-        <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="install-title">
-          <div className="confirm-modal__backdrop" onClick={handleInstallModalClose} />
-          <div className="confirm-modal__card install-modal__card">
-            <div className="confirm-modal__header">
-              <div>
-                <h3 id="install-title">{copy.installTitle}</h3>
-                <p className="install-modal__subtitle">{copy.installSubtitle}</p>
-              </div>
-              <button
-                className="confirm-modal__close"
-                type="button"
-                onClick={handleInstallModalClose}
-                aria-label={copy.close}
-              >
-                ×
-              </button>
-            </div>
-            <div className="install-modal__body">
-              <div className="install-steps">
-                {steps.map((step, index) => (
-                  <div key={step.title} className="install-step">
-                    <div className="install-step__index">{index + 1}</div>
-                    <div className="install-step__content">
-                      <div className="install-step__title">{step.title}</div>
-                      <div className="install-step__desc">{step.body}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="install-modal__hint">
-                {copy.installHttpsHint}
-              </p>
-            </div>
-            <div className="confirm-modal__actions">
-              <button className="button ghost" type="button" onClick={handleInstallModalClose}>
-                {copy.close}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {homepageNotice && (
         <motion.div
           className="site-notice-wrap"
@@ -657,17 +459,6 @@ export default function HomePage() {
                   {copy.bookNow}
                 </a>
               </motion.div>
-              {showInstallButton && (
-                <motion.div variants={itemVariants}>
-                  <button
-                    className="button outline hero-secondary"
-                    type="button"
-                    onClick={handleInstallClick}
-                  >
-                    {copy.installApp}
-                  </button>
-                </motion.div>
-              )}
               {!isClientLoggedIn && (
                 <motion.div variants={itemVariants}>
                   <Link className="button ghost hero-secondary" href="/login">
