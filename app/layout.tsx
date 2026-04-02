@@ -36,6 +36,7 @@ export const metadata: Metadata = {
     locale: "sr_RS",
     type: "website",
   },
+  manifest: "/manifest.webmanifest",
   icons: {
     icon: "/icons/icon-512-novilogo.png",
     apple: "/apple-touch-icon-novilogo.png",
