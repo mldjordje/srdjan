@@ -38,6 +38,11 @@ const isValidFromAddress = (value: string) => {
   return match ? isValidEmail(match[1]) : false;
 };
 
+const isSalonLocalPlaceholderEmail = (value: string) => {
+  const normalized = (value || "").trim().toLowerCase();
+  return normalized.endsWith("@salonsrdjan.local");
+};
+
 const escapeHtml = (value: string) =>
   value
     .replace(/&/g, "&amp;")
@@ -187,6 +192,13 @@ export const sendWorkerNewAppointmentEmail = async (input: WorkerAppointmentEmai
 export const sendClientAppointmentStatusEmail = async (
   input: ClientAppointmentStatusEmailInput
 ) => {
+  if (isSalonLocalPlaceholderEmail(input.to)) {
+    console.warn(
+      "[email] Client notification skipped: placeholder @salonsrdjan.local address."
+    );
+    return false;
+  }
+
   const europeanDate = formatIsoDateToEuropean(input.date);
   const isConfirmed = input.status === "confirmed";
   const statusLabel = isConfirmed ? "potvrdjen" : "otkazan";
